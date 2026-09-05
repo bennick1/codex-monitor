@@ -3,18 +3,6 @@ export type SnapshotStatus = "ok" | "stale" | "loading" | "unavailable" | "signe
 export type Language = "zh-CN" | "en";
 export type WidgetTheme = "light" | "dark";
 export type AppearancePreference = "system" | WidgetTheme;
-export type WidgetSkin = "default" | "blur" | "computer";
-
-export interface SupporterStatus {
-  requestCode: string;
-  active: boolean;
-  message: string;
-  unlockedSkin: Exclude<WidgetSkin, "default"> | null;
-  unlockedSkins: Array<Exclude<WidgetSkin, "default">>;
-  selectedSkin: WidgetSkin;
-  availableSkins: WidgetSkin[];
-}
-
 export interface UsageWindow {
   remainingPercent: number;
   resetsAt: string | null;
@@ -42,11 +30,4 @@ export interface WidgetPreferences {
   autoRotateSeconds: number;
   language: Language;
   appearance: AppearancePreference;
-  license: string | null;
-  licenses: string[];
-  unlockedSkin: Exclude<WidgetSkin, "default"> | null;
-  unlockedSkins: Array<Exclude<WidgetSkin, "default">>;
-  selectedSkin: WidgetSkin;
-  supporterPromptFirstSeenAt?: string | null;
-  supporterPromptShownAt?: string | null;
 }

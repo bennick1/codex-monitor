@@ -70,17 +70,12 @@ Please use GitHub Issues for bugs, compatibility reports, and feature requests:
 
 https://github.com/change-42-yhmm/quota-float/issues
 
-## Supporter skins
+## Appearance
 
-The standard installer includes the free default appearances and can unlock optional supporter skins with a signed, device-bound license. Licenses are verified locally; the app does not send device request codes or license text to a service.
+This fork provides the default Light, Dark, and Follow system appearances. Purchase, donation, device-code and supporter-license entry points, paid skins, and timed supporter prompts have been removed. Older license, skin and reminder fields are ignored; valid preferences and the statistics database are retained.
 
-### Dark healthy-state previews
+The updater still targets upstream quota-float. **Release blocker:** an upstream update can replace this fork and its Token backend. Do not install an upstream update while validating this build; a fork-specific update policy is required before release.
 
-Blur and Computer are optional supporter skins. These previews use mock quota data and do not reveal any account, device, or license information.
-
-| Blur | Computer |
-| --- | --- |
-| <img src="docs/images/skin-blur-dark-healthy.jpg" alt="Blur supporter skin in a dark healthy-state preview" width="260"> | <img src="docs/images/skin-computer-dark-healthy.jpg" alt="Computer supporter skin in a dark healthy-state preview" width="260"> |
 
 ## Privacy Boundary
 

@@ -17,7 +17,6 @@ tauri-build = { version = "2", features = [] }
 base64 = "0.22"
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "6"
-ed25519-dalek = { version = "2", features = ["rand_core"] }
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "system-proxy"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["raw_value"] }
@@ -37,9 +36,6 @@ tokio = { version = "1", features = ["macros", "sync"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
-
-[target.'cfg(windows)'.dependencies]
-winreg = "0.55"
 
 [dev-dependencies]
 tempfile = "3"
