@@ -12,9 +12,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use models::{ProviderSnapshot, WidgetPreferences};
 #[cfg(debug_assertions)]
 use models::UsageWindow;
+use models::{ProviderSnapshot, WidgetPreferences};
 use serde::Deserialize;
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, Submenu},
@@ -22,7 +22,6 @@ use tauri::{
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WindowEvent,
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
-use tauri_plugin_updater::UpdaterExt;
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_window_state::Builder as WindowStateBuilder;
 
@@ -109,22 +108,19 @@ struct AppState {
     simulate_short_window_for_testing: Mutex<bool>,
     geometry: Mutex<Option<WidgetGeometryState>>,
     drag_mode: Mutex<Option<WidgetMode>>,
-    update_available: Mutex<bool>,
 }
 
-fn update_menu_label(language: &str, update_available: bool) -> &'static str {
-    match (language == "en", update_available) {
-        (true, true) => "🟢 Check for updates",
-        (false, true) => "🟢 检查更新",
-        (true, false) => "Check for updates",
-        (false, false) => "检查更新",
+fn release_menu_label(language: &str) -> &'static str {
+    if language == "en" {
+        "Open release downloads"
+    } else {
+        "打开版本下载页"
     }
 }
 
 fn apply_short_window_test_override(
     _state: &AppState,
-    #[allow(unused_mut)]
-    mut snapshots: Vec<ProviderSnapshot>,
+    #[allow(unused_mut)] mut snapshots: Vec<ProviderSnapshot>,
 ) -> Vec<ProviderSnapshot> {
     #[cfg(debug_assertions)]
     if _state
@@ -992,14 +988,21 @@ fn set_widget_always_on_top(
 }
 
 #[tauri::command]
-fn sync_widget_appearance(_appearance: String, app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+fn sync_widget_appearance(
+    _appearance: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
     let current = current_widget_rect(&window)?;
     let (_, scale_factor) = monitor_and_scale(&window)?;
     let safe_inset = safe_inset_for_current_appearance(state.inner(), scale_factor);
-    let expanded_threshold = logical_to_physical((COLLAPSED_LOGICAL_SIZE + EXPANDED_LOGICAL_SIZE) / 2.0, scale_factor);
+    let expanded_threshold = logical_to_physical(
+        (COLLAPSED_LOGICAL_SIZE + EXPANDED_LOGICAL_SIZE) / 2.0,
+        scale_factor,
+    );
     let visual_size = if current.size.width > expanded_threshold {
         EXPANDED_LOGICAL_SIZE
     } else {
@@ -1007,8 +1010,13 @@ fn sync_widget_appearance(_appearance: String, app: AppHandle, state: State<'_, 
     };
     let side = widget_window_size(visual_size, scale_factor, safe_inset);
     let height = widget_window_size(
-        if visual_size == EXPANDED_LOGICAL_SIZE { EXPANDED_LOGICAL_HEIGHT } else { visual_size },
-        scale_factor, safe_inset,
+        if visual_size == EXPANDED_LOGICAL_SIZE {
+            EXPANDED_LOGICAL_HEIGHT
+        } else {
+            visual_size
+        },
+        scale_factor,
+        safe_inset,
     );
     window
         .set_size(PhysicalSize::new(side, height))
@@ -1018,7 +1026,13 @@ fn sync_widget_appearance(_appearance: String, app: AppHandle, state: State<'_, 
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, "show", "Show / Hide", true, None::<&str>)?;
     let refresh = MenuItem::with_id(app, "refresh", "Refresh now", true, None::<&str>)?;
-    let update = MenuItem::with_id(app, "update", "Check for updates", true, None::<&str>)?;
+    let releases = MenuItem::with_id(
+        app,
+        "releases",
+        "Open release downloads",
+        true,
+        None::<&str>,
+    )?;
     let unlock = MenuItem::with_id(app, "unlock", "Unlock widget", true, None::<&str>)?;
     let pin = MenuItem::with_id(app, "pin", "Pin / Unpin Codex", true, None::<&str>)?;
     let language = MenuItem::with_id(
@@ -1028,10 +1042,23 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
-    let theme_system = CheckMenuItem::with_id(app, "theme-system", "Follow system", true, false, None::<&str>)?;
+    let theme_system = CheckMenuItem::with_id(
+        app,
+        "theme-system",
+        "Follow system",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let theme_dark = CheckMenuItem::with_id(app, "theme-dark", "Dark", true, false, None::<&str>)?;
-    let theme_light = CheckMenuItem::with_id(app, "theme-light", "Light", true, false, None::<&str>)?;
-    let default_skin = Submenu::with_items(app, "Default skin / 默认皮肤", true, &[&theme_system, &theme_dark, &theme_light])?;
+    let theme_light =
+        CheckMenuItem::with_id(app, "theme-light", "Light", true, false, None::<&str>)?;
+    let default_skin = Submenu::with_items(
+        app,
+        "Default skin / 默认皮肤",
+        true,
+        &[&theme_system, &theme_dark, &theme_light],
+    )?;
     let theme = Submenu::with_items(app, "Theme / 主题", true, &[&default_skin])?;
     let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
     let autostart = CheckMenuItem::with_id(
@@ -1070,7 +1097,13 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         .unwrap_or_else(|| "zh-CN".into());
     let initial_appearance = app
         .try_state::<AppState>()
-        .and_then(|state| state.preferences.lock().ok().map(|prefs| prefs.appearance.clone()))
+        .and_then(|state| {
+            state
+                .preferences
+                .lock()
+                .ok()
+                .map(|prefs| prefs.appearance.clone())
+        })
         .unwrap_or_else(|| "system".into());
     let _ = theme_system.set_checked(initial_appearance == "system");
     let _ = theme_dark.set_checked(initial_appearance == "dark");
@@ -1078,7 +1111,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     if initial_language != "en" {
         let _ = show.set_text("显示 / 隐藏");
         let _ = refresh.set_text("立即刷新");
-        let _ = update.set_text(update_menu_label(&initial_language, false));
+        let _ = releases.set_text(release_menu_label(&initial_language));
         let _ = unlock.set_text("解锁悬浮窗");
         let _ = pin.set_text("固定 / 取消固定 Codex");
         let _ = language.set_text("Switch to English");
@@ -1103,7 +1136,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         &[
             &show,
             &refresh,
-            &update,
+            &releases,
             &settings,
             &theme,
             &test_short_window,
@@ -1111,18 +1144,17 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         ],
     )?;
     #[cfg(not(debug_assertions))]
-    let menu = Menu::with_items(app, &[&show, &refresh, &update, &settings, &theme, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &refresh, &releases, &settings, &theme, &quit])?;
     let mut builder = TrayIconBuilder::with_id("main")
         .menu(&menu)
-        .tooltip("Quota Float");
+        .tooltip("Codex Monitor");
     if let Some(icon) = app.default_window_icon() {
         builder = builder.icon(icon.clone());
     }
     let autostart_menu = autostart.clone();
     let show_menu = show.clone();
     let refresh_menu = refresh.clone();
-    let update_menu = update.clone();
-    let update_indicator = update.clone();
+    let releases_menu = releases.clone();
     let unlock_menu = unlock.clone();
     let pin_menu = pin.clone();
     let language_menu = language.clone();
@@ -1153,8 +1185,8 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             "refresh" => {
                 let _ = app.emit_to("widget", "refresh-requested", ());
             }
-            "update" => {
-                let _ = app.emit_to("widget", "update-check-requested", ());
+            "releases" => {
+                let _ = app.emit_to("widget", "release-page-requested", ());
             }
             "debug-short-window" =>
             {
@@ -1212,12 +1244,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                         } else {
                             "立即刷新"
                         });
-                        let update_available = state
-                            .update_available
-                            .lock()
-                            .map(|value| *value)
-                            .unwrap_or(false);
-                        let _ = update_menu.set_text(update_menu_label(&normalized.language, update_available));
+                        let _ = releases_menu.set_text(release_menu_label(&normalized.language));
                         let _ = unlock_menu.set_text(if english {
                             "Unlock widget"
                         } else {
@@ -1234,8 +1261,16 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                             "Switch to English"
                         });
                         let _ = theme_menu.set_text(if english { "Theme" } else { "主题" });
-                        let _ = default_skin_menu.set_text(if english { "Default skin" } else { "默认皮肤" });
-                        let _ = theme_system_menu.set_text(if english { "Follow system" } else { "跟随系统" });
+                        let _ = default_skin_menu.set_text(if english {
+                            "Default skin"
+                        } else {
+                            "默认皮肤"
+                        });
+                        let _ = theme_system_menu.set_text(if english {
+                            "Follow system"
+                        } else {
+                            "跟随系统"
+                        });
                         let _ = theme_dark_menu.set_text(if english { "Dark" } else { "深色" });
                         let _ = theme_light_menu.set_text(if english { "Light" } else { "浅色" });
                         let _ = autostart_menu.set_text(if english {
@@ -1259,10 +1294,12 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                         let normalized = prefs.clone().normalized();
                         *prefs = normalized.clone();
                         if persist_preferences(&state.preferences_path, &normalized).is_ok() {
-                            let _ = theme_system_state.set_checked(normalized.appearance == "system");
+                            let _ =
+                                theme_system_state.set_checked(normalized.appearance == "system");
                             let _ = theme_dark_state.set_checked(normalized.appearance == "dark");
                             let _ = theme_light_state.set_checked(normalized.appearance == "light");
-                            let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
+                            let _ =
+                                app.emit_to("widget", "preferences-changed", normalized.clone());
                         }
                     }
                 }
@@ -1286,27 +1323,6 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             _ => {}
         })
         .build(app)?;
-    // Do this after creating the tray and off the UI thread. A failed or slow
-    // network check leaves the ordinary menu item untouched.
-    let update_app = app.handle().clone();
-    tauri::async_runtime::spawn(async move {
-        let Ok(updater) = update_app.updater() else {
-            return;
-        };
-        if updater.check().await.ok().flatten().is_none() {
-            return;
-        }
-        let language = update_app
-            .try_state::<AppState>()
-            .and_then(|state| {
-                if let Ok(mut available) = state.update_available.lock() {
-                    *available = true;
-                }
-                state.preferences.lock().ok().map(|prefs| prefs.language.clone())
-            })
-            .unwrap_or_else(|| "zh-CN".into());
-        let _ = update_indicator.set_text(update_menu_label(&language, true));
-    });
     Ok(())
 }
 
@@ -1337,8 +1353,6 @@ pub fn run() {
     #[allow(unused_mut)]
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_process::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("widget") {
                 show_widget(&window);
@@ -1381,7 +1395,6 @@ pub fn run() {
                 simulate_short_window_for_testing: Mutex::new(false),
                 geometry: Mutex::new(None),
                 drag_mode: Mutex::new(None),
-                update_available: Mutex::new(false),
             });
             if let Err(error) = setup_tray(app) {
                 #[cfg(target_os = "macos")]
@@ -1475,7 +1488,7 @@ pub fn run() {
             }
         })
         .build(context)
-        .expect("failed to build Quota Float");
+        .expect("failed to build Codex Monitor");
     #[cfg(target_os = "macos")]
     macos_widget::prepare_app(&mut app);
     app.run(|app_handle, event| {

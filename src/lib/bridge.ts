@@ -130,12 +130,12 @@ export function setWidgetExpanded(expanded: boolean): Promise<void> {
 export async function listenDesktopEvents(handlers: {
   onPreferences: (value: WidgetPreferences) => void;
   onRefresh: () => void;
-  onUpdate: () => void;
+  onRelease: () => void;
 }): Promise<() => void> {
   if (!isTauri()) return () => undefined;
   const { listen } = await import("@tauri-apps/api/event");
   const unlistenPreferences = await listen<WidgetPreferences>("preferences-changed", (event) => handlers.onPreferences(event.payload));
   const unlistenRefresh = await listen("refresh-requested", handlers.onRefresh);
-  const unlistenUpdate = await listen("update-check-requested", handlers.onUpdate);
-  return () => { unlistenPreferences(); unlistenRefresh(); unlistenUpdate(); };
+  const unlistenRelease = await listen("release-page-requested", handlers.onRelease);
+  return () => { unlistenPreferences(); unlistenRefresh(); unlistenRelease(); };
 }

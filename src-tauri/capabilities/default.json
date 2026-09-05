@@ -9,12 +9,10 @@
     "core:window:allow-outer-position",
     "core:window:allow-set-size",
     "core:window:allow-set-always-on-top",
-    "updater:default",
-    "process:allow-restart",
     {
       "identifier": "opener:allow-open-url",
       "allow": [
-        { "url": "https://github.com/change-42-yhmm/quota-float/releases/*" }
+        { "url": "https://github.com/bennick1/codex-monitor/releases" }
       ]
     },
     "window-state:default"

@@ -1,6 +1,6 @@
 # Privacy
 
-Quota Float is designed to be local-first and minimal.
+Codex Monitor is designed to be local-first and minimal.
 
 ## What It Reads
 
@@ -11,7 +11,7 @@ Quota Float is designed to be local-first and minimal.
 
 ## What It Stores
 
-Quota Float stores widget preferences in its own application config directory:
+Codex Monitor stores widget preferences in its own application config directory:
 
 - locked state
 - always-on-top state
@@ -29,10 +29,12 @@ It does not copy or persist Codex access tokens, credentials, account IDs, raw q
 
 ## What It Sends
 
-The app only calls these quota-related HTTPS endpoints from the local desktop process:
+Quota requests from the local desktop process use these HTTPS endpoints:
 
 - `https://chatgpt.com/backend-api/wham/usage`
 - `https://chatgpt.com/backend-api/wham/rate-limit-reset-credits`
+
+V1 has no runtime updater and does not query, download, or install application updates. Choosing the tray's manual download entry opens `https://github.com/bennick1/codex-monitor/releases` in the browser. Codex credentials and local statistics are not sent to GitHub.
 
 No telemetry, analytics, crash reporting, or third-party tracking is included.
 
@@ -42,4 +44,4 @@ Logs are intentionally generic. They must not include tokens, account IDs, raw b
 
 ## Accuracy Boundary
 
-Quota Float displays quota windows returned by the Codex quota service. It does not estimate quota from local token usage and does not fabricate values when the response shape is unknown. Local Token Statistics is a separate measurement of recognized, confirmed and deduplicated records. Incomplete history, uncertain timestamps and ambiguous format transitions are reported explicitly. It cannot recover logs deleted before collection or represent cloud, cross-device or account-wide usage.
+Codex Monitor displays quota windows returned by the Codex quota service. It does not estimate quota from local token usage and does not fabricate values when the response shape is unknown. Local Token Statistics is a separate measurement of recognized, confirmed and deduplicated records. Incomplete history, uncertain timestamps and ambiguous format transitions are reported explicitly. It cannot recover logs deleted before collection or represent cloud, cross-device or account-wide usage.

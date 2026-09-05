@@ -1,24 +1,28 @@
-name: Release
+name: Release Preparation
 
 on:
-  push:
-    tags:
-      - "v*"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  publish:
+  build:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: windows-latest
-            args: ""
-          - platform: macos-latest
-            args: "--target universal-apple-darwin"
-    runs-on: ${{ matrix.platform }}
+          - os: windows-latest
+            bundles: nsis
+            target-args: ''
+            bundle-dir: src-tauri/target/release/bundle
+            artifact-name: codex-monitor-v1.0.0-windows-x64-unsigned
+          - os: macos-latest
+            bundles: app,dmg
+            target-args: --target universal-apple-darwin
+            bundle-dir: src-tauri/target/universal-apple-darwin/release/bundle
+            artifact-name: codex-monitor-v1.0.0-macos-universal-unsigned
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,31 +30,6 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
-      - name: Validate release version
-        shell: pwsh
-        run: |
-          $package = Get-Content -Raw package.json | ConvertFrom-Json
-          $expectedTag = "v$($package.version)"
-          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
-            throw "Release tag '$env:GITHUB_REF_NAME' does not match package version '$expectedTag'."
-          }
-      - name: Validate license verification key
-        shell: pwsh
-        env:
-          QUOTA_FLOAT_LICENSE_PUBLIC_KEY: ${{ secrets.QUOTA_FLOAT_LICENSE_PUBLIC_KEY }}
-        run: |
-          $encoded = $env:QUOTA_FLOAT_LICENSE_PUBLIC_KEY
-          if ([string]::IsNullOrWhiteSpace($encoded)) {
-            throw "QUOTA_FLOAT_LICENSE_PUBLIC_KEY is not configured."
-          }
-          try {
-            $key = [Convert]::FromBase64String($encoded.Trim())
-          } catch {
-            throw "QUOTA_FLOAT_LICENSE_PUBLIC_KEY is not valid Base64."
-          }
-          if ($key.Length -ne 32) {
-            throw "QUOTA_FLOAT_LICENSE_PUBLIC_KEY must decode to exactly 32 bytes."
-          }
       - name: Install macOS universal targets
         if: runner.os == 'macOS'
         run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
@@ -58,34 +37,78 @@ jobs:
         with:
           workspaces: src-tauri
       - run: npm ci
+      - run: npm run check:updater-policy
+      - name: Validate V1 version and record build environment
+        shell: pwsh
+        run: |
+          $package = Get-Content -Raw package.json | ConvertFrom-Json
+          $tauri = Get-Content -Raw src-tauri/tauri.conf.json | ConvertFrom-Json
+          if ($package.version -ne '1.0.0' -or $tauri.version -ne $package.version) {
+            throw 'Expected matching V1.0.0 package and Tauri versions.'
+          }
+          New-Item -ItemType Directory -Force outputs/v1.0.0 | Out-Null
+          @{
+            commit = $env:GITHUB_SHA
+            buildStartedAt = (Get-Date).ToUniversalTime().ToString('o')
+            os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
+            runnerArch = $env:RUNNER_ARCH
+            rust = (rustc --version)
+            node = (node --version)
+            npm = (npm --version)
+            tauri = (npx tauri --version | Select-Object -Last 1)
+            runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            platformSigning = 'Not configured; candidate artifacts only'
+          } | ConvertTo-Json | Set-Content -Encoding utf8 outputs/v1.0.0/build-environment.json
       - run: npm test
-      - run: cargo test --manifest-path src-tauri/Cargo.toml
-      - uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          QUOTA_FLOAT_LICENSE_PUBLIC_KEY: ${{ secrets.QUOTA_FLOAT_LICENSE_PUBLIC_KEY }}
+      - run: npm run build
+      - run: npm audit --audit-level=high
+      - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
+      - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Build candidate installer
+        run: >-
+          npm run tauri -- build --bundles ${{ matrix.bundles }} ${{ matrix.target-args }}
+          --config '{"bundle":{"createUpdaterArtifacts":false}}'
+      - name: Smoke test Windows NSIS installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem '${{ matrix.bundle-dir }}/nsis/*.exe')
+          if ($installer.Count -ne 1 -or $installer[0].Length -lt 1MB) {
+            throw "Expected exactly one non-empty NSIS installer."
+          }
+          $install = Start-Process -FilePath $installer[0].FullName -ArgumentList '/S' -PassThru -Wait
+          if ($install.ExitCode -ne 0) { throw "Silent install failed: $($install.ExitCode)" }
+          $entry = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
+            ForEach-Object { Get-ItemProperty $_.PSPath } |
+            Where-Object DisplayName -eq 'Codex Monitor' |
+            Select-Object -First 1
+          if (-not $entry) { throw 'Codex Monitor uninstall registration not found.' }
+          $uninstaller = $entry.UninstallString.Trim('"')
+          $installDir = Split-Path $uninstaller
+          $executable = Get-ChildItem $installDir -Filter 'codex-monitor.exe' -Recurse | Select-Object -First 1
+          if (-not $executable) { throw 'Installed codex-monitor.exe not found.' }
+          $app = Start-Process -FilePath $executable.FullName -PassThru
+          Start-Sleep -Seconds 8
+          if ($app.HasExited) { throw "Installed app exited during smoke test: $($app.ExitCode)" }
+          Stop-Process -Id $app.Id -Force
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
+          if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall failed: $($uninstall.ExitCode)" }
+      - name: Verify macOS bundle metadata
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path="$(find '${{ matrix.bundle-dir }}/macos' -maxdepth 1 -name 'Codex Monitor.app' -print -quit)"
+          test -n "$app_path"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app_path/Contents/Info.plist")" = 'Codex Monitor'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Contents/Info.plist")" = '1.0.0'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Contents/Info.plist")" = 'app.quotafloat.desktop'
+      - name: Name installers and generate SHA256
+        run: node scripts/prepare-release-artifacts.mjs "${{ matrix.bundle-dir }}" outputs/v1.0.0
+      - uses: actions/upload-artifact@v4
         with:
-          tagName: v__VERSION__
-          releaseName: Quota Float v__VERSION__
-          releaseBody: |
-            ## What's new
-
-            - Refreshes Blur state artwork and corrects its control-button fill states.
-            - Adds an offline maintainer issuance ledger with order details and clearly labeled local cancellation records.
-            - Removes outer card shadows while retaining the transparent-window safety inset.
-            - Adds a Chinese/English content switch to the design workbench, including widget preview copy.
-            - Keeps showing weekly quota when the 5-hour window is temporarily unavailable, with a clear `W` badge.
-            - Adds persistent expansion, clearer active controls, exact reset time, and localized tray actions.
-            - Adds automatic update checks and a safe GitHub Releases fallback link.
-            - Improves edge docking and transparent rounded-window rendering on Windows and macOS.
-
-            ![Quota Float weekly quota fallback](https://raw.githubusercontent.com/change-42-yhmm/quota-float/main/docs/images/quota-v0.1.4-weekly-fallback.png)
-
-            ## Privacy
-
-            Quota Float remains local-first: it reads the existing Codex Desktop login state only for quota requests and does not upload prompts, chats, raw quota responses, or local credentials.
-          releaseDraft: true
-          prerelease: false
-          args: ${{ matrix.args }}
+          name: ${{ matrix.artifact-name }}
+          path: outputs/v1.0.0/
+          if-no-files-found: error
+          retention-days: 30

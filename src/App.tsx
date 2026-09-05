@@ -3,7 +3,7 @@ import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
 import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
 import { needsFastRefresh, quotaTier } from "./lib/format";
-import { checkForAppUpdate, openReleasePage } from "./lib/appUpdate";
+import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
 import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
@@ -31,7 +31,6 @@ export default function App() {
   const [compact, setCompact] = useState(true);
   const [consumingProviders, setConsumingProviders] = useState<Set<string>>(() => new Set());
   const [operationError, setOperationError] = useState<string | null>(null);
-  const [showUpdateFallback, setShowUpdateFallback] = useState(false);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
   const tokens = useTokenStatistics(!compact);
   const failures = useRef(0);
@@ -72,22 +71,6 @@ export default function App() {
     media.addEventListener("change", onChange);
     return () => media.removeEventListener("change", onChange);
   }, []);
-
-  const checkUpdate = useCallback((manual = false) => {
-    setShowUpdateFallback(false);
-    void checkForAppUpdate(language, {
-      checking: t.updateChecking,
-      current: t.updateCurrent,
-      downloading: t.updateDownloading,
-      installing: t.updateInstalling,
-      availableWindows: t.updateAvailableWindows,
-      availableMac: t.updateAvailableMac,
-      failed: t.updateFailed,
-    }, (message) => {
-      setOperationError(message);
-      if (message === t.updateFailed) setShowUpdateFallback(true);
-    }, manual);
-  }, [language, t]);
 
   const refresh = useCallback(async (force = false) => {
     try {
@@ -151,16 +134,15 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     let cleanup: () => void = () => {};
-    void listenDesktopEvents({ onPreferences: (value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) }), onRefresh: refreshAll, onUpdate: () => checkUpdate(true) }).then((value) => {
+    void listenDesktopEvents({
+      onPreferences: (value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) }),
+      onRefresh: refreshAll,
+      onRelease: () => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed)),
+    }).then((value) => {
       if (cancelled) value(); else cleanup = value;
     }).catch(() => setOperationError(operation.listenerFailed));
     return () => { cancelled = true; cleanup(); };
-  }, [checkUpdate, operation.listenerFailed, refreshAll]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => checkUpdate(false), 12_000);
-    return () => window.clearTimeout(timer);
-  }, [checkUpdate]);
+  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll]);
 
   const refreshMs = useMemo(() => {
     const backoff = failures.current === 0 ? 5 * 60_000 : Math.min(30 * 60_000, 30_000 * 2 ** (failures.current - 1));
@@ -265,7 +247,7 @@ export default function App() {
       theme={theme}
 
       style={cardStyle}
-      notice={showUpdateFallback && operationError ? <><span>{operationError}</span><button type="button" onMouseDown={(event) => event.stopPropagation()} onClick={() => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed))}>GitHub Releases</button></> : operationError}
+      notice={operationError}
     />
   );
 }

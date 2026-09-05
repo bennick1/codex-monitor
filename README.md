@@ -1,150 +1,91 @@
-# Quota Float
+# Codex Monitor
 
-A lightweight Windows/macOS desktop widget that keeps your Codex quota visible from your local Codex Desktop session.
+A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-![Quota Float quota states](docs/images/quota-states.png)
+V1.0.0 is being prepared. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Use only [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases) after the maintainer publishes a version. See the [release validation report](docs/v1.0.0-release-validation-report.md) for the current status.
 
-## Highlights
+## Features
 
-- Shows your Codex plan, 5-hour quota, weekly quota, and next reset time in a compact always-on-top widget.
-- Uses clear quota states for healthy, caution, and critical remaining usage.
-- Collapses into a small floating orb when idle, then expands on hover.
-- Indicates whether quota is currently being consumed.
-- Includes persistent expansion, always-on-top controls, and localized tray actions.
-- Falls back to a clearly marked weekly-quota view when the 5-hour window is unavailable.
-- Checks for app updates automatically and supports signed in-app updates on Windows.
-- Shows reset credit count and available reset-credit expiration times when the quota service provides them.
-- Handles stale data, signed-out sessions, unavailable quota responses, and loading states without fabricating values.
+- **Lightweight floating widget:** collapses into an orb, expands on hover, with pinning and tray controls.
+- **Codex quota monitoring:** remaining 5-hour and weekly quota, reset times, and explicit unavailable/stale states.
+- **Token usage statistics:** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
+- **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
+- **Windows/macOS support:** a shared interface with Light, Dark, and Follow system appearances and Chinese/English labels. Platform acceptance is tracked separately in the release report.
 
-On macOS, the widget runs as a tray accessory and does not appear in the Dock or Command-Tab. Use its tray menu to show, unlock, or quit it. Startup stops if the tray cannot be created. The native fullscreen Space fix is awaiting user retesting after the first implementation failed manual acceptance; see [desktop validation report](docs/desktop-widget-fixes-report.md).
+Quota comes from the Codex service. Local token counts are a separate measurement and are not used to estimate quota. Totals cover recognized local history, not all usage across your account or devices; incomplete history is marked in the widget.
 
 ## Screenshots
 
-| Quota states | Floating orb | Reset credit expiration |
+![Codex Monitor quota and Token Statistics, using synthetic data](docs/images/codex-monitor-v1-token-preview.png)
+
+Rendered from the current components with synthetic `CODEX · TEST` data. No personal screenshots or statistics are included. This preview is not platform acceptance evidence.
+
+## Installation
+
+Download only from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). Do not use the upstream project's installers for this fork.
+
+| Platform | V1.0.0 installer | Install |
 | --- | --- | --- |
-| ![Healthy, caution, and critical quota states](docs/images/quota-states.png) | ![Collapsed quota orb](docs/images/quota-orb.png) | ![Reset credit expiration popover](docs/images/quota-reset-expiration.png) |
+| macOS | `Codex-Monitor-1.0.0.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
+| Windows | `Codex-Monitor-1.0.0.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
 
-### Weekly quota fallback
+V1.0.0 is distributed as **Unsigned / Not Notarized**. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. It is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
 
-| Expanded weekly view | Weekly quota orb |
-| --- | --- |
-| ![Expanded weekly quota fallback](docs/images/quota-v0.1.4-weekly-fallback.png) | ![Weekly quota orb with W badge](docs/images/quota-v0.1.4-weekly-orb.png) |
+For an existing Quota Float installation, quit the old app and preserve its application data before installing. V1 retains the old application identifier to keep settings and token history accessible. After upgrading, verify that the renamed installer and login/startup entry point to Codex Monitor; see the [migration inventory](docs/v1.0.0-name-migration-inventory.md). Do not run both copies together.
 
-### Dark healthy state
+## Usage
 
-![Quota Float dark healthy-state preview](docs/images/quota-v0.2.4-dark-healthy.jpg)
+1. Sign in to Codex on this machine, then launch Codex Monitor.
+2. Hover over the orb to view quota and Token Statistics. Pin the card to keep it expanded.
+3. Hover or focus each Token value to see the exact count, such as `12,685,398` for `1268.54万`.
+4. Use the tray menu to refresh, open the manual release download page, change language/appearance, show or hide the widget, or quit.
 
-The preview uses mock quota data only; it does not contain account, device, or license information.
+On macOS the app is a menu-bar accessory: it intentionally has no Dock or Command-Tab entry. Fullscreen Spaces and sleep/wake behavior must pass the tests in the release report.
 
-## Repository Metadata
+Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. An initial scan may take time. Deleted logs cannot be recovered, but previously collected statistics remain in the local database.
 
-Suggested repository description:
+## Privacy
 
-```text
-A lightweight Windows/macOS desktop widget that keeps your Codex quota visible from your local Codex Desktop session.
-```
+Codex Monitor does not collect or retain prompts, chat history, source code, or account credentials in its statistics database, logs, or telemetry. Statistics stay on this machine.
 
-Suggested topics:
+To read quota, the app accesses the existing local `auth.json` and uses its access token only for the required ChatGPT quota requests. It does not copy credentials to its own storage. The independent token collector reads structured usage records from local session files, skips message bodies, and stores only counters and the minimal timestamps, hashed identities, source references, and checkpoints needed for reliable local statistics.
 
-```text
-codex, quota, tauri, react, rust, desktop-app, windows, macos, productivity
-```
-
-## How It Works
-
-Quota Float reads the existing Codex Desktop login state on your machine and queries Codex/ChatGPT quota endpoints with that session. It does not estimate usage from local token counts and does not redeem reset credits or modify account settings.
-
-Browser preview uses mock data. Real quota reading requires the Tauri desktop app and an existing Codex Desktop login on the same machine.
-
-## Download
-
-For normal users, download the latest installer from GitHub Releases:
-
-- Latest release: https://github.com/change-42-yhmm/quota-float/releases/latest
-- Windows: use the `.exe` or `.msi` installer.
-- macOS Universal: use the `.dmg` bundle.
-
-Updater artifacts are signed with the project's Tauri update key. Windows Authenticode signing and macOS notarization are separate platform-signing steps; builds without those certificates may still trigger SmartScreen or Gatekeeper warnings.
-
-## Feedback
-
-Please use GitHub Issues for bugs, compatibility reports, and feature requests:
-
-https://github.com/change-42-yhmm/quota-float/issues
-
-## Appearance
-
-This fork provides the default Light, Dark, and Follow system appearances. Purchase, donation, device-code and supporter-license entry points, paid skins, and timed supporter prompts have been removed. Older license, skin and reminder fields are ignored; valid preferences and the statistics database are retained.
-
-The updater still targets upstream quota-float. **Release blocker:** an upstream update can replace this fork and its Token backend. Do not install an upstream update while validating this build; a fork-specific update policy is required before release.
-
-
-## Privacy Boundary
-
-Quota Float is local-first and intentionally narrow:
-
-- Reads the local Codex Desktop login state only to query Codex quota.
-- Sends the existing Codex access token only to ChatGPT quota endpoints.
-- Stores widget preferences in its app config directory and minimal local Token Statistics metadata in `app_local_data_dir/token-statistics.sqlite3`.
-- Token Statistics reads only `sessions` and `archived_sessions` under the effective `CODEX_HOME` (default: the user's `.codex`). It runs independently of quota authentication and network requests; the V1 backend currently has no visible Token UI.
-- Confirmed token counts, UTC times, hashed identities, relative source references, reconciliation evidence and checkpoints remain on this machine, including after the original session logs are deleted. They describe locally observed usage, not an account-wide bill or lifetime total.
-- Does not store Codex tokens, account IDs, prompts, chat history, raw quota responses, or local auth paths.
-- Does not include telemetry, analytics, crash reporting, or third-party tracking.
-- Does not redeem reset credits or modify account settings.
-
-See [PRIVACY.md](PRIVACY.md) and [SECURITY.md](SECURITY.md) for the full boundary.
-
-## Accuracy Boundary
-
-Codex quota is read from Codex/ChatGPT quota service responses. If the response format changes, the app shows an unavailable or stale state instead of inventing quota values.
+There is no analytics, tracking, account system, or cloud sync. See [PRIVACY.md](PRIVACY.md) for network and storage details and [SECURITY.md](SECURITY.md) for reporting guidance.
 
 ## Development
 
-Requirements:
+Requirements: Node.js 22, Rust stable, and the [Tauri 2 prerequisites](https://v2.tauri.app/start/prerequisites/) for your platform. Windows builds require the MSVC toolchain and WebView2; macOS builds require Apple command-line developer tools.
 
-- Node.js 20+
-- Rust stable
-- Tauri 2 system dependencies for your platform
-
-```bash
-npm install
-npm run dev
-npm run test
+```sh
+npm ci
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml --locked
 npm run build
-npm run tauri dev
+npm run tauri -- dev
 ```
 
-After Codex Desktop updates, run the compatibility check:
-
-```bash
-npm run check:codex
-```
-
-See [docs/CODEX-UPDATE-CHECK.md](docs/CODEX-UPDATE-CHECK.md) for the automated update-check workflow and optional Task Scheduler setup.
+`npm run dev` is a browser preview with mock data. It cannot validate desktop authentication, native windows, or SQLite integration. Report issues through [Codex Monitor Issues](https://github.com/bennick1/codex-monitor/issues), with personal information removed.
 
 ## Build
 
-```bash
-npm run tauri build
+Run on macOS for an Apple Silicon package:
+
+```sh
+npm run tauri -- build --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
-On Windows, Tauri may download WiX to create an MSI installer. If WiX download fails, the release executable may still be produced at:
+For a Universal macOS package, first install both Rust targets and add `--target universal-apple-darwin`. An arm64 package alone is not an Intel build.
 
-```text
-src-tauri/target/release/quota-float.exe
+Run in PowerShell on Windows for an NSIS installer:
+
+```powershell
+npm run tauri -- build --bundles nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
-## Release
+These commands produce release-mode installers with application updater artifacts disabled. Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
 
-GitHub Actions are configured for:
-
-- CI on push/PR: frontend tests, Rust tests, web build, Tauri build.
-- `v*` tags: Windows and macOS Universal installers, updater signatures, `latest.json`, and a public GitHub Release.
-
-See [docs/GITHUB-RELEASE-CHECKLIST.md](docs/GITHUB-RELEASE-CHECKLIST.md) before publishing a version for others.
-
-Do not upload local credentials, `.codex`, `.env*`, screenshots with personal data, `node_modules`, `dist`, `src-tauri/target`, or local installers to source control.
+The [release preparation guide](docs/RELEASE.md) covers naming, SHA256, build provenance, and validation. CI compilation and artifact creation do not replace installation and use on real Windows/macOS machines. No GitHub Release should be created until the maintainer approves the completed report.
 
 ## License
 
-MIT
+[MIT](LICENSE). Based on [Quota Float](https://github.com/change-42-yhmm/quota-float); the original copyright notice is preserved. Codex Monitor is an independent project and is not an official OpenAI product.

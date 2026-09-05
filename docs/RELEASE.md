@@ -1,78 +1,40 @@
-# 发布说明
+# Codex Monitor 发布准备
 
-## 当前发布目标
+V1.0.0 目标：`Codex-Monitor-1.0.0.dmg`、`Codex-Monitor-1.0.0.exe`、`SHA256SUMS`。最终结论以 [验收报告](v1.0.0-release-validation-report.md) 为准。
 
-Quota Float 使用同一套 React/CSS/Tauri 代码构建 Windows 和 macOS 版本。视觉效果、悬浮球、展开卡片、透明度、圆角和动画参数都应保持在共享前端代码中，避免维护 Windows/macOS 两套 UI。
+## 构建与制品
 
-当前发布默认输出 unsigned 包：
+macOS 在 Mac 上构建，Windows 在 Windows MSVC 环境构建。统一 Node 22、Rust stable，使用已提交的 npm/Cargo lockfile；记录实际版本，不能只写 stable。本机 arm64 包不等于 Universal 包或 Intel 验收。
 
-- `quota-float-windows-unsigned.zip`
-- `quota-float-macos-universal-unsigned.zip`
-
-macOS 包使用 Universal 构建，同时支持 Apple Silicon 和 Intel Mac。
-
-## 发布一个 GitHub 下载版本
-
-推送 `v*` tag 会触发 `.github/workflows/release.yml`，构建 Windows unsigned 包和 macOS Universal unsigned 包，并上传到草稿 GitHub Release。
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
+```sh
+npm ci
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml --locked
+npm run check:updater-policy
+npm run tauri -- build --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
+node scripts/prepare-release-artifacts.mjs src-tauri/target/release/bundle outputs/v1.0.0
 ```
 
-工作流完成后，到 GitHub Releases 检查草稿发布，确认说明和附件后手动发布。
+Windows PowerShell 把构建参数换成 `--bundles nsis`，同样使用命名脚本。Windows NSIS 配置为 `currentUser`，但 WebView2/运行时存在性和普通用户实际使用仍需实机确认。
 
-## CI 与构建
+Universal Mac 先安装 `aarch64-apple-darwin`、`x86_64-apple-darwin`，构建追加 `--target universal-apple-darwin`，命名脚本输入目录改为 `src-tauri/target/universal-apple-darwin/release/bundle`。
 
-`.github/workflows/ci.yml` 会在 push/PR 时执行：
+脚本只接受版本 1.0.0 的一个 DMG 和/或 NSIS setup.exe，拒绝同平台多个候选或覆盖不同内容。它把制品复制为目标名称，并对输出目录已有的最终安装包重算 `SHA256SUMS`。只有一个平台时这是部分清单；合并两平台后必须重新执行，不能直接拼接未知来源的校验文件。构建时间、来源 commit、源码差异和工具版本随构建证据保存到 ignored 的 outputs，不能把工作区构建写成已提交 SHA 的无差异产物。
 
-- 前端测试、前端构建、npm audit。
-- Windows 桌面测试和 Tauri build。
-- macOS 桌面测试和 Tauri Universal build。
+## GitHub Actions
 
-macOS CI/release 会显式安装：
+CI 在 push/PR 上验证前端与 Windows/macOS 编译。`release.yml` 为手动 Release Preparation，只有 read 权限，构建并上传 Actions artifacts，不创建 tag、draft Release 或 public Release。准备结果仍需下载到真实双平台验收。
 
-- `aarch64-apple-darwin`
-- `x86_64-apple-darwin`
+V1 正式采用手动 GitHub Release 更新。运行时不注册 Tauri updater、不查询或安装上游版本；托盘下载入口只打开本项目 Releases。`npm run check:updater-policy` 在 CI 与 Release Preparation 中防止上游 updater 地址或 updater 依赖回归。
 
-并使用：
+V1.0.0 的分发边界为 **Unsigned / Not Notarized**。Windows Authenticode、Apple Developer ID 和 notarization 均未配置，不能声称 Apple verified、notarized 或已解决 Gatekeeper/SmartScreen；这些状态必须在 README、报告和 Release Notes 中如实披露。
 
-```bash
-npm run tauri -- build --target universal-apple-darwin
-```
+## 升级与数据
 
-## macOS unsigned 包使用说明
+V1 保留 `app.quotafloat.desktop`，配置与统计目录继续使用它。productName、binary 改名不保证旧安装升级、开始菜单和开机启动项自动迁移；参见 [名称迁移清单](v1.0.0-name-migration-inventory.md)。退出旧实例并做一致性备份；不得覆盖活跃 SQLite 或删除旧统计，需验证重启后四周期统计和检查点仍在。
 
-因为当前 macOS 包未签名、未公证，首次打开时 Gatekeeper 可能会阻止启动。小范围测试用户可以使用以下方式打开：
+## 人工确认后的发布
 
-1. 解压下载的 macOS zip。
-2. 将应用移动到 Applications 或任意测试目录。
-3. 右键点击应用，选择 Open。
-4. 在系统提示中再次选择 Open。
+只有 [发布检查清单](GITHUB-RELEASE-CHECKLIST.md) 全部满足、报告 Ready、用户明确批准后，才允许创建 `v1.0.0` Release，标题 `Codex Monitor v1.0.0`，使用 [Release 文案模板](RELEASE_TEMPLATE.md) 和两份验收过的最终安装包加完整校验文件。
 
-如果系统仍然阻止，可以在 System Settings -> Privacy & Security 中允许打开该应用。
-
-## 签名与公证
-
-## 自动更新签名密钥：必须备份
-
-自动更新依赖 Tauri 更新签名密钥：私钥用于在发布时签名安装包与 `latest.json`，公钥内置在应用中用于验证更新未被篡改。
-
-- 私钥文件 `.tauri-updater.key` 必须存放在安全的加密备份或密码管理器中，且绝不能提交到 Git、上传到 Release 附件、发送到聊天或公开粘贴。
-- GitHub Actions 只通过仓库 Secret `TAURI_SIGNING_PRIVATE_KEY` 读取私钥；无需将私钥写入任何源码或配置文件。
-- 丢失私钥不会泄露用户的 Codex 数据，但会使已经发布的应用无法信任由新密钥签名的自动更新；届时需要让用户手动安装一次新版。
-
-Unsigned 包可以用于内部测试或小范围分发，但公开分发建议补齐签名与公证：
-
-- Windows：代码签名证书，避免 SmartScreen 或未知发布者提示。
-- macOS：Apple Developer ID Application 证书、Team ID、app-specific password，并完成 notarization。
-- CI：将证书、密码和 Team ID 放入 GitHub Secrets，再在 release workflow 中加入签名和公证步骤。
-
-证书和账号凭据不能由代码仓库生成，需要由项目所有者购买、申请或配置。
-
-## 跨平台维护原则
-
-- 后续效果调整默认只改共享前端代码。
-- 平台差异只放在桌面壳层，例如托盘、置顶、拖动、点击穿透、开机启动。
-- 不默认启用原生窗口级 Acrylic/Vibrancy；它会作用于整个窗口矩形，不符合只让圆角悬浮球卡片产生毛玻璃效果的设计目标。
-- Codex 登录态读取继续使用 `CODEX_HOME` 或用户目录 `.codex/auth.json`，Windows/macOS 共用同一逻辑。
+本次准备不自动创建 Release，也不把本机数据库、会话、真实账号截图或安装包提交到 Git。

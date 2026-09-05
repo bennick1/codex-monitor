@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_PATH="${1:-/Applications/Quota Float.app}"
+APP_PATH="${1:-/Applications/Codex Monitor.app}"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 OUT_DIR="${2:-$PWD/outputs/macos-smoke-$STAMP}"
 

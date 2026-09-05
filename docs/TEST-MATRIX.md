@@ -1,4 +1,6 @@
-# 测试矩阵
+# Codex Monitor 测试矩阵
+
+V1.0.0 的实际已验/未验结果以 [发布验收报告](v1.0.0-release-validation-report.md) 为准。下表为通用场景清单，历史状态不能替代本次双平台验收。
 
 | 范围 | 场景 | 预期 | 状态 |
 | --- | --- | --- | --- |
@@ -15,8 +17,8 @@
 | 视觉 | 悬浮球和展开卡片 | Windows/macOS 使用同一 CSS 参数，尺寸、透明度、圆角、文字布局保持一致 | 待双平台截图验收 |
 | 生命周期 | 单实例、关闭隐藏、休眠恢复 | 无重复后台进程，窗口可恢复 | 待实机验证 |
 | 性能 | 空闲 CPU/内存 | 无持续高 CPU，记录平台基线 | 待安装包验证 |
-| 构建 | Windows unsigned 包 | 生成 `quota-float-windows-unsigned.zip` | CI/Release 验证 |
-| 构建 | macOS Universal unsigned 包 | 生成 `quota-float-macos-universal-unsigned.zip`，支持 Apple Silicon 和 Intel | CI/Release 验证 |
+| 构建 | Windows unsigned 包 | 生成 `Codex-Monitor-1.0.0.exe` | CI/Release 验证 |
+| 构建 | macOS 包 | 生成 `Codex-Monitor-1.0.0.dmg`；在报告中注明实际架构，Universal 需单独构建验证 | CI/Release 验证 |
 | 隐私 | 日志与配置扫描 | 无 token、账号 ID、原始响应 | 静态审查通过，待安装包扫描 |
 
 ## 发布门槛

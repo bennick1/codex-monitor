@@ -11,7 +11,7 @@ vi.mock("./lib/bridge", () => ({
   fetchSnapshots: api.quota, getPreferences: api.preferences, listenDesktopEvents: api.desktopListen,
   setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: vi.fn(), setAlwaysOnTop: vi.fn(),
 }));
-vi.mock("./lib/appUpdate", () => ({ checkForAppUpdate: vi.fn(), openReleasePage: vi.fn() }));
+vi.mock("./lib/releasePage", () => ({ openReleasePage: vi.fn() }));
 const prefs = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light" };
 const quota = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 }, resetCredits: null, updatedAt: new Date().toISOString(), status: "ok", message: null };
 async function flush() { await act(async () => { await Promise.resolve(); }); }

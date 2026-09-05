@@ -93,7 +93,7 @@ export function DesignPlayground() {
       <div className={isOrb ? "design-orb-frame" : "design-card-frame"}>{render(snapshot)}</div>
     </section>
     <aside className="design-controls">
-      <header><p className="design-kicker">QUOTA FLOAT · PREVIEW</p><h1>{t.geometryPreview}</h1><p className="design-description">{t.description}</p></header>
+      <header><p className="design-kicker">CODEX MONITOR · PREVIEW</p><h1>{t.geometryPreview}</h1><p className="design-description">{t.description}</p></header>
       <div className="design-language-switch" role="group" aria-label={t.language}><span>{t.language}</span>{(["zh-CN", "en"] as const).map((value) => <button key={value} className={language === value ? "is-active" : ""} onClick={() => setLanguage(value)}>{value === "zh-CN" ? "中文" : "English"}</button>)}</div>
       <p className="design-source-note">{t.source} <code>DESKTOP_PALETTES.{theme}.{active}</code></p>
       <Range label={t.cornerRadius} value={controls.radius} min={18} max={64} unit="px" onChange={(value) => update("radius", value)} />

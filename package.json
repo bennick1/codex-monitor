@@ -1,12 +1,13 @@
 {
-  "name": "quota-float",
+  "name": "codex-monitor",
   "private": true,
-  "version": "0.2.4",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader native",
     "build": "tsc && vite build --configLoader native",
     "check:codex": "powershell -ExecutionPolicy Bypass -File scripts/check-codex-update.ps1",
+    "check:updater-policy": "node scripts/check-updater-policy.mjs",
     "test": "vitest run --configLoader native",
     "tauri": "tauri"
   },
@@ -14,8 +15,6 @@
     "@phosphor-icons/react": "^2.1.10",
     "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-opener": "^2.5.4",
-    "@tauri-apps/plugin-process": "^2.3.1",
-    "@tauri-apps/plugin-updater": "^2.10.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
