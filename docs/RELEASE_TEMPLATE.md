@@ -33,4 +33,4 @@ Statistics remain local. No prompts, chats, source code, or account credentials 
 
 ## Validation
 
-**Draft text only. Not approved for publication.** Replace this paragraph only after the [V1.0.0 report](https://github.com/bennick1/codex-monitor/blob/main/docs/v1.0.0-release-validation-report.md) is Ready, both final artifacts have been tested on real machines, and the maintainer has explicitly approved creating the Release. Do not copy historical test results as V1.0.0 evidence.
+The [V1.0.0 validation report](https://github.com/bennick1/codex-monitor/blob/main/docs/v1.0.0-release-validation-report.md) is Ready. macOS and Windows human acceptance passed; detailed Windows environment records were not supplied and are not inferred. Final unsigned candidates were built from commit `a4d3b3119e4411c52d4d7c51d7700bcf5ca0adc0` in [Release Preparation #33982068031](https://github.com/bennick1/codex-monitor/actions/runs/33982068031). The workflow passed tests, audit, updater-policy checks, macOS bundle verification, and Windows NSIS install/start/uninstall smoke. Verify the attached `SHA256SUMS` before installation.
