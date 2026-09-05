@@ -1,4 +1,6 @@
 mod codex;
+#[cfg(target_os = "macos")]
+mod macos_widget;
 mod models;
 mod token_stats;
 
@@ -21,6 +23,7 @@ use tauri::{
 };
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_updater::UpdaterExt;
+#[cfg(not(target_os = "macos"))]
 use tauri_plugin_window_state::Builder as WindowStateBuilder;
 
 // These are the light-theme visual dimensions. They deliberately do not vary
@@ -208,12 +211,16 @@ mod preference_migration_tests {
                 assert_eq!(prefs.language, "en");
                 assert_eq!(prefs.appearance, appearance);
                 persist_preferences(&path, &prefs).unwrap();
-                let saved: serde_json::Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+                let saved: serde_json::Value =
+                    serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
                 assert_eq!(saved.as_object().unwrap().len(), 7);
                 assert!(saved.get("license").is_none());
                 assert!(saved.get("selectedSkin").is_none());
                 assert_eq!(fs::read(&db_path).unwrap(), b"untouched database sentinel");
-                assert_eq!(fs::read(&window_path).unwrap(), br#"{"widget":{"x":123,"y":234}}"#);
+                assert_eq!(
+                    fs::read(&window_path).unwrap(),
+                    br#"{"widget":{"x":123,"y":234}}"#
+                );
                 // Backup recovery must use the same compatibility path.
                 fs::write(&path, b"invalid").unwrap();
                 assert_eq!(load_preferences(&path).language, "en");
@@ -965,7 +972,13 @@ fn set_widget_always_on_top(
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
-    if let Err(error) = window.set_always_on_top(always_on_top) {
+    #[cfg(target_os = "macos")]
+    let applied = macos_widget::set_always_on_top(&window, always_on_top);
+    #[cfg(not(target_os = "macos"))]
+    let applied = window
+        .set_always_on_top(always_on_top)
+        .map_err(|error| error.to_string());
+    if let Err(error) = applied {
         let _ = persist_preferences(&state.preferences_path, &previous);
         return Err(format!("failed to toggle always-on-top: {error}"));
     }
@@ -1125,9 +1138,10 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 if let Some(window) = app.get_webview_window("widget") {
                     if window.is_visible().unwrap_or(false) {
                         let _ = window.hide();
+                        #[cfg(target_os = "macos")]
+                        macos_widget::save_visibility(app);
                     } else {
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                        show_widget(&window);
                     }
                 }
             }
@@ -1291,22 +1305,44 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
+fn show_widget(window: &tauri::WebviewWindow) {
+    #[cfg(target_os = "macos")]
+    {
+        if let Err(error) = macos_widget::show(window) {
+            eprintln!("failed to show widget: {error}");
+        }
+        macos_widget::save_visibility(window.app_handle());
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
 pub fn run() {
+    #[allow(unused_mut)]
+    let mut context = tauri::generate_context!();
+    #[cfg(target_os = "macos")]
+    macos_widget::prepare_config(context.config_mut());
+    #[cfg(target_os = "macos")]
+    let window_state = macos_widget::state_plugin();
+    #[cfg(not(target_os = "macos"))]
+    let window_state = WindowStateBuilder::default().build();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if let Some(window) = app.get_webview_window("widget") {
-                let _ = window.show();
-                let _ = window.set_focus();
+                show_widget(&window);
             }
         }))
         .plugin(tauri_plugin_autostart::init(
             MacosLauncher::LaunchAgent,
             None,
         ))
-        .plugin(WindowStateBuilder::default().build())
+        .plugin(window_state)
         .setup(|app| {
             let token_db = app
                 .path()
@@ -1341,9 +1377,17 @@ pub fn run() {
                 drag_mode: Mutex::new(None),
                 update_available: Mutex::new(false),
             });
-            if setup_tray(app).is_err() {
-                eprintln!("tray setup failed; enabling taskbar fallback");
+            if let Err(error) = setup_tray(app) {
+                #[cfg(target_os = "macos")]
+                {
+                    // A hidden or click-through widget without its tray is not
+                    // operable. Fail startup instead of leaving a lost process.
+                    eprintln!("tray setup failed; unable to start widget");
+                    return Err(error.into());
+                }
+                #[cfg(not(target_os = "macos"))]
                 if let Some(window) = app.get_webview_window("widget") {
+                    eprintln!("tray setup failed; enabling taskbar fallback: {error}");
                     let _ = window.set_skip_taskbar(false);
                 }
             }
@@ -1351,17 +1395,21 @@ pub fn run() {
                 let _ = apply_lock(app.handle(), true);
             }
             if let Some(window) = app.get_webview_window("widget") {
-                let _ = window.set_always_on_top(preferences.always_on_top);
-                // A saved window position can be outside the active monitor while
-                // iterating in development. Keep the test widget discoverable.
-                #[cfg(debug_assertions)]
+                #[cfg(target_os = "macos")]
+                macos_widget::initialize(&window, preferences.always_on_top)
+                    .map_err(std::io::Error::other)?;
+                #[cfg(not(target_os = "macos"))]
                 {
-                    let _ = window.center();
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                    let _ = window.set_always_on_top(preferences.always_on_top);
+                    #[cfg(debug_assertions)]
+                    {
+                        let _ = window.center();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
                 }
             }
-            #[cfg(debug_assertions)]
+            #[cfg(all(debug_assertions, not(target_os = "macos")))]
             {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
@@ -1398,8 +1446,7 @@ pub fn run() {
             } = event
             {
                 if let Some(window) = app.get_webview_window("widget") {
-                    let _ = window.show();
-                    let _ = window.set_focus();
+                    show_widget(&window);
                 }
             }
         })
@@ -1415,9 +1462,11 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
+                #[cfg(target_os = "macos")]
+                macos_widget::save_visibility(window.app_handle());
             }
         })
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("failed to build Quota Float");
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Resumed) {
