@@ -361,8 +361,11 @@ button { font: inherit; }
 .token-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin: 0; }
 .token-grid > div { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
 .token-grid dt { font-size: 12px; line-height: 16px; white-space: nowrap; }
-.token-grid dd { margin: 0; min-width: 0; font-size: 18px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.token-value { cursor: default; }
+.token-grid dd { margin: 0; min-width: 0; max-width: 100%; font-size: 18px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.token-value { display: inline-block; max-width: 100%; vertical-align: top; cursor: default; }
+.token-value--long { font-size: 12px; line-height: 16px; white-space: normal; overflow-wrap: anywhere; }
+.token-grid:has(.token-value--long) { row-gap: 4px; }
+.token-grid:has(.token-value--long) + .token-meta { margin-top: 6px; }
 .token-value small { font-size: 12px; }
 .token-value:focus-visible { outline: 2px solid #315f9f; outline-offset: 2px; border-radius: 3px; }
 .token-exact { display: none; position: absolute; z-index: 5; left: 0; right: 0; top: -23px; padding: 7px 9px; border-radius: 8px; color: #17191f; background: #edf3f8; box-shadow: 0 2px 12px #0002; font-size: 12px; line-height: 16px; white-space: normal; overflow-wrap: anywhere; pointer-events: none; }

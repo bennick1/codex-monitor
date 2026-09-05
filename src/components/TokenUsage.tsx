@@ -1,7 +1,7 @@
 import { useId } from "react";
 import type { Language } from "../types";
 import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
-import { formatTokenCount } from "../lib/tokenFormat";
+import { formatTokenCount, formatTokenCountExact } from "../lib/tokenFormat";
 
 export function TokenUsage({ view, language }: { view: TokenStatisticsView; language: Language }) {
   const id = useId();
@@ -43,12 +43,13 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
         const value = item?.totalTokens;
         const valid = !unconfirmedScan && typeof value === "string" && /^\d+$/.test(value);
         const text = valid ? formatTokenCount(value) : ((!snapshot && loading && !failed) || snapshot?.status === "scanning") ? "…" : "—";
+        const exact = valid ? formatTokenCountExact(value) : null;
         return <div key={t.labels[index]} data-period={["today", "thisWeek", "thisMonth", "total"][index]}>
           <dt>{t.labels[index]}</dt>
-          <dd><span className="token-value" tabIndex={valid ? 0 : undefined}
-            aria-label={valid ? `${t.labels[index]}: ${value}${item?.isPartial ? ` · ${t.partial}` : ""}` : undefined}>
+          <dd><span className={`token-value${text.length > 10 ? " token-value--long" : ""}`} tabIndex={valid ? 0 : undefined}
+            aria-label={valid ? `${t.labels[index]}: ${exact}${item?.isPartial ? ` · ${t.partial}` : ""}` : undefined}>
             {text}{item?.isPartial ? <small aria-hidden="true">*</small> : null}
-            {valid ? <span className="token-exact" role="tooltip">{t.labels[index]}: {value}{item?.isPartial ? ` · ${t.partial}` : ""}</span> : null}
+            {valid ? <span className="token-exact" role="tooltip">{t.labels[index]}: {exact}{item?.isPartial ? ` · ${t.partial}` : ""}</span> : null}
           </span></dd>
         </div>;
       })}

@@ -74,7 +74,7 @@ describe("App hover integration with the real TokenUsage component", () => {
     act(() => api.desktopListen.mock.calls[0][0].onRefresh()); await flush();
     expect(api.refreshTokens).toHaveBeenCalledOnce();
     expect(screen.getByRole("progressbar")).toBeTruthy();
-    expect(screen.getByLabelText("本周: 1200")).toBeTruthy();
+    expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
     if (failed === "tokens") expect(screen.getByText("暂未更新")).toBeTruthy();
   });
   it("preserves follow-system appearance while open", async () => {

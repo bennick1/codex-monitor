@@ -33,7 +33,24 @@ try {
       return errors;
     });
     results.push({ name, errors });
-    if (status === 'partial' && quota === 'ok') await page.screenshot({ path: `${out}/${name}.png` });
+    if (status === 'partial' && quota === 'ok') {
+      await page.screenshot({ path: `${out}/${name}.png` });
+      for (const mode of ['hover', 'focus']) for (let index = 0; index < 4; index++) {
+        const value = page.locator('.token-value').nth(index);
+        await value[mode]();
+        const detailErrors = await value.evaluate(el => {
+          const detail = el.querySelector('.token-exact');
+          const box = detail.getBoundingClientRect();
+          const card = document.querySelector('main').getBoundingClientRect();
+          const errors = [];
+          if (!box.width || !box.height || getComputedStyle(detail).display === 'none') errors.push('detail not visible');
+          if (box.left < card.left || box.right > card.right || box.top < card.top || box.bottom > card.bottom || detail.scrollWidth > detail.clientWidth + 1) errors.push('detail overflow');
+          if (!/: \d{1,3}(,\d{3})*( · |$)/.test(detail.textContent) || /[万亿]/.test(detail.textContent)) errors.push('detail is not a grouped full integer');
+          return errors;
+        });
+        results.push({ name: `${name}-${mode}-${index}`, errors: detailErrors });
+      }
+    }
   }
   await writeFile(`${out}/results.json`, JSON.stringify(results, null, 2));
   const failed = results.filter(r => r.errors.length);
