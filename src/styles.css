@@ -349,3 +349,30 @@ button { font: inherit; }
 .design-workbench--dark .design-source-note { border-color: #729cf5; color: #b5c5df; background: #1d2a3d; }
 @media (max-width: 1320px) { .design-workbench { grid-template-columns: minmax(480px, 1fr) 390px; } .palette-matrix { grid-column: 1 / -1; min-height: auto; border-top: 1px solid #dbe1e9; border-left: 0; } .palette-matrix__themes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 820px) { .design-workbench { grid-template-columns: 1fr; } .design-stage { min-height: 520px; padding: 40px 20px; } .design-controls { position: static; height: auto; border-left: 0; border-top: 1px solid #dfe1e6; } .palette-matrix { padding: 34px 20px 44px; } .palette-matrix__themes { grid-template-columns: 1fr; } }
+
+/* Token integration: keep the orb/width and the original quota hierarchy. */
+.quota-card--tokens { height: 506px; }
+.quota-card--tokens .card-footer { top: 198px; bottom: auto; }
+.quota-card--tokens .error-state { margin-top: 22px; }
+.quota-card--tokens .error-refresh-button { margin-top: 12px; }
+.quota-card--tokens .operation-notice { top: 80px; bottom: auto; }
+.token-usage { position: absolute; top: 292px; left: 24px; right: 24px; padding-top: 12px; border-top: 1px solid rgba(17,20,27,.18); color: #17191f; }
+.token-usage h2 { margin: 0 0 9px; font-size: 13px; line-height: 18px; font-weight: 650; }
+.token-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; margin: 0; }
+.token-grid > div { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.token-grid dt { font-size: 12px; line-height: 16px; white-space: nowrap; }
+.token-grid dd { margin: 0; min-width: 0; font-size: 18px; line-height: 22px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.token-value { cursor: default; }
+.token-value small { font-size: 12px; }
+.token-value:focus-visible { outline: 2px solid #315f9f; outline-offset: 2px; border-radius: 3px; }
+.token-exact { display: none; position: absolute; z-index: 5; left: 0; right: 0; top: -23px; padding: 7px 9px; border-radius: 8px; color: #17191f; background: #edf3f8; box-shadow: 0 2px 12px #0002; font-size: 12px; line-height: 16px; white-space: normal; overflow-wrap: anywhere; pointer-events: none; }
+.token-value:hover .token-exact, .token-value:focus .token-exact { display: block; }
+.token-meta { margin-top: 10px; font-size: 12px; line-height: 16px; color: #394152; }
+.token-meta p { margin: 0; overflow-wrap: anywhere; }
+.token-status { font-weight: 600; }
+.quota-card--theme-dark .token-usage { color: #edf3ff; border-color: #edf3ff40; }
+.quota-card--theme-dark .token-meta { color: #c7d4ea; }
+.quota-card--theme-dark .token-exact { color: #edf3ff; background: #182438; }
+.quota-card--theme-dark .token-value:focus-visible { outline-color: #a9d0ff; }
+
+.quota-card--tokens.quota-card--stale .error-state p { margin-right: 0; }

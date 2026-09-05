@@ -17,6 +17,8 @@ export interface TokenStatisticsSnapshot {
   schemaVersion: number;
   generation: TokenInteger;
   scope: "localCodexHome";
+  /** Opaque backend source key; never a filesystem path. */
+  sourceId: string | null;
   queryAtUtc: string;
   timeZone: string | null;
   todayStartUtc: string | null;
@@ -59,6 +61,7 @@ export interface TokenStatisticsSnapshot {
 /** A commit/status notification: re-query to obtain a fresh common Q and timezone. */
 export interface TokenStatisticsNotification {
   schemaVersion: number;
+  sourceId: string | null;
   generation: TokenInteger;
   scanning: boolean;
 }

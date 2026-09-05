@@ -1,3 +1,5 @@
+import { TokenUsage } from "./TokenUsage";
+import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
 import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, Info, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
 import { memo, type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { clampPercent, formatDateTime, formatResetDate, formatResetTime, quotaTier } from "../lib/format";
@@ -6,6 +8,7 @@ import type { Language, ProviderSnapshot, WidgetPreferences, WidgetTheme } from 
 import { ProviderMark } from "./ProviderMark";
 
 interface Props {
+  tokens?: TokenStatisticsView;
   snapshot: ProviderSnapshot;
   preferences: WidgetPreferences;
   providerCount: number;
@@ -46,6 +49,7 @@ function localizedBackendMessage(message: string | null, language: Language): st
 
 export const QuotaCard = memo(function QuotaCard({
   snapshot,
+  tokens,
   preferences,
   providerCount,
   onPrevious,
@@ -91,7 +95,7 @@ export const QuotaCard = memo(function QuotaCard({
 
   return (
     <main
-      className={`quota-card quota-card--${snapshot.status} quota-card--${tier}${theme ? ` quota-card--theme-${theme}` : ""}`}
+      className={`quota-card quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}`}
       style={style}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
@@ -159,6 +163,7 @@ export const QuotaCard = memo(function QuotaCard({
           ) : null}
         </section>
       )}
+      {tokens ? <TokenUsage view={tokens} language={language} /> : null}
     </main>
   );
 });

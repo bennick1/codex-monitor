@@ -31,6 +31,7 @@ use tauri_plugin_window_state::Builder as WindowStateBuilder;
 // the same footprint as its CSS content.
 const COLLAPSED_LOGICAL_SIZE: f64 = 72.0;
 const EXPANDED_LOGICAL_SIZE: f64 = 306.0;
+const EXPANDED_LOGICAL_HEIGHT: f64 = 506.0;
 const EDGE_SAFE_INSET_LOGICAL: f64 = 4.0;
 const SNAP_THRESHOLD_LOGICAL: f64 = 24.0;
 const POSITION_EPSILON: u32 = 2;
@@ -599,7 +600,7 @@ fn expand_widget(
     );
     let expanded_size = PhysicalSize::new(
         widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
-        widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
+        widget_window_size(EXPANDED_LOGICAL_HEIGHT, scale_factor, safe_inset),
     );
     let Some(monitor) = monitor else {
         window
@@ -668,7 +669,7 @@ mod geometry_tests {
     fn expansion_stays_above_a_bottom_taskbar() {
         let position = expanded_position_in_bounds(
             rect(1844, 964, 80),
-            PhysicalSize::new(314, 314),
+            PhysicalSize::new(314, 514),
             DockState {
                 horizontal: Some(HorizontalDock::Right),
                 vertical: Some(VerticalDock::Bottom),
@@ -677,14 +678,14 @@ mod geometry_tests {
             PhysicalSize::new(1920, 1040),
             4,
         );
-        assert_eq!(position, PhysicalPosition::new(1610, 730));
+        assert_eq!(position, PhysicalPosition::new(1610, 530));
     }
 
     #[test]
     fn expansion_handles_negative_origin_work_areas() {
         let position = expanded_position_in_bounds(
             rect(-1284, -4, 80),
-            PhysicalSize::new(314, 314),
+            PhysicalSize::new(314, 514),
             DockState {
                 horizontal: Some(HorizontalDock::Left),
                 vertical: Some(VerticalDock::Top),
@@ -700,13 +701,13 @@ mod geometry_tests {
     fn undocked_expansion_flips_inward_near_work_area_edges() {
         let position = expanded_position_in_bounds(
             rect(1750, 900, 80),
-            PhysicalSize::new(314, 314),
+            PhysicalSize::new(314, 514),
             DockState::default(),
             PhysicalPosition::new(0, 0),
             PhysicalSize::new(1920, 1040),
             4,
         );
-        assert_eq!(position, PhysicalPosition::new(1516, 666));
+        assert_eq!(position, PhysicalPosition::new(1516, 466));
     }
 }
 
@@ -816,7 +817,7 @@ fn finish_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     );
     let expanded_size = PhysicalSize::new(
         widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
-        widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
+        widget_window_size(EXPANDED_LOGICAL_HEIGHT, scale_factor, safe_inset),
     );
     let mode = state
         .drag_mode
@@ -1005,8 +1006,12 @@ fn sync_widget_appearance(_appearance: String, app: AppHandle, state: State<'_, 
         COLLAPSED_LOGICAL_SIZE
     };
     let side = widget_window_size(visual_size, scale_factor, safe_inset);
+    let height = widget_window_size(
+        if visual_size == EXPANDED_LOGICAL_SIZE { EXPANDED_LOGICAL_HEIGHT } else { visual_size },
+        scale_factor, safe_inset,
+    );
     window
-        .set_size(PhysicalSize::new(side, side))
+        .set_size(PhysicalSize::new(side, height))
         .map_err(|_| "failed to resize widget for appearance".to_string())
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
 import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
 import { needsFastRefresh, quotaTier } from "./lib/format";
@@ -32,6 +33,7 @@ export default function App() {
   const [operationError, setOperationError] = useState<string | null>(null);
   const [showUpdateFallback, setShowUpdateFallback] = useState(false);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
+  const tokens = useTokenStatistics(!compact);
   const failures = useRef(0);
   const previousPrimary = useRef(new Map<string, number>());
   const consumptionTimers = useRef(new Map<string, number>());
@@ -128,6 +130,11 @@ export default function App() {
         return getPreferences().catch(() => DEFAULT_PREFS);
       });
       setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) });
+      // Window-state may restore the last expanded footprint while React starts
+      // as an orb. Reconcile once, unless the user has already begun hovering.
+      if (!value.stayExpanded && hoverSequence.current === 0) {
+        void setWidgetExpanded(false).catch(() => undefined);
+      }
     })().catch(() => setPreferences(DEFAULT_PREFS));
     return () => {
       for (const timer of consumptionTimers.current.values()) window.clearTimeout(timer);
@@ -136,14 +143,19 @@ export default function App() {
     };
   }, [refresh]);
 
+  const refreshAll = useCallback(() => {
+    void refresh(true);
+    void tokens.refresh();
+  }, [refresh, tokens.refresh]);
+
   useEffect(() => {
     let cancelled = false;
     let cleanup: () => void = () => {};
-    void listenDesktopEvents({ onPreferences: (value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) }), onRefresh: () => void refresh(true), onUpdate: () => checkUpdate(true) }).then((value) => {
+    void listenDesktopEvents({ onPreferences: (value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) }), onRefresh: refreshAll, onUpdate: () => checkUpdate(true) }).then((value) => {
       if (cancelled) value(); else cleanup = value;
     }).catch(() => setOperationError(operation.listenerFailed));
     return () => { cancelled = true; cleanup(); };
-  }, [checkUpdate, operation.listenerFailed, refresh]);
+  }, [checkUpdate, operation.listenerFailed, refreshAll]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => checkUpdate(false), 12_000);
@@ -247,7 +259,8 @@ export default function App() {
       onLock={() => { setOperationError(null); void setAlwaysOnTop(!preferences.alwaysOnTop).then((value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) })).catch(() => setOperationError(operation.alwaysOnTopFailed)); }}
       onDrag={() => startDragging()}
       onHover={handleHover}
-      onRefresh={() => refresh(true)}
+      onRefresh={refreshAll}
+      tokens={tokens}
       isConsuming={consumingProviders.has(current.provider)}
       theme={theme}
 

@@ -17,6 +17,7 @@ use std::{
 #[serde(rename_all = "camelCase")]
 pub struct Notification {
     schema_version: i64,
+    source_id: Option<String>,
     generation: String,
     scanning: bool,
 }
@@ -142,6 +143,7 @@ impl TokenStatisticsService {
                             }
                             notify(Notification {
                                 schema_version: SCHEMA_VERSION,
+                                source_id: inner.runtime.lock().ok().and_then(|s| s.root.clone()),
                                 generation: generation.to_string(),
                                 scanning: true,
                             });
@@ -154,6 +156,7 @@ impl TokenStatisticsService {
                         state.error = result.err().map(|e| e.0);
                         Notification {
                             schema_version: SCHEMA_VERSION,
+                            source_id: state.root.clone(),
                             generation: state.generation.to_string(),
                             scanning: false,
                         }
@@ -250,6 +253,7 @@ impl TokenStatisticsService {
             snapshot.status = "scanning".into();
         }
         snapshot.quality.warning_codes.sort();
+        snapshot.source_id = root.clone();
         snapshot.quality.warning_codes.dedup();
         if let Ok(mut state) = self.inner.runtime.lock() {
             if state.root == root && snapshot.total.is_some() {

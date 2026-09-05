@@ -1260,6 +1260,9 @@ fn tauri_ipc_contract_uses_registered_independent_commands() {
     };
     let result = invoke("get_token_statistics");
     assert_eq!(result["scope"], "localCodexHome");
+    assert_eq!(result["sourceId"], service.query().source_id.unwrap());
+    assert_eq!(result["sourceId"].as_str().unwrap().len(), 64);
+    assert!(!result["sourceId"].as_str().unwrap().contains('/'));
     assert_eq!(result["total"]["totalTokens"], "120");
     assert!(result["generation"].is_string());
     assert_eq!(invoke("refresh_token_statistics")["queued"], true);
