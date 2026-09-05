@@ -41,3 +41,7 @@ token.json
 /tools/maintainer-issuer/issuance-ledger.json
 .tauri-updater.key
 /效果/
+*.sqlite3
+*.sqlite3-*
+*.sqlite3.*
+/src-tauri/gen/schemas/macOS-schema.json

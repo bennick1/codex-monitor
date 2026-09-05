@@ -1,4 +1,5 @@
 import type { ProviderSnapshot, SupporterStatus, WidgetPreferences, WidgetSkin } from "../types";
+import type { TokenStatisticsSnapshot, TokenStatisticsNotification, TokenStatisticsRefresh } from "./tokenStatistics";
 
 const defaultPreferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", license: null, licenses: [], unlockedSkin: null, unlockedSkins: [], selectedSkin: "default" };
 
@@ -29,6 +30,24 @@ export async function fetchSnapshots(force = false): Promise<ProviderSnapshot[]>
   if (!isTauri()) return [mockSnapshot];
   const { invoke } = await import("@tauri-apps/api/core");
   return invoke<ProviderSnapshot[]>(force ? "refresh_snapshots" : "get_snapshots");
+}
+
+export async function getTokenStatistics(): Promise<TokenStatisticsSnapshot> {
+  if (!isTauri()) throw new Error("Local Token Statistics requires the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TokenStatisticsSnapshot>("get_token_statistics");
+}
+
+export async function refreshTokenStatistics(): Promise<TokenStatisticsRefresh> {
+  if (!isTauri()) throw new Error("Local Token Statistics requires the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<TokenStatisticsRefresh>("refresh_token_statistics");
+}
+
+export async function listenTokenStatisticsUpdated(handler: (event: TokenStatisticsNotification) => void): Promise<() => void> {
+  if (!isTauri()) return () => undefined;
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<TokenStatisticsNotification>("token-statistics-updated", (event) => handler(event.payload));
 }
 
 export async function getPreferences(): Promise<WidgetPreferences> {

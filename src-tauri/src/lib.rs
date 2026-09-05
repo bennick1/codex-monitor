@@ -1,6 +1,7 @@
 mod codex;
 mod license;
 mod models;
+mod token_stats;
 
 use std::{
     fs,
@@ -1643,6 +1644,18 @@ pub fn run() {
         ))
         .plugin(WindowStateBuilder::default().build())
         .setup(|app| {
+            let token_db = app
+                .path()
+                .app_local_data_dir()
+                .ok()
+                .map(|path| path.join("token-statistics.sqlite3"));
+            let token_handle = app.handle().clone();
+            app.manage(token_stats::TokenStatisticsService::start(
+                token_db,
+                move |event| {
+                    let _ = token_handle.emit("token-statistics-updated", event);
+                },
+            ));
             let data_dir = app.path().app_config_dir()?;
             let preferences_path = data_dir.join("preferences.json");
             let mut preferences = load_preferences(&preferences_path);
@@ -1730,6 +1743,8 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            token_stats::service::get_token_statistics,
+            token_stats::service::refresh_token_statistics,
             get_snapshots,
             refresh_snapshots,
             expand_widget,
@@ -1759,6 +1774,14 @@ pub fn run() {
             }
         })
         .on_window_event(|window, event| {
+            if matches!(event, WindowEvent::Focused(true)) {
+                if let Some(service) = window
+                    .app_handle()
+                    .try_state::<token_stats::TokenStatisticsService>()
+                {
+                    service.refresh();
+                }
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
@@ -1768,7 +1791,15 @@ pub fn run() {
         .expect("failed to build Quota Float");
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Resumed) {
+            if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {
+                service.refresh();
+            }
             let _ = app_handle.emit_to("widget", "refresh-requested", ());
+        }
+        if matches!(event, tauri::RunEvent::Exit) {
+            if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {
+                service.stop();
+            }
         }
     });
 }

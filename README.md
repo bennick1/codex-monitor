@@ -88,7 +88,9 @@ Quota Float is local-first and intentionally narrow:
 
 - Reads the local Codex Desktop login state only to query Codex quota.
 - Sends the existing Codex access token only to ChatGPT quota endpoints.
-- Stores only widget preferences in its own app config directory.
+- Stores widget preferences in its app config directory and minimal local Token Statistics metadata in `app_local_data_dir/token-statistics.sqlite3`.
+- Token Statistics reads only `sessions` and `archived_sessions` under the effective `CODEX_HOME` (default: the user's `.codex`). It runs independently of quota authentication and network requests; the V1 backend currently has no visible Token UI.
+- Confirmed token counts, UTC times, hashed identities, relative source references, reconciliation evidence and checkpoints remain on this machine, including after the original session logs are deleted. They describe locally observed usage, not an account-wide bill or lifetime total.
 - Does not store Codex tokens, account IDs, prompts, chat history, raw quota responses, or local auth paths.
 - Does not include telemetry, analytics, crash reporting, or third-party tracking.
 - Does not redeem reset credits or modify account settings.
