@@ -1,10 +1,11 @@
-//! macOS Spaces policy for the existing Tauri NSWindow.
+//! macOS Spaces policy for a tray accessory's Tauri NSWindow.
 //! Never activate the app or change keyboard focus to maintain visibility.
 use std::{fs, path::Path, sync::mpsc};
 
 use objc2::{available, MainThreadMarker};
 use objc2_app_kit::{
-    NSFloatingWindowLevel, NSNormalWindowLevel, NSWindow, NSWindowCollectionBehavior as Behavior,
+    NSApplication, NSApplicationActivationPolicy, NSFloatingWindowLevel, NSNormalWindowLevel,
+    NSWindow, NSWindowCollectionBehavior as Behavior,
 };
 use tauri::{Manager, WebviewWindow};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt, DEFAULT_FILENAME};
@@ -24,10 +25,47 @@ fn saved_flags() -> StateFlags {
 
 pub fn prepare_config(config: &mut tauri::Config) {
     if let Some(widget) = config.app.windows.iter_mut().find(|w| w.label == "widget") {
+        // Tauri normally creates configured windows before the setup callback.
+        // Create this one explicitly after verifying the app policy and tray.
+        widget.create = false;
         widget.visible = false;
         widget.focus = false;
         widget.fullscreen = false;
     }
+}
+
+pub fn prepare_app(app: &mut tauri::App) {
+    // With Tauri 2.11.5 this configures tao's launch policy, so it MUST be
+    // called before App::run, not after the NSWindow has already been created.
+    // A regular application window did not follow native fullscreen Spaces
+    // during user acceptance even with all three collection-behavior flags.
+    app.set_activation_policy(tauri::ActivationPolicy::Accessory);
+}
+
+pub fn create_widget(app: &tauri::App) -> Result<(), String> {
+    let main = MainThreadMarker::new().ok_or("widget creation requires the main thread")?;
+    if NSApplication::sharedApplication(main).activationPolicy()
+        != NSApplicationActivationPolicy::Accessory
+    {
+        return Err(
+            "macOS accessory activation policy was not applied before window creation".into(),
+        );
+    }
+    if app.tray_by_id("main").is_none() {
+        return Err("cannot create an accessory widget without its tray".into());
+    }
+    let config = app
+        .config()
+        .app
+        .windows
+        .iter()
+        .find(|w| w.label == "widget")
+        .ok_or("widget configuration missing")?;
+    tauri::WebviewWindowBuilder::from_config(app.handle(), config)
+        .map_err(|error| error.to_string())?
+        .build()
+        .map_err(|error| error.to_string())?;
+    Ok(())
 }
 
 fn collection_behavior(mut current: Behavior, modern_spaces: bool) -> Behavior {
@@ -181,7 +219,7 @@ mod tests {
         prepare_config(&mut config);
         let widget = &config.app.windows[0];
         assert_eq!(widget.label, "widget");
-        assert!(!widget.visible && !widget.focus && !widget.fullscreen);
+        assert!(!widget.create && !widget.visible && !widget.focus && !widget.fullscreen);
         assert!(widget.focusable && widget.always_on_top);
         assert_eq!(widget.width, 80.0);
         assert_eq!(widget.height, 80.0);

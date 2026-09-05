@@ -1329,7 +1329,8 @@ pub fn run() {
     let window_state = macos_widget::state_plugin();
     #[cfg(not(target_os = "macos"))]
     let window_state = WindowStateBuilder::default().build();
-    let app = tauri::Builder::default()
+    #[allow(unused_mut)]
+    let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -1391,6 +1392,8 @@ pub fn run() {
                     let _ = window.set_skip_taskbar(false);
                 }
             }
+            #[cfg(target_os = "macos")]
+            macos_widget::create_widget(app).map_err(std::io::Error::other)?;
             if preferences.locked {
                 let _ = apply_lock(app.handle(), true);
             }
@@ -1468,6 +1471,8 @@ pub fn run() {
         })
         .build(context)
         .expect("failed to build Quota Float");
+    #[cfg(target_os = "macos")]
+    macos_widget::prepare_app(&mut app);
     app.run(|app_handle, event| {
         if matches!(event, tauri::RunEvent::Resumed) {
             if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {

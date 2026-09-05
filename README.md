@@ -16,6 +16,8 @@ A lightweight Windows/macOS desktop widget that keeps your Codex quota visible f
 - Shows reset credit count and available reset-credit expiration times when the quota service provides them.
 - Handles stale data, signed-out sessions, unavailable quota responses, and loading states without fabricating values.
 
+On macOS, the widget runs as a tray accessory and does not appear in the Dock or Command-Tab. Use its tray menu to show, unlock, or quit it. Startup stops if the tray cannot be created. The native fullscreen Space fix is awaiting user retesting after the first implementation failed manual acceptance; see [desktop validation report](docs/desktop-widget-fixes-report.md).
+
 ## Screenshots
 
 | Quota states | Floating orb | Reset credit expiration |
