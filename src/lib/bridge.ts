@@ -1,3 +1,4 @@
+import type { QuotaWindowBoundary } from "./tokenStatistics";
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 import type { TokenStatisticsSnapshot, TokenStatisticsNotification, TokenStatisticsRefresh } from "./tokenStatistics";
 
@@ -32,10 +33,10 @@ export async function fetchSnapshots(force = false): Promise<ProviderSnapshot[]>
   return invoke<ProviderSnapshot[]>(force ? "refresh_snapshots" : "get_snapshots");
 }
 
-export async function getTokenStatistics(): Promise<TokenStatisticsSnapshot> {
+export async function getTokenStatistics(quotaWindow: QuotaWindowBoundary | null = null): Promise<TokenStatisticsSnapshot> {
   if (!isTauri()) throw new Error("Local Token Statistics requires the desktop app.");
   const { invoke } = await import("@tauri-apps/api/core");
-  return invoke<TokenStatisticsSnapshot>("get_token_statistics");
+  return invoke<TokenStatisticsSnapshot>("get_token_statistics", { quotaWindow });
 }
 
 export async function refreshTokenStatistics(): Promise<TokenStatisticsRefresh> {

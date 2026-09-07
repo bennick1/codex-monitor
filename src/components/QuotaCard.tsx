@@ -1,3 +1,4 @@
+import { quotaAvailable } from "../lib/quotaWeek";
 import { TokenUsage } from "./TokenUsage";
 import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
 import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, Info, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
@@ -76,7 +77,7 @@ export const QuotaCard = memo(function QuotaCard({
   const displayingWeeklyAsPrimary = primary === null && weekly !== null;
   const staleAge = Date.now() - new Date(snapshot.updatedAt).getTime();
   const staleExpired = snapshot.status === "stale" && staleAge > 30 * 60_000;
-  const available = snapshot.status === "ok" || (snapshot.status === "stale" && !staleExpired);
+  const available = quotaAvailable(snapshot);
   const tier = quotaTier(displayPercent);
   const indicatorState = isConsuming ? "active" : snapshot.status === "ok" ? "ok" : snapshot.status === "stale" ? "stale" : "error";
   const indicatorLabel = isConsuming

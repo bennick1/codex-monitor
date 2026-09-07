@@ -1443,7 +1443,6 @@ fn assert_model_invariants(snapshot: &aggregate::Snapshot) {
     let p = &snapshot.model_statistics.as_ref().unwrap().periods;
     for (overview, period) in [
         (&snapshot.today, &p.today),
-        (&snapshot.this_week, &p.this_week),
         (&snapshot.this_month, &p.this_month),
         (&snapshot.total, &p.total),
     ] {
@@ -1795,11 +1794,378 @@ fn model_zero_huge_tokens_and_natural_period_boundaries() {
     assert_model_invariants(&s);
     let p = &s.model_statistics.unwrap().periods;
     assert_eq!(p.today.models.len(), 1);
-    assert_eq!(p.this_week.models.len(), 3);
+    assert!(p.quota_week.is_none());
     assert_eq!(p.this_month.models.len(), 3);
     assert_eq!(p.total.models.len(), 4);
     assert_eq!(p.today.models[0].tokens, huge.to_string());
-    assert_eq!(p.this_week.models[0].share, 33.3);
+    assert_eq!(p.this_month.models[0].share, 33.3);
     assert_model_invariants(&h.query("2026-09-07T00:01:00Z", "Asia/Shanghai"));
     assert_model_invariants(&h.query("2026-10-01T00:01:00Z", "Asia/Shanghai"));
+}
+
+#[test]
+fn conflicted_source_cannot_poison_a_clean_turn_model() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "gpt-5.6-sol"),
+            modern("main", "r1", 100, 100),
+        ],
+    );
+    let broken = h.home.join("sessions/broken.jsonl");
+    write(
+        &broken,
+        &[
+            meta("unrelated"),
+            meta("main"),
+            model_turn("turn-a", "gpt-5.6-terra"),
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![("gpt-5.6-sol".into(), "100".into())]
+    );
+    // Recreate the old bug, including a completed metadata checkpoint.
+    h.db.execute("UPDATE model_turns SET conflict=1", [])
+        .unwrap();
+    h.db.execute("DELETE FROM model_repairs", []).unwrap();
+    let before = accounting_dump(&h.db);
+    let s = h.snapshot();
+    let totals = [
+        s.today.unwrap().total_tokens,
+        s.this_week.unwrap().total_tokens,
+        s.this_month.unwrap().total_tokens,
+        s.total.unwrap().total_tokens,
+    ];
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![("unknown".into(), "100".into())]
+    );
+    for repaired in [true, false] {
+        assert_eq!(
+            super::reader::repair_models(
+                &mut h.db,
+                &h.source,
+                &AtomicBool::new(false),
+                &mut Default::default()
+            )
+            .unwrap(),
+            repaired
+        );
+        assert_eq!(accounting_dump(&h.db), before);
+        let s = h.snapshot();
+        assert_eq!(model_rows(&s), vec![("gpt-5.6-sol".into(), "100".into())]);
+        assert_eq!(
+            [
+                s.today.unwrap().total_tokens,
+                s.this_week.unwrap().total_tokens,
+                s.this_month.unwrap().total_tokens,
+                s.total.unwrap().total_tokens
+            ],
+            totals
+        );
+    }
+    append(
+        &h.log(),
+        &[
+            model_turn("turn-b", "gpt-5.6-terra"),
+            {
+                let mut r = modern("main", "r2", 200, 300);
+                r["payload"]["turn_id"] = json!("turn-b");
+                r
+            },
+            model_turn("turn-c", "gpt-6-astra"),
+            {
+                let mut r = modern("main", "r3", 300, 600);
+                r["payload"]["turn_id"] = json!("turn-c");
+                r
+            },
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("gpt-6-astra".into(), "300".into()),
+            ("gpt-5.6-terra".into(), "200".into()),
+            ("gpt-5.6-sol".into(), "100".into())
+        ]
+    );
+}
+
+#[test]
+fn historical_repair_preserves_real_conflicts_missing_sources_and_unknown() {
+    for missing in [false, true] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                model_turn("turn-a", "gpt-5.6-sol"),
+                modern("main", "r1", 100, 100),
+                model_turn("turn-a", "gpt-5.6-terra"),
+                turn("turn-b"),
+                legacy(200, 100),
+            ],
+        );
+        h.scan();
+        h.db.execute("DELETE FROM model_repairs", []).unwrap();
+        if missing {
+            fs::remove_file(h.log()).unwrap();
+        }
+        let before = accounting_dump(&h.db);
+        let models = model_rows(&h.snapshot());
+        assert_eq!(
+            super::reader::repair_models(
+                &mut h.db,
+                &h.source,
+                &AtomicBool::new(false),
+                &mut Default::default()
+            )
+            .unwrap(),
+            !missing
+        );
+        assert_eq!(accounting_dump(&h.db), before);
+        assert_eq!(model_rows(&h.snapshot()), models);
+        assert!(models.iter().all(|(m, _)| m == "unknown"));
+    }
+}
+
+#[test]
+fn uncertain_time_can_have_a_proven_model_without_changing_time_or_tokens() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "gpt-5.6-sol"),
+            legacy(100, 100),
+            legacy(300, 1),
+            json!({"type":"event_msg","payload":{"type":"task_complete"}}),
+            model_turn("turn-a", "gpt-5.6-sol"),
+            legacy(500, 1),
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("gpt-5.6-sol".into(), "300".into()),
+            ("unknown".into(), "200".into())
+        ]
+    );
+    let before = accounting_dump(&h.db);
+    h.db.execute("DELETE FROM model_repairs", []).unwrap();
+    h.db.execute("DELETE FROM model_identities WHERE identity IN (SELECT id FROM token_facts WHERE time_status='timeUncertain')", []).unwrap();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("gpt-5.6-sol".into(), "100".into()),
+            ("unknown".into(), "400".into())
+        ]
+    );
+    h.restart();
+    h.scan();
+    assert_eq!(accounting_dump(&h.db), before);
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("gpt-5.6-sol".into(), "300".into()),
+            ("unknown".into(), "200".into())
+        ]
+    );
+}
+
+#[test]
+fn available_attribution_backfills_even_when_an_unrelated_source_is_missing() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "gpt-5.6-sol"),
+            legacy(100, 100),
+            legacy(300, 1),
+        ],
+    );
+    let lost = h.home.join("sessions/lost.jsonl");
+    write(
+        &lost,
+        &[meta("lost"), modern("lost", "lost-response", 50, 50)],
+    );
+    h.scan();
+    h.db.execute("DELETE FROM model_repairs", []).unwrap();
+    h.db.execute(
+        "UPDATE model_identities SET turn=NULL WHERE kind='legacy'",
+        [],
+    )
+    .unwrap();
+    fs::remove_file(lost).unwrap();
+    let before = accounting_dump(&h.db);
+    for _ in 0..2 {
+        assert!(super::reader::repair_models(
+            &mut h.db,
+            &h.source,
+            &AtomicBool::new(false),
+            &mut Default::default()
+        )
+        .unwrap());
+        assert_eq!(accounting_dump(&h.db), before);
+        assert_eq!(
+            model_rows(&h.snapshot()),
+            vec![
+                ("gpt-5.6-sol".into(), "300".into()),
+                ("unknown".into(), "50".into())
+            ]
+        );
+    }
+}
+
+#[test]
+fn quota_week_boundaries_preserve_overview_and_model_invariants() {
+    let mut h = Harness::new();
+    let reset = aggregate::QuotaWindow {
+        resets_at: "2026-09-11T09:09:19+08:00".into(),
+        window_seconds: 604800,
+    };
+    let q = DateTime::parse_from_rfc3339("2026-09-07T12:00:00+08:00")
+        .unwrap()
+        .with_timezone(&Utc);
+    assert_eq!(
+        reset.start(q).unwrap(),
+        DateTime::parse_from_rfc3339("2026-09-04T09:09:19+08:00").unwrap()
+    );
+    let mut records = vec![meta("main")];
+    for (index, at) in [
+        "2026-09-04T09:09:18+08:00",
+        "2026-09-04T09:09:19+08:00",
+        "2026-09-05T10:00:00+08:00",
+        "2026-09-06T10:00:00+08:00",
+        "2026-09-07T10:00:00+08:00",
+        "2026-09-07T12:00:00+08:00",
+        "2026-09-07T12:00:01+08:00",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let turn = format!("turn-{index}");
+        if index != 3 {
+            records.push(model_turn(
+                &turn,
+                if index == 2 {
+                    "codex-auto-review"
+                } else {
+                    "synthetic-model"
+                },
+            ));
+        }
+        let mut event = modern(
+            "main",
+            &format!("response-{index}"),
+            100,
+            (index as i64 + 1) * 100,
+        );
+        event["timestamp"] = json!(at);
+        event["payload"]["turn_id"] = json!(turn);
+        records.push(event);
+    }
+    write(&h.log(), &records);
+    h.scan();
+    let root = h.source.resolve().unwrap().1;
+    let query = |h: &mut Harness, window: Option<&aggregate::QuotaWindow>| {
+        aggregate::query_with_quota(&mut h.db, &root, q, chrono_tz::Asia::Shanghai, window).unwrap()
+    };
+    let baseline = query(&mut h, None);
+    assert!(baseline
+        .model_statistics
+        .as_ref()
+        .unwrap()
+        .periods
+        .quota_week
+        .is_none());
+    let with_quota = query(&mut h, Some(&reset));
+    for key in ["today", "thisWeek", "thisMonth", "total"] {
+        assert_eq!(
+            serde_json::to_value(&baseline).unwrap()[key],
+            serde_json::to_value(&with_quota).unwrap()[key]
+        );
+    }
+    assert_eq!(with_quota.this_week.as_ref().unwrap().total_tokens, "100");
+    assert_eq!(
+        with_quota
+            .future_deferred_totals
+            .as_ref()
+            .unwrap()
+            .total_tokens,
+        "200"
+    );
+    let period = with_quota
+        .model_statistics
+        .unwrap()
+        .periods
+        .quota_week
+        .unwrap();
+    assert_eq!(period.total_tokens, "400");
+    assert_eq!(
+        period
+            .models
+            .iter()
+            .map(|m| m.tokens.parse::<i64>().unwrap())
+            .sum::<i64>(),
+        400
+    );
+    assert_eq!(period.models.last().unwrap().model, "unknown");
+    assert_eq!(period.models.last().unwrap().share, 25.0);
+    assert!(period
+        .models
+        .iter()
+        .any(|m| m.model == "codex-auto-review" && m.tokens == "100"));
+    for bad in [
+        aggregate::QuotaWindow {
+            resets_at: "bad".into(),
+            window_seconds: 604800,
+        },
+        aggregate::QuotaWindow {
+            resets_at: reset.resets_at.clone(),
+            window_seconds: 3600,
+        },
+        aggregate::QuotaWindow {
+            resets_at: q.to_rfc3339(),
+            window_seconds: 604800,
+        },
+        aggregate::QuotaWindow {
+            resets_at: "2026-10-11T09:09:19+08:00".into(),
+            window_seconds: 604800,
+        },
+    ] {
+        assert!(query(&mut h, Some(&bad))
+            .model_statistics
+            .unwrap()
+            .periods
+            .quota_week
+            .is_none());
+    }
+}
+
+#[test]
+fn empty_quota_week_is_zero_not_unavailable() {
+    let mut h = Harness::new();
+    write(&h.log(), &[meta("empty")]);
+    h.scan();
+    let q = DateTime::parse_from_rfc3339(AT)
+        .unwrap()
+        .with_timezone(&Utc);
+    let window = aggregate::QuotaWindow {
+        resets_at: "2026-09-11T00:00:00Z".into(),
+        window_seconds: 604800,
+    };
+    let root = h.source.resolve().unwrap().1;
+    let s =
+        aggregate::query_with_quota(&mut h.db, &root, q, chrono_tz::UTC, Some(&window)).unwrap();
+    let period = s.model_statistics.unwrap().periods.quota_week.unwrap();
+    assert_eq!(period.total_tokens, "0");
+    assert!(period.models.is_empty());
 }

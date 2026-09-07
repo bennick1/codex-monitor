@@ -95,7 +95,7 @@ describe("model token presentation", () => {
     expect(container.querySelector(".token-model-view")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     expect(container.querySelector(".token-grid")).toBeNull();
-    expect(screen.getByRole("button", { name: "本周" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "按额度周" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText("gpt-synthetic-alpha")).toBeTruthy();
     expect(screen.getByText("66.7%")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "今日" }));
@@ -117,7 +117,7 @@ describe("model token presentation", () => {
   });
   it.each(["zh-CN", "en"] as const)("localizes unknown and puts it last in %s without altering slugs", (language) => {
     const snapshot = tokenSnapshot();
-    snapshot.modelStatistics!.periods.thisWeek = { totalTokens: "1200", models: [
+    snapshot.modelStatistics!.periods.quotaWeek = { totalTokens: "1200", models: [
       { model: "unknown", tokens: "900", share: 75 },
       { model: "gpt-future-raw-slug", tokens: "300", share: 25 },
     ] };
@@ -126,12 +126,12 @@ describe("model token presentation", () => {
     const rows = container.querySelectorAll(".token-model-list li");
     expect(rows[0].getAttribute("data-model")).toBe("gpt-future-raw-slug");
     expect(rows[1].getAttribute("data-model")).toBe("unknown");
-    expect(rows[1].querySelector(".token-model-name")?.textContent).toBe(language === "en" ? "Unknown" : "未归属");
+    expect(rows[1].querySelector(".token-model-name")?.textContent).toBe(language === "en" ? "Unidentified" : "未识别模型");
     expect(screen.getByText("75.0%")).toBeTruthy();
     expect(container.querySelector(".token-status")).toBeNull();
     if (language === "en") {
-      for (const label of ["Today", "Week", "Month", "Total"]) expect(screen.getByRole("button", { name: label })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Week" }).getAttribute("aria-pressed")).toBe("true");
+      for (const label of ["Today", "Quota Week", "Month", "Total"]) expect(screen.getByRole("button", { name: label })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Quota Week" }).getAttribute("aria-pressed")).toBe("true");
     }
   });
   it.each(["scanning", "partial", "empty", "unavailable"] as const)("retains shared %s feedback in model mode", (status) => {
@@ -164,11 +164,19 @@ describe("model token presentation", () => {
   it("keeps future long model names accessible and every row inside the scroll container", () => {
     const snapshot = tokenSnapshot();
     const name = "future-model-" + "unabridged-".repeat(12);
-    snapshot.modelStatistics!.periods.thisWeek = { totalTokens: "1000", models: Array.from({ length: 10 }, (_, index) => ({ model: name + index, tokens: "100", share: 10 })) };
+    snapshot.modelStatistics!.periods.quotaWeek = { totalTokens: "1000", models: Array.from({ length: 10 }, (_, index) => ({ model: name + index, tokens: "100", share: 10 })) };
     const { container } = show(snapshot);
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     expect(container.querySelectorAll(".token-model-list li")).toHaveLength(10);
     expect(screen.getByTitle(name + "0").textContent).toBe(name + "0");
     expect(screen.getByLabelText(name + "0: 100")).toBeTruthy();
   });
+});
+
+it("quota unavailable never reuses overview week and leaves the other model periods usable", () => {
+  const snapshot = tokenSnapshot(); snapshot.modelStatistics!.periods.quotaWeek = null;
+  show(snapshot); expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "按模型" }));
+  expect(screen.getByText("—")).toBeTruthy(); expect(screen.queryByRole("button", { name: "本周" })).toBeNull();
+  for (const label of ["今日", "本月", "总计"]) { fireEvent.click(screen.getByRole("button", { name: label })); expect(screen.queryByText("—")).toBeNull(); }
 });

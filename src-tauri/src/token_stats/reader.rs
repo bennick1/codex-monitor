@@ -416,6 +416,140 @@ fn backfill_models(
     Ok(())
 }
 
+/// Rebuild old source-conflict contamination only when ALL previously observed
+/// sources can be verified. Otherwise add available evidence conservatively:
+/// absence is never permission to erase persisted conflict evidence.
+/// This entry point performs metadata work only; it never ingests new Token facts.
+pub(super) fn repair_models(
+    db: &mut Connection,
+    source: &Source,
+    cancel: &AtomicBool,
+    coverage: &mut Coverage,
+) -> Result<bool> {
+    let (path, root) = source.resolve()?;
+    let done: bool = db.query_row(
+        "SELECT EXISTS(SELECT 1 FROM model_repairs WHERE root=?1 AND revision=1)",
+        [&root],
+        |r| r.get(0),
+    )?;
+    if done {
+        return Ok(false);
+    }
+    // Freeze accounting checkpoints for the one-time metadata repair. Concurrent
+    // collectors must not advance them between verification and metadata replay.
+    let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+    let checkpoints = {
+        let mut st = tx.prepare("SELECT id,version,native_id,size,modified,offset,edge,cursor,verified_at,relative_path FROM source_files WHERE root=?1")?;
+        let rows = st.query_map([&root], |r| {
+            Ok((Checkpoint::read(r)?, r.get::<_, String>(9)?))
+        })?;
+        rows.collect::<std::result::Result<Vec<_>, _>>()?
+    };
+    // Verify before replacing metadata. Keep the verified handles for replay.
+    let mut files = Vec::new();
+    let mut complete = true;
+    for (cp, relative) in checkpoints {
+        let candidate = path.join(relative);
+        let checked = (|| -> Result<File> {
+            let target = candidate.canonicalize()?;
+            if !allowed(&path, &target) {
+                return Err("unsafeSourcePath".into());
+            }
+            let mut options = fs::OpenOptions::new();
+            options.read(true);
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::OpenOptionsExt;
+                options.custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK);
+            }
+            let mut file = options.open(&target)?;
+            if !file.metadata()?.is_file()
+                || native_id(&file)? != cp.native
+                || candidate.canonicalize()? != target
+                || file.metadata()?.len() < cp.size
+                || !verify_chunks(
+                    &tx,
+                    &cp,
+                    &mut file,
+                    &mut coverage.integrity_read_bytes,
+                    cancel,
+                )?
+            {
+                return Err("sourceChanged".into());
+            }
+            Ok(file)
+        })();
+        match checked {
+            Ok(file) => files.push((cp, file)),
+            Err(e) if e.0 == "scanCancelled" || e.0.starts_with("database") => return Err(e),
+            Err(_) => complete = false,
+        }
+    }
+    if files.is_empty() {
+        return Ok(false);
+    }
+    for (cp, _) in &files {
+        let unchanged: bool = tx.query_row(
+            "SELECT offset=?2 AND size=?3 AND native_id=?4 FROM source_files WHERE id=?1",
+            params![cp.id, cp.offset, cp.size, cp.native],
+            |r| r.get(0),
+        )?;
+        if !unchanged {
+            return Err("checkpointConflict".into());
+        }
+    }
+    if complete {
+        tx.execute("DELETE FROM model_identities WHERE root=?1", [&root])?;
+        tx.execute("DELETE FROM model_turns WHERE root=?1", [&root])?;
+    }
+    for (cp, mut file) in files {
+        let mut context = super::attribution::Context::default();
+        let mut offset = 0;
+        while offset < cp.offset {
+            let batch = read_batch(&mut file, offset, cp.offset, cancel)?;
+            coverage.integrity_read_bytes += batch.read;
+            if batch.end == offset {
+                return Err("sourceChanged".into());
+            }
+            for line in batch.lines {
+                super::attribution::observe(
+                    &tx,
+                    &Position {
+                        root: &root,
+                        file: &cp.id,
+                        start: line.start,
+                        end: line.end,
+                    },
+                    &mut context,
+                    &line.event,
+                )?;
+            }
+            offset = batch.end;
+        }
+        // Verify the complete committed prefix again before accepting its metadata.
+        if !verify_chunks(
+            &tx,
+            &cp,
+            &mut file,
+            &mut coverage.integrity_read_bytes,
+            cancel,
+        )? {
+            return Err("sourceChanged".into());
+        }
+        tx.execute("INSERT INTO model_checkpoints VALUES(?1,?2,?3) ON CONFLICT(file) DO UPDATE SET offset=excluded.offset,cursor=excluded.cursor",
+            params![cp.id, offset, json(&context)?])?;
+    }
+    if complete {
+        tx.execute(
+            "INSERT INTO model_repairs VALUES(?1,1) ON CONFLICT(root) DO UPDATE SET revision=1",
+            [&root],
+        )?;
+    }
+    store::bump(&tx)?;
+    tx.commit()?;
+    Ok(true)
+}
+
 #[derive(Default)]
 pub struct Scanner {
     pub startup: bool,
@@ -701,6 +835,9 @@ impl Scanner {
                     db.execute("UPDATE source_files SET availability='unreadable',verified_at=0 WHERE root=?1 AND relative_path=?2 AND availability!='replaced'", params![root,relative])?;
                 }
             }
+        }
+        if self.startup {
+            repair_models(db, source, cancel, &mut state.coverage)?;
         }
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
         // Only a COMPLETE directory enumeration may declare an absent alias missing.

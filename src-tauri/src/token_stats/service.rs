@@ -201,7 +201,12 @@ impl TokenStatisticsService {
         self.inner.trigger.cancel();
     }
 
+    #[cfg(test)]
     pub(super) fn query(&self) -> Snapshot {
+        self.query_with_quota(None)
+    }
+
+    fn query_with_quota(&self, quota: Option<aggregate::QuotaWindow>) -> Snapshot {
         let (root, scanning, error, last) = {
             let state = self.inner.runtime.lock().unwrap_or_else(|e| e.into_inner());
             (
@@ -215,17 +220,21 @@ impl TokenStatisticsService {
             let (q, zone) = aggregate::system_query()?;
             let mut db =
                 store::open_reader(self.inner.path.as_ref().ok_or("databasePathUnavailable")?)?;
-            aggregate::query(
+            aggregate::query_with_quota(
                 &mut db,
                 root.as_deref().ok_or("sourceUnavailable")?,
                 q,
                 zone,
+                quota.as_ref(),
             )
         })();
         let mut snapshot = match result {
             Ok(snapshot) => snapshot,
             Err(e) => {
                 let mut snapshot = last.unwrap_or_else(|| aggregate::unavailable(e.0));
+                if let Some(models) = &mut snapshot.model_statistics {
+                    models.periods.quota_week = None;
+                }
                 snapshot.is_stale = snapshot.total.is_some();
                 snapshot.quality.warning_codes.push(e.0.into());
                 if snapshot.total.is_some() {
@@ -267,10 +276,11 @@ impl TokenStatisticsService {
 #[tauri::command]
 pub async fn get_token_statistics(
     service: tauri::State<'_, TokenStatisticsService>,
+    quota_window: Option<aggregate::QuotaWindow>,
 ) -> std::result::Result<Snapshot, String> {
     let service = service.inner().clone();
     Ok(
-        tauri::async_runtime::spawn_blocking(move || service.query())
+        tauri::async_runtime::spawn_blocking(move || service.query_with_quota(quota_window))
             .await
             .unwrap_or_else(|_| aggregate::unavailable("queryWorkerUnavailable")),
     )

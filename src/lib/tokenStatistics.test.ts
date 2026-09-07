@@ -12,7 +12,7 @@ describe("independent token statistics bridge", () => {
     api.invoke.mockResolvedValueOnce(snapshot).mockResolvedValueOnce({ queued: true });
     expect(await getTokenStatistics()).toEqual(snapshot);
     expect(await refreshTokenStatistics()).toEqual({ queued: true });
-    expect(api.invoke.mock.calls).toEqual([["get_token_statistics"], ["refresh_token_statistics"]]);
+    expect(api.invoke.mock.calls).toEqual([["get_token_statistics", { quotaWindow: null }], ["refresh_token_statistics"]]);
   });
   it("forwards only the independent notification and cleanup", async () => {
     const stop = vi.fn();

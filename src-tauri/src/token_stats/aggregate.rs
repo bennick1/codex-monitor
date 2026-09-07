@@ -80,7 +80,7 @@ pub struct ModelTokenPeriod {
 #[serde(rename_all = "camelCase")]
 pub struct ModelPeriods {
     pub today: ModelTokenPeriod,
-    pub this_week: ModelTokenPeriod,
+    pub quota_week: Option<ModelTokenPeriod>,
     pub this_month: ModelTokenPeriod,
     pub total: ModelTokenPeriod,
 }
@@ -240,7 +240,38 @@ pub fn unavailable(code: &str) -> Snapshot {
     }
 }
 
+#[cfg(test)]
 pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Result<Snapshot> {
+    query_with_quota(db, root, q, zone, None)
+}
+
+#[derive(Clone, Debug, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuotaWindow {
+    pub resets_at: String,
+    pub window_seconds: i64,
+}
+impl QuotaWindow {
+    pub fn start(&self, q: DateTime<Utc>) -> Option<DateTime<Utc>> {
+        if self.window_seconds != 604800 {
+            return None;
+        }
+        let reset = DateTime::parse_from_rfc3339(&self.resets_at)
+            .ok()?
+            .with_timezone(&Utc);
+        let start = reset.checked_sub_signed(Duration::seconds(self.window_seconds))?;
+        (start <= q && q < reset).then_some(start)
+    }
+}
+
+pub fn query_with_quota(
+    db: &mut Connection,
+    root: &str,
+    q: DateTime<Utc>,
+    zone: Tz,
+    quota: Option<&QuotaWindow>,
+) -> Result<Snapshot> {
+    let quota_start = quota.and_then(|window| window.start(q));
     let tx = db.transaction()?;
     // This first read fixes the SQLite snapshot for every subsequent read.
     let generation = store::generation(&tx)?;
@@ -254,7 +285,8 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
     )?;
     let month = day_start(date.with_day(1).ok_or("calendarUnavailable")?, zone)?;
     let mut day_models = ModelSum::default();
-    let mut week_models = ModelSum::default();
+    let mut quota_models = ModelSum::default();
+    let mut quota_sum = Sum::default();
     let mut month_models = ModelSum::default();
     let mut total_models = ModelSum::default();
     let mut day_sum = Sum::default();
@@ -304,7 +336,10 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
                 }
                 if at >= week {
                     week_sum.add(&fact.usage)?;
-                    week_models.add(model.as_deref(), &fact.usage)?;
+                }
+                if quota_start.is_some_and(|start| at >= start) {
+                    quota_sum.add(&fact.usage)?;
+                    quota_models.add(model.as_deref(), &fact.usage)?;
                 }
                 if at >= month {
                     month_sum.add(&fact.usage)?;
@@ -407,7 +442,9 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
         model_statistics: Some(ModelStatistics {
             periods: ModelPeriods {
                 today: day_models.export(&day_sum)?,
-                this_week: week_models.export(&week_sum)?,
+                quota_week: quota_start
+                    .map(|_| quota_models.export(&quota_sum))
+                    .transpose()?,
                 this_month: month_models.export(&month_sum)?,
                 total: total_models.export(&total)?,
             },

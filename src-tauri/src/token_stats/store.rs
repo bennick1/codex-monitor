@@ -97,6 +97,12 @@ pub fn open(path: &Path) -> Result<Connection> {
     }
     validate(&connection)?;
     connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA trusted_schema=OFF;")?;
+    // Internal attribution revision, independent of the accounting/API schema.
+    connection.execute_batch(
+        "CREATE TABLE IF NOT EXISTS model_repairs (
+        root TEXT PRIMARY KEY REFERENCES source_roots(root), revision INTEGER NOT NULL);
+        CREATE INDEX IF NOT EXISTS model_source_lookup ON fact_sources(file,start,end)",
+    )?;
     Ok(connection)
 }
 

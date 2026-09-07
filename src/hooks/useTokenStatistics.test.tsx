@@ -95,3 +95,30 @@ describe("stable token lifecycle", () => {
     expect(hook.result.current.failed).toBe(true); expect(hook.result.current.snapshot).not.toBeNull();
   });
 });
+
+it("passes quota boundaries, rejects an old boundary response, and clears expired stale quota", async () => {
+  vi.setSystemTime(new Date("2026-09-07T04:00:00Z"));
+  const quota = { provider: "codex" as const, displayName: "CODEX", plan: null, shortWindow: null, resetCredits: null, status: "stale" as const, message: null, updatedAt: new Date().toISOString(), weeklyWindow: { resetsAt: "2026-09-11T09:09:19+08:00", windowSeconds: 604800, remainingPercent: 50 } };
+  const old = deferred<TokenStatisticsSnapshot>(); api.get.mockReturnValueOnce(old.promise);
+  const hook = renderHook(({ value }) => useTokenStatistics(true, value), { initialProps: { value: quota } }); await flush();
+  expect(api.get).toHaveBeenLastCalledWith({ resetsAt: quota.weeklyWindow.resetsAt, windowSeconds: 604800 });
+  const next = { ...quota, weeklyWindow: { ...quota.weeklyWindow, resetsAt: "2026-09-12T09:09:19+08:00" } };
+  hook.rerender({ value: next });
+  await act(async () => old.resolve(tokenSnapshot())); expect(hook.result.current.snapshot).toBeNull();
+  await tick(500); expect(api.get).toHaveBeenLastCalledWith({ resetsAt: next.weeklyWindow.resetsAt, windowSeconds: 604800 });
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).not.toBeNull();
+  api.get.mockRejectedValue(new Error("offline"));
+  await tick(1800001);
+  expect(api.get).toHaveBeenLastCalledWith(null);
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).toBeNull();
+  expect(hook.result.current.snapshot?.thisWeek?.totalTokens).toBe("1200");
+});
+
+it("invalidates the quota period exactly at reset without guessing the next reset", async () => {
+  vi.setSystemTime(new Date("2026-09-07T04:00:00Z"));
+  const quota = { provider: "codex" as const, displayName: "CODEX", plan: null, shortWindow: null, resetCredits: null, status: "ok" as const, message: null, updatedAt: new Date().toISOString(), weeklyWindow: { resetsAt: "2026-09-07T04:00:01Z", windowSeconds: 604800, remainingPercent: 50 } };
+  const hook = renderHook(() => useTokenStatistics(true, quota)); await flush();
+  api.get.mockRejectedValue(new Error("offline")); await tick(1000);
+  expect(api.get).toHaveBeenLastCalledWith(null);
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).toBeNull();
+});

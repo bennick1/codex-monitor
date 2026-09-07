@@ -1,5 +1,5 @@
 import { getTokenStatistics, listenTokenStatisticsUpdated, refreshTokenStatistics } from "./bridge";
-import type { TokenStatisticsNotification, TokenStatisticsSnapshot } from "./tokenStatistics";
+import type { QuotaWindowBoundary, TokenStatisticsNotification, TokenStatisticsSnapshot } from "./tokenStatistics";
 
 export interface TokenStatisticsView {
   snapshot: TokenStatisticsSnapshot | null;
@@ -13,6 +13,18 @@ const EVENT_COALESCE_MS = 500;
 
 /** One owner for IPC, including requests surviving StrictMode effect cleanup. */
 export class TokenStatisticsController {
+  private quotaWindow: QuotaWindowBoundary | null = null;
+  private quotaRevision = 0;
+
+  setQuotaWindow(window: QuotaWindowBoundary | null) {
+    if (JSON.stringify(window) === JSON.stringify(this.quotaWindow)) return;
+    this.quotaWindow = window;
+    ++this.quotaRevision;
+    const snapshot = this.view.snapshot;
+    if (snapshot?.modelStatistics) this.update({ snapshot: { ...snapshot, modelStatistics: { periods: { ...snapshot.modelStatistics.periods, quotaWeek: null } } } });
+    this.request();
+  }
+
   private view = INITIAL_TOKEN_VIEW;
   private publish: ((view: TokenStatisticsView) => void) | null = null;
   private epoch = 0;
@@ -107,9 +119,11 @@ export class TokenStatisticsController {
     this.inFlight = true;
     const epoch = this.epoch;
     const revision = this.revision;
+    const quotaRevision = this.quotaRevision;
     this.update({ loading: true });
-    void getTokenStatistics().then((snapshot) => {
+    void getTokenStatistics(this.quotaWindow).then((snapshot) => {
       if (epoch !== this.epoch || !this.publish) return;
+      if (quotaRevision !== this.quotaRevision) return;
       // An event may name a new source while this read still owns an old root.
       if (revision !== this.revision && this.source !== snapshot.sourceId) return;
       const previous = this.view.snapshot;
