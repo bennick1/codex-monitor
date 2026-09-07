@@ -494,7 +494,7 @@ pub fn apply(db: &Connection, p: &Position<'_>, cursor: &mut Cursor, event: Even
                 cursor.parent = parent;
             }
         }
-        Event::Turn(turn) => cursor.turn = turn,
+        Event::Turn(turn, _) => cursor.turn = turn,
         Event::Modern(record) => modern(db, p, cursor, record)?,
         Event::Legacy(event) => legacy(db, p, cursor, event)?,
         Event::Problem(code) => {
@@ -504,7 +504,7 @@ pub fn apply(db: &Connection, p: &Position<'_>, cursor: &mut Cursor, event: Even
             }
             problem(db, p, code)?;
         }
-        Event::Ignore => {}
+        Event::Ignore | Event::ModelBoundary => {}
     }
     Ok(())
 }

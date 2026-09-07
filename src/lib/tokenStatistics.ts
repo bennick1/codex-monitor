@@ -13,6 +13,24 @@ export interface TokenTotals {
   isPartial: boolean;
 }
 
+export type TokenPeriod = "today" | "thisWeek" | "thisMonth" | "total";
+
+export interface ModelTokenUsage {
+  model: string;
+  tokens: TokenInteger;
+  /** Percentage of this period's collected tokens, independent of quota. */
+  share: number;
+}
+
+export interface ModelTokenPeriod {
+  totalTokens: TokenInteger;
+  models: ModelTokenUsage[];
+}
+
+export interface ModelTokenStatistics {
+  periods: Record<TokenPeriod, ModelTokenPeriod>;
+}
+
 export interface TokenStatisticsSnapshot {
   schemaVersion: number;
   generation: TokenInteger;
@@ -28,6 +46,7 @@ export interface TokenStatisticsSnapshot {
   thisWeek: TokenTotals | null;
   thisMonth: TokenTotals | null;
   total: TokenTotals | null;
+  modelStatistics: ModelTokenStatistics | null;
   datedTotals: TokenTotals | null;
   undatedTotals: TokenTotals | null;
   timeUncertainTotals: TokenTotals | null;

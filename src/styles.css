@@ -379,3 +379,29 @@ button { font: inherit; }
 .quota-card--theme-dark .token-value:focus-visible { outline-color: #a9d0ff; }
 
 .quota-card--tokens.quota-card--stale .error-state p { margin-right: 0; }
+
+/* Model statistics stay inside the existing floating card dimensions. */
+.token-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.token-heading h2 { margin: 0; white-space: nowrap; }
+.token-switch { display: flex; align-items: center; gap: 2px; }
+.token-switch button { border: 0; border-radius: 4px; padding: 0 5px; color: inherit; background: transparent; font: inherit; font-size: 12px; line-height: 18px; cursor: pointer; white-space: nowrap; }
+.token-switch button[aria-pressed="true"] { background: #17191f14; font-weight: 650; }
+.token-switch button:hover { background: #17191f20; }
+.token-switch button:focus-visible { outline: 2px solid #315f9f; outline-offset: 1px; }
+.token-period-switch { justify-content: space-between; margin-bottom: 4px; }
+.token-period-switch button { flex: 1; line-height: 22px; }
+.token-model-list { list-style: none; margin: 0; padding: 0 2px; max-height: 88px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.token-model-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 100px) 45px; align-items: center; gap: 5px; min-height: 22px; font-size: 12px; line-height: 18px; }
+.token-model-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-model-list .token-value { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.token-model-share { text-align: right; font-variant-numeric: tabular-nums; }
+.token-model-placeholder { margin: 0; min-height: 44px; font-size: 12px; line-height: 22px; }
+.token-model-view + .token-meta { margin-top: 6px; }
+.quota-card--theme-dark .token-switch button[aria-pressed="true"] { background: #edf3ff20; }
+.quota-card--theme-dark .token-switch button:hover { background: #edf3ff30; }
+.quota-card--theme-dark .token-switch button:focus-visible { outline-color: #a9d0ff; }
+.token-usage--models { bottom: 14px; display: flex; flex-direction: column; }
+.token-usage--models .token-heading, .token-usage--models .token-meta, .token-period-switch { flex-shrink: 0; }
+.token-model-view { display: flex; flex-direction: column; min-height: 0; }
+.token-model-list { flex: 0 1 auto; }
+.token-model-list .token-exact { text-align: left; }

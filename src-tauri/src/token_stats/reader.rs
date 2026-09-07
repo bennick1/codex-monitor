@@ -356,6 +356,66 @@ fn read_batch(file: &mut File, start: u64, limit: u64, cancel: &AtomicBool) -> R
     })
 }
 
+// Reuse the bounded reader and the verified source handle, with an independent
+// metadata checkpoint. Backfill NEVER feeds old lines back into normalize::apply.
+fn backfill_models(
+    db: &mut Connection,
+    file: &mut File,
+    cp: &Checkpoint,
+    root: &str,
+    cancel: &AtomicBool,
+    coverage: &mut Coverage,
+) -> Result<()> {
+    let saved: Option<(u64, String)> = db
+        .query_row(
+            "SELECT offset,cursor FROM model_checkpoints WHERE file=?1",
+            [&cp.id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .optional()?;
+    let (mut offset, mut context) = match saved {
+        Some((offset, raw)) => (offset, from_json::<super::attribution::Context>(&raw)?),
+        None => (0, super::attribution::Context::default()),
+    };
+    if offset > cp.offset {
+        return Err("databaseInvalidMetadata".into());
+    }
+    while offset < cp.offset {
+        let batch = read_batch(file, offset, cp.offset, cancel)?;
+        coverage.integrity_read_bytes += batch.read;
+        if batch.end == offset {
+            return Err("sourceChanged".into());
+        }
+        let meta = file.metadata()?;
+        if meta.len() < cp.size
+            || (meta.len() == cp.size && modified(&meta) != cp.modified)
+            || native_id(file)? != cp.native
+        {
+            return Err("sourceChanged".into());
+        }
+        let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        for line in batch.lines {
+            super::attribution::observe(
+                &tx,
+                &Position {
+                    root,
+                    file: &cp.id,
+                    start: line.start,
+                    end: line.end,
+                },
+                &mut context,
+                &line.event,
+            )?;
+        }
+        tx.execute("INSERT INTO model_checkpoints VALUES(?1,?2,?3) ON CONFLICT(file) DO UPDATE SET offset=excluded.offset,cursor=excluded.cursor",
+            params![cp.id,batch.end,json(&context)?])?;
+        store::bump(&tx)?;
+        tx.commit()?;
+        offset = batch.end;
+    }
+    Ok(())
+}
+
 #[derive(Default)]
 pub struct Scanner {
     pub startup: bool,
@@ -494,6 +554,7 @@ impl Scanner {
                 "UPDATE source_files SET availability='present' WHERE id=?1",
                 [&cp.id],
             )?;
+            backfill_models(db, &mut file, &cp, root, cancel, coverage)?;
             return Ok((cp.id, cp.offset == size));
         }
         // Record the observed boundary WITHOUT advancing the committed offset.
@@ -567,6 +628,9 @@ impl Scanner {
             cp.cursor = cursor;
             cp.edge = next_edge;
         }
+        cp.size = size;
+        cp.modified = mtime.clone();
+        backfill_models(db, &mut file, &cp, root, cancel, coverage)?;
         cp.cursor.partial_tail = cp.offset < size;
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
         tx.execute("UPDATE source_files SET size=?1,modified=?2,verified_at=?3,availability='present',cursor=?5 WHERE id=?4", params![size,mtime,cp.verified_at,cp.id,json(&cp.cursor)?])?;

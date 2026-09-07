@@ -64,6 +64,79 @@ impl Sum {
     }
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct ModelTokenUsage {
+    pub model: String,
+    pub tokens: String,
+    pub share: f64,
+}
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelTokenPeriod {
+    pub total_tokens: String,
+    pub models: Vec<ModelTokenUsage>,
+}
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelPeriods {
+    pub today: ModelTokenPeriod,
+    pub this_week: ModelTokenPeriod,
+    pub this_month: ModelTokenPeriod,
+    pub total: ModelTokenPeriod,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct ModelStatistics {
+    pub periods: ModelPeriods,
+}
+
+#[derive(Default)]
+struct ModelSum(BTreeMap<String, i64>);
+impl ModelSum {
+    fn add(&mut self, model: Option<&str>, usage: &Usage) -> Result<()> {
+        if let Some(model) = model.filter(|m| *m != "unknown") {
+            let n = self.0.entry(model.to_owned()).or_default();
+            *n = n
+                .checked_add(usage.total().ok_or("aggregateOverflow")?)
+                .ok_or("aggregateOverflow")?;
+        }
+        Ok(())
+    }
+    fn export(self, sum: &Sum) -> Result<ModelTokenPeriod> {
+        let total = sum.input + sum.output;
+        let mut known = 0i64;
+        let mut rows: Vec<_> = self.0.into_iter().filter(|(_, n)| *n > 0).collect();
+        rows.sort_by(|(a, x), (b, y)| y.cmp(x).then_with(|| a.cmp(b)));
+        for (_, n) in &rows {
+            known = known.checked_add(*n).ok_or("aggregateOverflow")?;
+        }
+        let unknown = total
+            .checked_sub(known)
+            .filter(|n| *n >= 0)
+            .ok_or("modelInvariantViolation")?;
+        if unknown > 0 {
+            rows.push(("unknown".into(), unknown));
+        }
+        // Integer arithmetic through rounding; only the final bounded percentage is f64.
+        let models = rows
+            .into_iter()
+            .map(|(model, n)| ModelTokenUsage {
+                model,
+                tokens: n.to_string(),
+                share: if total == 0 {
+                    0.0
+                } else {
+                    ((i128::from(n) * 1000 + i128::from(total) / 2) / i128::from(total)) as f64
+                        / 10.0
+                },
+            })
+            .collect();
+        Ok(ModelTokenPeriod {
+            total_tokens: total.to_string(),
+            models,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Quality {
@@ -90,6 +163,7 @@ pub struct Snapshot {
     pub this_week: Option<Totals>,
     pub this_month: Option<Totals>,
     pub total: Option<Totals>,
+    pub model_statistics: Option<ModelStatistics>,
     pub dated_totals: Option<Totals>,
     pub undated_totals: Option<Totals>,
     pub time_uncertain_totals: Option<Totals>,
@@ -146,6 +220,7 @@ pub fn unavailable(code: &str) -> Snapshot {
         this_week: None,
         this_month: None,
         total: None,
+        model_statistics: None,
         dated_totals: None,
         undated_totals: None,
         time_uncertain_totals: None,
@@ -178,6 +253,10 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
         zone,
     )?;
     let month = day_start(date.with_day(1).ok_or("calendarUnavailable")?, zone)?;
+    let mut day_models = ModelSum::default();
+    let mut week_models = ModelSum::default();
+    let mut month_models = ModelSum::default();
+    let mut total_models = ModelSum::default();
     let mut day_sum = Sum::default();
     let mut week_sum = Sum::default();
     let mut month_sum = Sum::default();
@@ -186,12 +265,20 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
     let mut undated = Sum::default();
     let mut uncertain = Sum::default();
     let mut future = Sum::default();
-    let mut statement = tx.prepare("SELECT id,thread,input,output,cached,reasoning,cache_write,at,end_at,time_status,format FROM token_facts WHERE root=?1 AND active=1")?;
-    let rows = statement.query_map([root], store::read_fact)?;
+    let mut statement = tx.prepare("SELECT f.id,f.thread,f.input,f.output,f.cached,f.reasoning,f.cache_write,f.at,f.end_at,f.time_status,f.format,
+        (SELECT CASE WHEN COUNT(*)=1 THEN MAX(CASE WHEN mi.conflict=0 AND mt.conflict=0 AND mi.thread=f.thread THEN mt.model ELSE NULL END) ELSE NULL END
+         FROM fact_identities fi
+         LEFT JOIN model_identities mi ON mi.root=fi.root AND mi.kind=fi.kind AND mi.identity=fi.identity
+         LEFT JOIN model_turns mt ON mt.root=mi.root AND mt.thread=mi.thread AND mt.turn=mi.turn
+         WHERE fi.fact=f.id AND fi.root=f.root AND fi.kind=CASE WHEN f.format='response' THEN 'response' ELSE 'legacy' END)
+        FROM token_facts f WHERE f.root=?1 AND f.active=1")?;
+    let rows = statement.query_map([root], |r| {
+        Ok((store::read_fact(r)?, r.get::<_, Option<String>>(11)?))
+    })?;
     let mut earliest: Option<DateTime<Utc>> = None;
     let mut latest: Option<DateTime<Utc>> = None;
     for row in rows {
-        let fact = row?;
+        let (fact, model) = row?;
         let parse = |t: &str| {
             DateTime::parse_from_rfc3339(t)
                 .map(|v| v.with_timezone(&Utc))
@@ -204,6 +291,7 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
             continue;
         }
         total.add(&fact.usage)?;
+        total_models.add(model.as_deref(), &fact.usage)?;
         match fact.time_status.as_str() {
             "dated" => {
                 let at = at.ok_or("databaseInvalidTimestamp")?;
@@ -212,12 +300,15 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
                 dated.add(&fact.usage)?;
                 if at >= today {
                     day_sum.add(&fact.usage)?;
+                    day_models.add(model.as_deref(), &fact.usage)?;
                 }
                 if at >= week {
                     week_sum.add(&fact.usage)?;
+                    week_models.add(model.as_deref(), &fact.usage)?;
                 }
                 if at >= month {
                     month_sum.add(&fact.usage)?;
+                    month_models.add(model.as_deref(), &fact.usage)?;
                 }
             }
             "undated" => undated.add(&fact.usage)?,
@@ -313,6 +404,14 @@ pub fn query(db: &mut Connection, root: &str, q: DateTime<Utc>, zone: Tz) -> Res
         this_week: Some(export_period(&week_sum)),
         this_month: Some(export_period(&month_sum)),
         total: Some(export_period(&total)),
+        model_statistics: Some(ModelStatistics {
+            periods: ModelPeriods {
+                today: day_models.export(&day_sum)?,
+                this_week: week_models.export(&week_sum)?,
+                this_month: month_models.export(&month_sum)?,
+                total: total_models.export(&total)?,
+            },
+        }),
         dated_totals: Some(dated.export()),
         undated_totals: Some(undated.export()),
         time_uncertain_totals: Some(uncertain.export()),

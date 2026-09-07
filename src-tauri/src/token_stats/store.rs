@@ -16,7 +16,7 @@ pub fn validate(connection: &Connection) -> Result<()> {
         [],
         |r| r.get(0),
     )?;
-    // No historical schema/parser migration exists in V1. Fail closed before writing.
+    // Accounting parser/rule version remains V1; model metadata is independent.
     if parser != PARSER_VERSION {
         return Err("parserIncompatible".into());
     }
@@ -62,9 +62,23 @@ pub fn open(path: &Path) -> Result<Connection> {
     if fresh {
         let tx = connection.transaction()?;
         tx.execute_batch(include_str!("schema.sql"))?;
+        tx.execute_batch(include_str!("model_schema.sql"))?;
         tx.commit()?;
     }
-    validate(&connection)?;
+    // Refuse foreign/newer databases before any migration or journal mutation.
+    let version: i64 = connection.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+    let app: i64 = connection.query_row("PRAGMA application_id", [], |r| r.get(0))?;
+    if app != APPLICATION_ID || !matches!(version, 1 | SCHEMA_VERSION) {
+        return Err("databaseIncompatible".into());
+    }
+    let parser: i64 = connection.query_row(
+        "SELECT parser_version FROM statistics_meta WHERE singleton=1",
+        [],
+        |r| r.get(0),
+    )?;
+    if parser != PARSER_VERSION {
+        return Err("parserIncompatible".into());
+    }
     let check: String = connection.query_row("PRAGMA quick_check", [], |r| r.get(0))?;
     if check != "ok" {
         return Err("databaseCorrupt".into());
@@ -76,6 +90,12 @@ pub fn open(path: &Path) -> Result<Connection> {
     if violations != 0 {
         return Err("databaseCorrupt".into());
     }
+    if version == 1 {
+        let tx = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
+        tx.execute_batch(include_str!("model_schema.sql"))?;
+        tx.commit()?;
+    }
+    validate(&connection)?;
     connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA trusted_schema=OFF;")?;
     Ok(connection)
 }

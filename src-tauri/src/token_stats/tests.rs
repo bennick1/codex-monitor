@@ -80,13 +80,15 @@ impl Harness {
     }
     fn query(&mut self, q: &str, tz: &str) -> aggregate::Snapshot {
         let root = self.source.resolve().unwrap().1;
-        aggregate::query(
+        let snapshot = aggregate::query(
             &mut self.db,
             &root,
             DateTime::parse_from_rfc3339(q).unwrap().with_timezone(&Utc),
             tz.parse().unwrap(),
         )
-        .unwrap()
+        .unwrap();
+        assert_model_invariants(&snapshot);
+        snapshot
     }
     fn restart(&mut self) {
         self.db = store::open(&self.path).unwrap();
@@ -1432,4 +1434,372 @@ fn failed_or_partial_tail_deleted_later_remains_a_reported_gap() {
         assert_eq!(s.status, "partial");
         assert_eq!(s.quality.issue_counts["uncommittedSourceTail"], "1");
     }
+}
+
+fn model_turn(id: &str, model: &str) -> Value {
+    json!({"type":"turn_context","payload":{"turn_id":id,"model":model,"instructions":"SECRET-PROMPT","tools":["SECRET-TOOL"]}})
+}
+fn assert_model_invariants(snapshot: &aggregate::Snapshot) {
+    let p = &snapshot.model_statistics.as_ref().unwrap().periods;
+    for (overview, period) in [
+        (&snapshot.today, &p.today),
+        (&snapshot.this_week, &p.this_week),
+        (&snapshot.this_month, &p.this_month),
+        (&snapshot.total, &p.total),
+    ] {
+        assert_eq!(overview.as_ref().unwrap().total_tokens, period.total_tokens);
+        let total: i128 = period.total_tokens.parse().unwrap();
+        assert_eq!(
+            period
+                .models
+                .iter()
+                .map(|r| r.tokens.parse::<i128>().unwrap())
+                .sum::<i128>(),
+            total
+        );
+        let mut previous = i128::MAX;
+        for (index, row) in period.models.iter().enumerate() {
+            let n: i128 = row.tokens.parse().unwrap();
+            assert!(n > 0);
+            if row.model == "unknown" {
+                assert_eq!(index + 1, period.models.len());
+            } else {
+                assert!(n <= previous);
+                previous = n;
+            }
+            assert_eq!(row.share, ((n * 1000 + total / 2) / total) as f64 / 10.0);
+        }
+        if total == 0 {
+            assert!(period.models.is_empty());
+        }
+    }
+}
+fn model_rows(snapshot: &aggregate::Snapshot) -> Vec<(String, String)> {
+    assert_model_invariants(snapshot);
+    snapshot
+        .model_statistics
+        .as_ref()
+        .unwrap()
+        .periods
+        .total
+        .models
+        .iter()
+        .map(|r| (r.model.clone(), r.tokens.clone()))
+        .collect()
+}
+
+#[test]
+fn model_parser_preserves_slug_and_ignores_bodies_and_invalid_optional_model() {
+    use super::model::Event;
+    for (value, expected) in [
+        (
+            json!("gpt-Synthetic.future-α"),
+            Some("gpt-Synthetic.future-α"),
+        ),
+        (Value::Null, None),
+        (json!({"text":"SECRET"}), None),
+        (json!(42), None),
+    ] {
+        let mut event = model_turn("a", "placeholder");
+        event["payload"]["model"] = value;
+        match parser::parse(event.to_string().as_bytes()) {
+            Event::Turn(Some(_), model) => assert_eq!(model.as_deref(), expected),
+            _ => panic!("model metadata must not invalidate the accounting turn"),
+        }
+    }
+    assert!(matches!(
+        parser::parse(
+            br#"{"type":"response_item","payload":{"model":"SECRET","content":"SECRET"}}"#
+        ),
+        Event::Ignore
+    ));
+}
+
+#[test]
+fn modern_models_use_explicit_turn_not_previous_turn_and_keep_unknown_last() {
+    let mut h = Harness::new();
+    let mut second = modern("main", "r2", 200, 300);
+    second["payload"]["turn_id"] = json!("turn-b");
+    let mut unlinked = modern("main", "r3", 400, 700);
+    unlinked["payload"]["turn_id"] = json!("absent");
+    let mut missing = modern("main", "r4", 300, 1000);
+    missing["payload"]
+        .as_object_mut()
+        .unwrap()
+        .remove("turn_id");
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "synthetic-a"),
+            modern("main", "r1", 100, 100),
+            model_turn("turn-b", "synthetic-b"),
+            second,
+            unlinked,
+            missing,
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("synthetic-b".into(), "200".into()),
+            ("synthetic-a".into(), "100".into()),
+            ("unknown".into(), "700".into())
+        ]
+    );
+    append(&h.log(), &[model_turn("turn-b", "synthetic-conflict")]);
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("synthetic-a".into(), "100".into()),
+            ("unknown".into(), "900".into())
+        ]
+    );
+    h.scanner = Scanner::new();
+    h.scan();
+    assert_eq!(h.total(), "1000");
+}
+
+#[test]
+fn legacy_model_boundaries_missing_context_and_uncertain_delta_are_conservative() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "synthetic-a"),
+            legacy(100, 100),
+            turn("turn-b"),
+            legacy(200, 100),
+            model_turn("turn-c", "synthetic-c"),
+            json!({"type":"event_msg","payload":{"type":"task_complete"}}),
+            legacy(300, 100),
+            model_turn("turn-d", "synthetic-d"),
+            legacy(500, 1),
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("synthetic-a".into(), "100".into()),
+            ("unknown".into(), "400".into())
+        ]
+    );
+}
+
+#[test]
+fn model_conflict_across_duplicate_response_turns_does_not_change_facts() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "synthetic-a"),
+            modern("main", "r1", 100, 100),
+        ],
+    );
+    h.scan();
+    let mut duplicate = modern("main", "r1", 100, 100);
+    duplicate["payload"]["turn_id"] = json!("turn-b");
+    append(&h.log(), &[model_turn("turn-b", "synthetic-b"), duplicate]);
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![("unknown".into(), "100".into())]
+    );
+}
+
+// Snapshot the complete V1 accounting tables, including source offsets, identities,
+// active flags and reconciliation. Model-only reads must leave every value intact.
+fn accounting_dump(db: &rusqlite::Connection) -> Vec<String> {
+    let mut out = Vec::new();
+    for table in [
+        "token_facts",
+        "fact_identities",
+        "fact_sources",
+        "legacy_events",
+        "reconciliation_candidates",
+        "candidate_sources",
+        "reconciliation_links",
+        "file_chunks",
+    ] {
+        let mut st = db
+            .prepare(&format!("SELECT * FROM {table} ORDER BY rowid"))
+            .unwrap();
+        let count = st.column_count();
+        let rows = st
+            .query_map([], |r| {
+                Ok((0..count)
+                    .map(|i| format!("{:?}", r.get_ref(i).unwrap()))
+                    .collect::<Vec<_>>()
+                    .join("|"))
+            })
+            .unwrap();
+        out.extend(rows.map(|r| format!("{table}:{}", r.unwrap())));
+    }
+    let mut st = db
+        .prepare("SELECT id,offset,cursor FROM source_files ORDER BY id")
+        .unwrap();
+    out.extend(
+        st.query_map([], |r| {
+            Ok(format!(
+                "{}|{}|{}",
+                r.get::<_, String>(0)?,
+                r.get::<_, i64>(1)?,
+                r.get::<_, String>(2)?
+            ))
+        })
+        .unwrap()
+        .map(|r| r.unwrap()),
+    );
+    out
+}
+
+#[test]
+fn v1_migration_and_metadata_backfill_preserve_all_accounting_and_deleted_sources() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            model_turn("turn-a", "synthetic-a"),
+            modern("main", "r1", 120, 120),
+        ],
+    );
+    let deleted = h.home.join("sessions/deleted.jsonl");
+    write(
+        &deleted,
+        &[
+            meta("deleted"),
+            model_turn("turn-a", "synthetic-deleted"),
+            modern("deleted", "r2", 230, 230),
+        ],
+    );
+    h.scan();
+    let before = accounting_dump(&h.db);
+    let snapshot = h.snapshot();
+    let totals = [
+        snapshot.today.unwrap().total_tokens,
+        snapshot.this_week.unwrap().total_tokens,
+        snapshot.this_month.unwrap().total_tokens,
+        snapshot.total.unwrap().total_tokens,
+    ];
+    // Reconstruct exact V1: its unchanged schema.sql plus original accounting rows.
+    h.db.execute_batch("DROP TABLE model_checkpoints; DROP TABLE model_identities; DROP TABLE model_turns; DROP INDEX model_fact_lookup; PRAGMA user_version=1;").unwrap();
+    fs::remove_file(&deleted).unwrap();
+    drop(h.db);
+    h.db = store::open(&h.path).unwrap();
+    assert_eq!(accounting_dump(&h.db), before);
+    assert_eq!(
+        h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![("unknown".into(), "350".into())]
+    );
+    for _ in 0..2 {
+        h.scanner = Scanner::new();
+        h.scan();
+        assert_eq!(accounting_dump(&h.db), before);
+        let s = h.snapshot();
+        assert_eq!(
+            model_rows(&s),
+            vec![
+                ("synthetic-a".into(), "120".into()),
+                ("unknown".into(), "230".into())
+            ]
+        );
+        assert_eq!(
+            [
+                s.today.unwrap().total_tokens,
+                s.this_week.unwrap().total_tokens,
+                s.this_month.unwrap().total_tokens,
+                s.total.unwrap().total_tokens
+            ],
+            totals
+        );
+    }
+    let more = modern("main", "r3", 30, 150);
+    append(&h.log(), &[more]);
+    h.scan();
+    assert_eq!(
+        model_rows(&h.snapshot()),
+        vec![
+            ("synthetic-a".into(), "150".into()),
+            ("unknown".into(), "230".into())
+        ]
+    );
+}
+
+#[test]
+fn failed_v1_migration_rolls_back_and_foreign_v1_database_is_untouched() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("v1.sqlite3");
+    let db = rusqlite::Connection::open(&path).unwrap();
+    db.execute_batch(include_str!("schema.sql")).unwrap();
+    // Force failure after the first CREATE; the complete migration must roll back.
+    db.execute_batch("CREATE TABLE model_identities(blocker TEXT);")
+        .unwrap();
+    assert!(store::open(&path).is_err());
+    assert_eq!(
+        db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        db.query_row(
+            "SELECT count(*) FROM sqlite_master WHERE name='model_turns'",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0
+    );
+    db.execute_batch("DROP TABLE model_identities; PRAGMA application_id=123;")
+        .unwrap();
+    let before = fs::read(&path).unwrap();
+    assert!(store::open(&path).is_err());
+    assert_eq!(fs::read(&path).unwrap(), before);
+}
+
+#[test]
+fn model_zero_huge_tokens_and_natural_period_boundaries() {
+    let mut h = Harness::new();
+    assert_model_invariants(&h.snapshot());
+    let mut values = vec![meta("main")];
+    let huge = 9_007_199_254_740_993i64;
+    for (i, at) in [
+        "2026-08-01T01:00:00Z",
+        "2026-09-01T01:00:00Z",
+        "2026-09-04T01:00:00Z",
+        "2026-09-05T01:00:00Z",
+        "2026-09-06T01:00:00Z",
+    ]
+    .iter()
+    .enumerate()
+    {
+        values.push(model_turn(&format!("t{i}"), &format!("synthetic-{i}")));
+        let mut r = modern("main", &format!("r{i}"), huge, huge * (i as i64 + 1));
+        r["timestamp"] = json!(at);
+        r["payload"]["turn_id"] = json!(format!("t{i}"));
+        values.push(r);
+    }
+    write(&h.log(), &values);
+    h.scan();
+    let s = h.snapshot();
+    assert_model_invariants(&s);
+    let p = &s.model_statistics.unwrap().periods;
+    assert_eq!(p.today.models.len(), 1);
+    assert_eq!(p.this_week.models.len(), 3);
+    assert_eq!(p.this_month.models.len(), 3);
+    assert_eq!(p.total.models.len(), 4);
+    assert_eq!(p.today.models[0].tokens, huge.to_string());
+    assert_eq!(p.this_week.models[0].share, 33.3);
+    assert_model_invariants(&h.query("2026-09-07T00:01:00Z", "Asia/Shanghai"));
+    assert_model_invariants(&h.query("2026-10-01T00:01:00Z", "Asia/Shanghai"));
 }

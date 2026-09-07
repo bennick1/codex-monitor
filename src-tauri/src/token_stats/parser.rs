@@ -25,6 +25,8 @@ struct Payload<'a> {
     parent_thread_id: Option<Cow<'a, str>>,
     thread_id: Option<Cow<'a, str>>,
     turn_id: Option<Cow<'a, str>>,
+    #[serde(borrow)]
+    model: Option<&'a RawValue>,
     response_id: Option<Cow<'a, str>>,
     #[serde(borrow)]
     usage: Option<&'a RawValue>,
@@ -107,7 +109,14 @@ pub fn parse(line: &[u8]) -> Event {
             },
             None => Event::Problem("missingThreadIdentity"),
         },
-        "turn_context" => Event::Turn(identity(p.turn_id.as_deref())),
+        "turn_context" => Event::Turn(
+            identity(p.turn_id.as_deref()),
+            p.model
+                .and_then(|v| serde_json::from_str::<String>(v.get()).ok())
+                .filter(|m| {
+                    !m.trim().is_empty() && m.len() <= 512 && !m.chars().any(char::is_control)
+                }),
+        ),
         "token_usage_record" => {
             let (Some(thread), Some(response), Some(counts)) = (
                 identity(p.thread_id.as_deref()),
@@ -142,6 +151,14 @@ pub fn parse(line: &[u8]) -> Event {
                 at,
                 turn: None,
             })
+        }
+        "event_msg"
+            if matches!(
+                p.kind.as_deref(),
+                Some("task_started" | "task_complete" | "turn_aborted")
+            ) =>
+        {
+            Event::ModelBoundary
         }
         _ => Event::Ignore,
     }

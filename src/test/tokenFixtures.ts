@@ -6,10 +6,24 @@ export const totals = (totalTokens: string, isPartial = false): TokenTotals => (
   totalTokens, factCount: "1", missingCachedFacts: "0", missingReasoningFacts: "0", isPartial,
 });
 export const tokenSnapshot = (patch: Partial<TokenStatisticsSnapshot> = {}): TokenStatisticsSnapshot => ({
-  schemaVersion: 1, sourceId: "synthetic-source-a", scope: "localCodexHome", generation: "7",
+  schemaVersion: 2, sourceId: "synthetic-source-a", scope: "localCodexHome", generation: "7",
   queryAtUtc: "2026-09-05T15:59:55.000000000Z", timeZone: "Asia/Shanghai",
   todayStartUtc: "2026-09-04T16:00:00.000000000Z", thisWeekStartUtc: "2026-08-30T16:00:00.000000000Z", thisMonthStartUtc: "2026-08-31T16:00:00.000000000Z",
   today: totals("0"), thisWeek: totals("1200"), thisMonth: totals("3450000"), total: totals("9007199254740993"),
+  modelStatistics: { periods: {
+    today: { totalTokens: "0", models: [] },
+    thisWeek: { totalTokens: "1200", models: [
+      { model: "gpt-synthetic-alpha", tokens: "800", share: 66.6667 },
+      { model: "gpt-synthetic-beta", tokens: "300", share: 25 },
+      { model: "unknown", tokens: "100", share: 8.3333 },
+    ] },
+    thisMonth: { totalTokens: "3450000", models: [
+      { model: "gpt-synthetic-month", tokens: "3450000", share: 100 },
+    ] },
+    total: { totalTokens: "9007199254740993", models: [
+      { model: "gpt-synthetic-total", tokens: "9007199254740993", share: 100 },
+    ] },
+  } },
   datedTotals: null, undatedTotals: null, timeUncertainTotals: null, futureDeferredTotals: null,
   status: "ready", isStale: false, lastScanAt: "2026-09-05T15:50:00Z", lastSuccessAt: "2026-09-05T15:49:00Z",
   coverage: { discoveredFiles: 1, scannedFiles: 1, failedFiles: 0, retainedMissingFiles: 0, threadsWithUsage: 1, threadsWithoutUsage: 0, earliestUsageAt: null, latestUsageAt: null, readBytes: 0, integrityReadBytes: 0, complete: true },

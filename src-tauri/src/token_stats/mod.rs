@@ -1,5 +1,6 @@
 //! Local-only accounting. This module has no dependency on the quota client.
 mod aggregate;
+mod attribution;
 mod model;
 mod normalize;
 mod parser;
@@ -38,7 +39,7 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 type Result<T> = std::result::Result<T, Error>;
-const SCHEMA_VERSION: i64 = 1;
+const SCHEMA_VERSION: i64 = 2;
 const PARSER_VERSION: i64 = 1;
 
 #[cfg(test)]
