@@ -4,6 +4,9 @@ use std::{fs, path::Path, time::Duration};
 
 pub const BUSY_TIMEOUT: Duration = Duration::from_millis(250);
 const APPLICATION_ID: i64 = 1129598795;
+const MODEL_REPAIR_SCHEMA: &str = "CREATE TABLE IF NOT EXISTS model_repairs (
+    root TEXT PRIMARY KEY REFERENCES source_roots(root), revision INTEGER NOT NULL);
+    CREATE INDEX IF NOT EXISTS model_source_lookup ON fact_sources(file,start,end)";
 
 pub fn validate(connection: &Connection) -> Result<()> {
     let version: i64 = connection.query_row("PRAGMA user_version", [], |r| r.get(0))?;
@@ -63,6 +66,7 @@ pub fn open(path: &Path) -> Result<Connection> {
         let tx = connection.transaction()?;
         tx.execute_batch(include_str!("schema.sql"))?;
         tx.execute_batch(include_str!("model_schema.sql"))?;
+        tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
         tx.commit()?;
     }
     // Refuse foreign/newer databases before any migration or journal mutation.
@@ -90,19 +94,18 @@ pub fn open(path: &Path) -> Result<Connection> {
     if violations != 0 {
         return Err("databaseCorrupt".into());
     }
-    if version == 1 {
+    if !fresh {
         let tx = connection.transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)?;
-        tx.execute_batch(include_str!("model_schema.sql"))?;
+        if version == 1 {
+            tx.execute_batch(include_str!("model_schema.sql"))?;
+        }
+        // Complete the internal metadata revision before committing schema 2.
+        // A late DDL failure must also roll back the tables and user_version.
+        tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
         tx.commit()?;
     }
     validate(&connection)?;
     connection.execute_batch("PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA wal_autocheckpoint=1000; PRAGMA trusted_schema=OFF;")?;
-    // Internal attribution revision, independent of the accounting/API schema.
-    connection.execute_batch(
-        "CREATE TABLE IF NOT EXISTS model_repairs (
-        root TEXT PRIMARY KEY REFERENCES source_roots(root), revision INTEGER NOT NULL);
-        CREATE INDEX IF NOT EXISTS model_source_lookup ON fact_sources(file,start,end)",
-    )?;
     Ok(connection)
 }
 

@@ -1687,7 +1687,7 @@ fn v1_migration_and_metadata_backfill_preserve_all_accounting_and_deleted_source
         snapshot.total.unwrap().total_tokens,
     ];
     // Reconstruct exact V1: its unchanged schema.sql plus original accounting rows.
-    h.db.execute_batch("DROP TABLE model_checkpoints; DROP TABLE model_identities; DROP TABLE model_turns; DROP INDEX model_fact_lookup; PRAGMA user_version=1;").unwrap();
+    h.db.execute_batch("DROP TABLE model_checkpoints; DROP TABLE model_identities; DROP TABLE model_turns; DROP TABLE model_repairs; DROP INDEX model_fact_lookup; DROP INDEX model_source_lookup; PRAGMA user_version=1;").unwrap();
     fs::remove_file(&deleted).unwrap();
     drop(h.db);
     h.db = store::open(&h.path).unwrap();
@@ -1764,6 +1764,59 @@ fn failed_v1_migration_rolls_back_and_foreign_v1_database_is_untouched() {
     let before = fs::read(&path).unwrap();
     assert!(store::open(&path).is_err());
     assert_eq!(fs::read(&path).unwrap(), before);
+}
+
+#[test]
+fn late_model_metadata_initialization_failure_rolls_back_all_ddl() {
+    for version in [1, 2] {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("late-migration.sqlite3");
+        let db = rusqlite::Connection::open(&path).unwrap();
+        db.execute_batch(include_str!("schema.sql")).unwrap();
+        if version == 2 {
+            db.execute_batch(include_str!("model_schema.sql")).unwrap();
+        }
+        // Inject a failure at the last index, after the model tables and version.
+        db.execute_batch("CREATE TABLE model_source_lookup(blocker TEXT)")
+            .unwrap();
+        let before = accounting_dump(&db);
+        assert!(store::open(&path).is_err());
+        assert_eq!(
+            db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            version
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT count(*) FROM sqlite_master WHERE name='model_repairs'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0
+        );
+        if version == 1 {
+            assert_eq!(
+                db.query_row(
+                    "SELECT count(*) FROM sqlite_master WHERE name IN ('model_turns','model_identities','model_checkpoints','model_fact_lookup')",
+                    [],
+                    |r| r.get::<_, i64>(0)
+                )
+                .unwrap(),
+                0
+            );
+        }
+        assert_eq!(accounting_dump(&db), before);
+        db.execute_batch("DROP TABLE model_source_lookup").unwrap();
+        let repaired = store::open(&path).unwrap();
+        assert_eq!(
+            repaired
+                .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(accounting_dump(&repaired), before);
+    }
 }
 
 #[test]
