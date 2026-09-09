@@ -27,11 +27,11 @@ export interface ModelTokenPeriod {
   models: ModelTokenUsage[];
 }
 
-export type ModelTokenPeriodKey = "today" | "quotaWeek" | "thisMonth" | "total";
+export type ModelTokenPeriodKey = "today" | "quotaPeriod" | "last7Days" | "last30Days" | "total";
 export interface QuotaWindowBoundary { resetsAt: string; windowSeconds: number }
 
 export interface ModelTokenStatistics {
-  periods: Record<Exclude<ModelTokenPeriodKey, "quotaWeek">, ModelTokenPeriod> & { quotaWeek: ModelTokenPeriod | null };
+  periods: Record<Exclude<ModelTokenPeriodKey, "quotaPeriod">, ModelTokenPeriod> & { quotaPeriod: ModelTokenPeriod | null };
 }
 
 export interface TokenStatisticsSnapshot {

@@ -1441,12 +1441,13 @@ fn model_turn(id: &str, model: &str) -> Value {
 }
 fn assert_model_invariants(snapshot: &aggregate::Snapshot) {
     let p = &snapshot.model_statistics.as_ref().unwrap().periods;
-    for (overview, period) in [
-        (&snapshot.today, &p.today),
-        (&snapshot.this_month, &p.this_month),
-        (&snapshot.total, &p.total),
-    ] {
+    for (overview, period) in [(&snapshot.today, &p.today), (&snapshot.total, &p.total)] {
         assert_eq!(overview.as_ref().unwrap().total_tokens, period.total_tokens);
+    }
+    for period in [&p.today, &p.last7_days, &p.last30_days, &p.total]
+        .into_iter()
+        .chain(p.quota_period.iter())
+    {
         let total: i128 = period.total_tokens.parse().unwrap();
         assert_eq!(
             period
@@ -1847,11 +1848,11 @@ fn model_zero_huge_tokens_and_natural_period_boundaries() {
     assert_model_invariants(&s);
     let p = &s.model_statistics.unwrap().periods;
     assert_eq!(p.today.models.len(), 1);
-    assert!(p.quota_week.is_none());
-    assert_eq!(p.this_month.models.len(), 3);
+    assert!(p.quota_period.is_none());
+    assert_eq!(p.last30_days.models.len(), 3);
     assert_eq!(p.total.models.len(), 4);
     assert_eq!(p.today.models[0].tokens, huge.to_string());
-    assert_eq!(p.this_month.models[0].share, 33.3);
+    assert_eq!(p.last30_days.models[0].share, 33.3);
     assert_model_invariants(&h.query("2026-09-07T00:01:00Z", "Asia/Shanghai"));
     assert_model_invariants(&h.query("2026-10-01T00:01:00Z", "Asia/Shanghai"));
 }
@@ -2078,7 +2079,7 @@ fn available_attribution_backfills_even_when_an_unrelated_source_is_missing() {
 }
 
 #[test]
-fn quota_week_boundaries_preserve_overview_and_model_invariants() {
+fn quota_period_boundaries_preserve_overview_and_model_invariants() {
     let mut h = Harness::new();
     let reset = aggregate::QuotaWindow {
         resets_at: "2026-09-11T09:09:19+08:00".into(),
@@ -2137,7 +2138,7 @@ fn quota_week_boundaries_preserve_overview_and_model_invariants() {
         .as_ref()
         .unwrap()
         .periods
-        .quota_week
+        .quota_period
         .is_none());
     let with_quota = query(&mut h, Some(&reset));
     for key in ["today", "thisWeek", "thisMonth", "total"] {
@@ -2159,7 +2160,7 @@ fn quota_week_boundaries_preserve_overview_and_model_invariants() {
         .model_statistics
         .unwrap()
         .periods
-        .quota_week
+        .quota_period
         .unwrap();
     assert_eq!(period.total_tokens, "400");
     assert_eq!(
@@ -2198,13 +2199,13 @@ fn quota_week_boundaries_preserve_overview_and_model_invariants() {
             .model_statistics
             .unwrap()
             .periods
-            .quota_week
+            .quota_period
             .is_none());
     }
 }
 
 #[test]
-fn empty_quota_week_is_zero_not_unavailable() {
+fn empty_quota_period_is_zero_not_unavailable() {
     let mut h = Harness::new();
     write(&h.log(), &[meta("empty")]);
     h.scan();
@@ -2218,7 +2219,117 @@ fn empty_quota_week_is_zero_not_unavailable() {
     let root = h.source.resolve().unwrap().1;
     let s =
         aggregate::query_with_quota(&mut h.db, &root, q, chrono_tz::UTC, Some(&window)).unwrap();
-    let period = s.model_statistics.unwrap().periods.quota_week.unwrap();
+    let period = s.model_statistics.unwrap().periods.quota_period.unwrap();
     assert_eq!(period.total_tokens, "0");
     assert!(period.models.is_empty());
+}
+
+#[test]
+fn rolling_model_periods_use_exact_half_open_utc_windows() {
+    use chrono::Duration;
+    for (q_text, zone) in [
+        ("2026-09-09T12:00:00Z", chrono_tz::Asia::Shanghai),
+        ("2026-03-09T12:00:00Z", chrono_tz::America::New_York),
+        ("2026-11-02T12:00:00Z", chrono_tz::America::New_York),
+    ] {
+        for seconds in [604800, 2592000] {
+            let mut h = Harness::new();
+            let q = DateTime::parse_from_rfc3339(q_text)
+                .unwrap()
+                .with_timezone(&Utc);
+            let start = q - Duration::seconds(seconds);
+            assert_eq!((q - start).num_seconds(), seconds);
+            let mut records = vec![meta("main")];
+            for (index, at) in [
+                start - Duration::nanoseconds(1),
+                start,
+                q - Duration::days(6),
+                q - Duration::nanoseconds(1),
+                q,
+                q + Duration::seconds(1),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let turn = format!("rolling-{index}");
+                // An explicit missing context exercises the existing unknown remainder.
+                if index != 2 {
+                    records.push(model_turn(&turn, &format!("synthetic-{index}")));
+                }
+                let mut event = modern("main", &format!("r{index}"), 100, (index as i64 + 1) * 100);
+                event["timestamp"] = json!(aggregate::utc_string(at));
+                event["payload"]["turn_id"] = json!(turn);
+                records.push(event);
+            }
+            write(&h.log(), &records);
+            h.scan();
+            let s = h.query(q_text, zone.name());
+            assert_model_invariants(&s);
+            let p = &s.model_statistics.as_ref().unwrap().periods;
+            let period = if seconds == 604800 {
+                &p.last7_days
+            } else {
+                &p.last30_days
+            };
+            assert_eq!(period.total_tokens, "300");
+            assert_eq!(period.models.len(), 3);
+            assert_eq!(period.models.last().unwrap().model, "unknown");
+            assert_eq!(period.models.last().unwrap().tokens, "100");
+            assert_eq!(s.total.as_ref().unwrap().total_tokens, "400");
+            assert_eq!(
+                s.future_deferred_totals.as_ref().unwrap().total_tokens,
+                "200"
+            );
+            assert_eq!(s.today.as_ref().unwrap().total_tokens, "100");
+            assert_eq!(
+                s.today_start_utc.as_ref().unwrap(),
+                &aggregate::utc_string(
+                    aggregate::day_start(q.with_timezone(&zone).date_naive(), zone).unwrap()
+                )
+            );
+            let api = serde_json::to_value(&s).unwrap();
+            let keys: Vec<_> = api["modelStatistics"]["periods"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect();
+            assert_eq!(
+                keys,
+                ["last30Days", "last7Days", "quotaPeriod", "today", "total"]
+            );
+            for key in ["today", "thisWeek", "thisMonth", "total"] {
+                assert!(api[key].is_object());
+            }
+        }
+    }
+}
+
+#[test]
+fn rolling_periods_cross_monday_and_month_boundaries() {
+    let mut h = Harness::new();
+    let mut records = vec![meta("main")];
+    for (index, at) in [
+        "2026-08-10T12:00:00Z",
+        "2026-08-31T23:59:59Z",
+        "2026-09-01T00:00:00Z",
+        "2026-09-02T12:00:00Z",
+        "2026-09-06T23:59:59Z",
+        "2026-09-07T00:00:00Z",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let mut event = modern("main", &format!("r{index}"), 100, (index as i64 + 1) * 100);
+        event["timestamp"] = json!(at);
+        records.push(event);
+    }
+    write(&h.log(), &records);
+    h.scan();
+    let s = h.query("2026-09-09T12:00:00Z", "UTC");
+    let p = s.model_statistics.as_ref().unwrap();
+    assert_eq!(p.periods.last7_days.total_tokens, "300");
+    assert_eq!(p.periods.last30_days.total_tokens, "600");
+    assert_eq!(s.this_week.unwrap().total_tokens, "100");
+    assert_eq!(s.this_month.unwrap().total_tokens, "400");
 }

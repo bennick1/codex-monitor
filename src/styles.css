@@ -389,7 +389,7 @@ button { font: inherit; }
 .token-switch button:hover { background: #17191f20; }
 .token-switch button:focus-visible { outline: 2px solid #315f9f; outline-offset: 1px; }
 .token-period-switch { justify-content: space-between; margin-bottom: 4px; }
-.token-period-switch button { flex: 1; line-height: 22px; }
+.token-period-switch button { flex: 1 0 auto; padding: 0 3px; font-size: 11px; line-height: 22px; }
 .token-model-list { list-style: none; margin: 0; padding: 0 2px; max-height: 88px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
 .token-model-list li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 100px) 45px; align-items: center; gap: 5px; min-height: 22px; font-size: 12px; line-height: 18px; }
 .token-model-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

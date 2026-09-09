@@ -88,19 +88,19 @@ describe("token status and field presentation", () => {
 
 
 describe("model token presentation", () => {
-  it("defaults to the unchanged two-by-two overview, then opens this week and switches all periods", () => {
+  it("defaults to the unchanged two-by-two overview, then opens quota period and switches all periods", () => {
     const { container } = show(tokenSnapshot());
     expect(screen.getByRole("button", { name: "总览" }).getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelectorAll(".token-grid > div")).toHaveLength(4);
     expect(container.querySelector(".token-model-view")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     expect(container.querySelector(".token-grid")).toBeNull();
-    expect(screen.getByRole("button", { name: "按额度周" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "额度周期" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByText("gpt-synthetic-alpha")).toBeTruthy();
     expect(screen.getByText("66.7%")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "今日" }));
     expect(screen.getByText("当前周期暂无用量")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "本月" }));
+    fireEvent.click(screen.getByRole("button", { name: "近30天" }));
     expect(screen.getByLabelText("gpt-synthetic-month: 3,450,000").childNodes[0].textContent).toBe("345.00万");
     fireEvent.click(screen.getByRole("button", { name: "总计" }));
     const exact = screen.getByLabelText("gpt-synthetic-total: 9,007,199,254,740,993");
@@ -117,7 +117,7 @@ describe("model token presentation", () => {
   });
   it.each(["zh-CN", "en"] as const)("localizes unknown and puts it last in %s without altering slugs", (language) => {
     const snapshot = tokenSnapshot();
-    snapshot.modelStatistics!.periods.quotaWeek = { totalTokens: "1200", models: [
+    snapshot.modelStatistics!.periods.quotaPeriod = { totalTokens: "1200", models: [
       { model: "unknown", tokens: "900", share: 75 },
       { model: "gpt-future-raw-slug", tokens: "300", share: 25 },
     ] };
@@ -130,8 +130,8 @@ describe("model token presentation", () => {
     expect(screen.getByText("75.0%")).toBeTruthy();
     expect(container.querySelector(".token-status")).toBeNull();
     if (language === "en") {
-      for (const label of ["Today", "Quota Week", "Month", "Total"]) expect(screen.getByRole("button", { name: label })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Quota Week" }).getAttribute("aria-pressed")).toBe("true");
+      for (const label of ["Today", "Quota Period", "7 Days", "30 Days", "Total"]) expect(screen.getByRole("button", { name: label })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Quota Period" }).getAttribute("aria-pressed")).toBe("true");
     }
   });
   it.each(["scanning", "partial", "empty", "unavailable"] as const)("retains shared %s feedback in model mode", (status) => {
@@ -164,7 +164,7 @@ describe("model token presentation", () => {
   it("keeps future long model names accessible and every row inside the scroll container", () => {
     const snapshot = tokenSnapshot();
     const name = "future-model-" + "unabridged-".repeat(12);
-    snapshot.modelStatistics!.periods.quotaWeek = { totalTokens: "1000", models: Array.from({ length: 10 }, (_, index) => ({ model: name + index, tokens: "100", share: 10 })) };
+    snapshot.modelStatistics!.periods.quotaPeriod = { totalTokens: "1000", models: Array.from({ length: 10 }, (_, index) => ({ model: name + index, tokens: "100", share: 10 })) };
     const { container } = show(snapshot);
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     expect(container.querySelectorAll(".token-model-list li")).toHaveLength(10);
@@ -174,9 +174,29 @@ describe("model token presentation", () => {
 });
 
 it("quota unavailable never reuses overview week and leaves the other model periods usable", () => {
-  const snapshot = tokenSnapshot(); snapshot.modelStatistics!.periods.quotaWeek = null;
+  const snapshot = tokenSnapshot(); snapshot.modelStatistics!.periods.quotaPeriod = null;
   show(snapshot); expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "按模型" }));
   expect(screen.getByText("—")).toBeTruthy(); expect(screen.queryByRole("button", { name: "本周" })).toBeNull();
-  for (const label of ["今日", "本月", "总计"]) { fireEvent.click(screen.getByRole("button", { name: label })); expect(screen.queryByText("—")).toBeNull(); }
+  for (const label of ["今日", "近7天", "近30天", "总计"]) { fireEvent.click(screen.getByRole("button", { name: label })); expect(screen.queryByText("—")).toBeNull(); }
+});
+
+it.each(["zh-CN", "en"] as const)("maps all five model periods and preserves overview in %s", (language) => {
+  const { container } = render(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot() }} />);
+  const zh = language === "zh-CN";
+  const overview = container.querySelector(".token-grid")!.innerHTML;
+  fireEvent.click(screen.getByRole("button", { name: zh ? "按模型" : "By model" }));
+  const labels = zh ? ["今日", "额度周期", "近7天", "近30天", "总计"] : ["Today", "Quota Period", "7 Days", "30 Days", "Total"];
+  const buttons = within(screen.getByRole("group", { name: zh ? "统计周期" : "Period" })).getAllByRole("button");
+  expect(buttons.map(b => b.textContent)).toEqual(labels);
+  expect(buttons[1].getAttribute("aria-pressed")).toBe("true");
+  expect(screen.queryByRole("button", { name: zh ? "本月" : "This month" })).toBeNull();
+  for (const [index, model] of [null, "gpt-synthetic-alpha", "gpt-synthetic-week", "gpt-synthetic-month", "gpt-synthetic-total"].entries()) {
+    fireEvent.click(buttons[index]);
+    expect(buttons[index].getAttribute("aria-pressed")).toBe("true");
+    if (model) expect(screen.getByTitle(model)).toBeTruthy();
+    else expect(screen.getByText(zh ? "当前周期暂无用量" : "No usage in this period")).toBeTruthy();
+  }
+  fireEvent.click(screen.getByRole("button", { name: zh ? "总览" : "Overview" }));
+  expect(container.querySelector(".token-grid")!.innerHTML).toBe(overview);
 });

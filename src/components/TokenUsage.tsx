@@ -7,19 +7,19 @@ import { formatTokenCount, formatTokenCountExact } from "../lib/tokenFormat";
 export function TokenUsage({ view, language }: { view: TokenStatisticsView; language: Language }) {
   const id = useId();
   const [mode, setMode] = useState<"overview" | "models">("overview");
-  const [period, setPeriod] = useState<ModelTokenPeriodKey>("quotaWeek");
-  const periods: ModelTokenPeriodKey[] = ["today", "quotaWeek", "thisMonth", "total"];
+  const [period, setPeriod] = useState<ModelTokenPeriodKey>("quotaPeriod");
+  const periods: ModelTokenPeriodKey[] = ["today", "quotaPeriod", "last7Days", "last30Days", "total"];
   const zh = language === "zh-CN";
   const t = zh ? {
     overview: "总览", models: "按模型", unknown: "未识别模型", period: "统计周期", noPeriod: "当前周期暂无用量",
-    periodLabels: ["今日", "按额度周", "本月", "总计"],
+    periodLabels: ["今日", "额度周期", "近7天", "近30天", "总计"],
     title: "Token 用量", labels: ["今日", "本周", "本月", "总计"],
     scope: "本机 Codex 已采集用量", scanning: "扫描中", loading: "正在读取",
     partial: "统计不完整", empty: "暂无本机用量记录", unavailable: "统计暂不可用",
     stale: "暂未更新", listener: "实时更新暂不可用", scanned: "扫描", success: "成功采集",
   } : {
     overview: "Overview", models: "By model", unknown: "Unidentified", period: "Period", noPeriod: "No usage in this period",
-    periodLabels: ["Today", "Quota Week", "Month", "Total"],
+    periodLabels: ["Today", "Quota Period", "7 Days", "30 Days", "Total"],
     title: "Token usage", labels: ["Today", "This week", "This month", "Total"],
     scope: "Collected on this Mac/PC · Codex", scanning: "Scanning", loading: "Loading",
     partial: "Incomplete", empty: "No local usage records", unavailable: "Statistics unavailable",
@@ -34,7 +34,7 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
   // The backend owns amount ordering; keep unknown last without Number conversion.
   const models = modelPeriod?.models.filter((item) => item.model !== "unknown") ?? [];
   models.push(...(modelPeriod?.models.filter((item) => item.model === "unknown") ?? []));
-  const selectedPartial = period === "quotaWeek" ? partial : snapshot?.[period]?.isPartial;
+  const selectedPartial = period === "today" || period === "total" ? snapshot?.[period]?.isPartial : partial;
   const stale = failed || snapshot?.isStale || listenerFailed;
   const messages = [
     snapshot?.status === "scanning" ? t.scanning : !snapshot && loading && !failed ? t.loading : null,

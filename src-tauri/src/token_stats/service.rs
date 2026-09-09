@@ -233,7 +233,7 @@ impl TokenStatisticsService {
             Err(e) => {
                 let mut snapshot = last.unwrap_or_else(|| aggregate::unavailable(e.0));
                 if let Some(models) = &mut snapshot.model_statistics {
-                    models.periods.quota_week = None;
+                    models.periods.quota_period = None;
                 }
                 snapshot.is_stale = snapshot.total.is_some();
                 snapshot.quality.warning_codes.push(e.0.into());

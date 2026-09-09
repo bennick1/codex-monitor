@@ -80,8 +80,9 @@ pub struct ModelTokenPeriod {
 #[serde(rename_all = "camelCase")]
 pub struct ModelPeriods {
     pub today: ModelTokenPeriod,
-    pub quota_week: Option<ModelTokenPeriod>,
-    pub this_month: ModelTokenPeriod,
+    pub quota_period: Option<ModelTokenPeriod>,
+    pub last7_days: ModelTokenPeriod,
+    pub last30_days: ModelTokenPeriod,
     pub total: ModelTokenPeriod,
 }
 #[derive(Clone, Debug, Serialize)]
@@ -287,7 +288,16 @@ pub fn query_with_quota(
     let mut day_models = ModelSum::default();
     let mut quota_models = ModelSum::default();
     let mut quota_sum = Sum::default();
-    let mut month_models = ModelSum::default();
+    let last7_start = q
+        .checked_sub_signed(Duration::seconds(604800))
+        .ok_or("calendarUnavailable")?;
+    let last30_start = q
+        .checked_sub_signed(Duration::seconds(2592000))
+        .ok_or("calendarUnavailable")?;
+    let mut last7_models = ModelSum::default();
+    let mut last30_models = ModelSum::default();
+    let mut last7_sum = Sum::default();
+    let mut last30_sum = Sum::default();
     let mut total_models = ModelSum::default();
     let mut day_sum = Sum::default();
     let mut week_sum = Sum::default();
@@ -341,9 +351,16 @@ pub fn query_with_quota(
                     quota_sum.add(&fact.usage)?;
                     quota_models.add(model.as_deref(), &fact.usage)?;
                 }
+                if at >= last7_start {
+                    last7_sum.add(&fact.usage)?;
+                    last7_models.add(model.as_deref(), &fact.usage)?;
+                }
+                if at >= last30_start {
+                    last30_sum.add(&fact.usage)?;
+                    last30_models.add(model.as_deref(), &fact.usage)?;
+                }
                 if at >= month {
                     month_sum.add(&fact.usage)?;
-                    month_models.add(model.as_deref(), &fact.usage)?;
                 }
             }
             "undated" => undated.add(&fact.usage)?,
@@ -442,10 +459,11 @@ pub fn query_with_quota(
         model_statistics: Some(ModelStatistics {
             periods: ModelPeriods {
                 today: day_models.export(&day_sum)?,
-                quota_week: quota_start
+                quota_period: quota_start
                     .map(|_| quota_models.export(&quota_sum))
                     .transpose()?,
-                this_month: month_models.export(&month_sum)?,
+                last7_days: last7_models.export(&last7_sum)?,
+                last30_days: last30_models.export(&last30_sum)?,
                 total: total_models.export(&total)?,
             },
         }),

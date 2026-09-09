@@ -21,7 +21,7 @@ export class TokenStatisticsController {
     this.quotaWindow = window;
     ++this.quotaRevision;
     const snapshot = this.view.snapshot;
-    if (snapshot?.modelStatistics) this.update({ snapshot: { ...snapshot, modelStatistics: { periods: { ...snapshot.modelStatistics.periods, quotaWeek: null } } } });
+    if (snapshot?.modelStatistics) this.update({ snapshot: { ...snapshot, modelStatistics: { periods: { ...snapshot.modelStatistics.periods, quotaPeriod: null } } } });
     this.request();
   }
 

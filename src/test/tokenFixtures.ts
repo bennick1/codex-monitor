@@ -12,12 +12,13 @@ export const tokenSnapshot = (patch: Partial<TokenStatisticsSnapshot> = {}): Tok
   today: totals("0"), thisWeek: totals("1200"), thisMonth: totals("3450000"), total: totals("9007199254740993"),
   modelStatistics: { periods: {
     today: { totalTokens: "0", models: [] },
-    quotaWeek: { totalTokens: "1200", models: [
+    quotaPeriod: { totalTokens: "1200", models: [
       { model: "gpt-synthetic-alpha", tokens: "800", share: 66.6667 },
       { model: "gpt-synthetic-beta", tokens: "300", share: 25 },
       { model: "unknown", tokens: "100", share: 8.3333 },
     ] },
-    thisMonth: { totalTokens: "3450000", models: [
+    last7Days: { totalTokens: "7000", models: [{ model: "gpt-synthetic-week", tokens: "7000", share: 100 }] },
+    last30Days: { totalTokens: "3450000", models: [
       { model: "gpt-synthetic-month", tokens: "3450000", share: 100 },
     ] },
     total: { totalTokens: "9007199254740993", models: [

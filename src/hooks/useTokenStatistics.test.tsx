@@ -106,11 +106,11 @@ it("passes quota boundaries, rejects an old boundary response, and clears expire
   hook.rerender({ value: next });
   await act(async () => old.resolve(tokenSnapshot())); expect(hook.result.current.snapshot).toBeNull();
   await tick(500); expect(api.get).toHaveBeenLastCalledWith({ resetsAt: next.weeklyWindow.resetsAt, windowSeconds: 604800 });
-  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).not.toBeNull();
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod).not.toBeNull();
   api.get.mockRejectedValue(new Error("offline"));
   await tick(1800001);
   expect(api.get).toHaveBeenLastCalledWith(null);
-  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).toBeNull();
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod).toBeNull();
   expect(hook.result.current.snapshot?.thisWeek?.totalTokens).toBe("1200");
 });
 
@@ -120,5 +120,5 @@ it("invalidates the quota period exactly at reset without guessing the next rese
   const hook = renderHook(() => useTokenStatistics(true, quota)); await flush();
   api.get.mockRejectedValue(new Error("offline")); await tick(1000);
   expect(api.get).toHaveBeenLastCalledWith(null);
-  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaWeek).toBeNull();
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod).toBeNull();
 });
