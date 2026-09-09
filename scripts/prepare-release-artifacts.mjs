@@ -9,7 +9,9 @@ const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const [input, output] = process.argv.slice(2).map(p => resolve(p));
 if (!input || !output) throw new Error('Usage: node scripts/prepare-release-artifacts.mjs <bundle-dir> <output-dir>');
 if (input === output) throw new Error('Use separate build and release output directories.');
-if (pkg.version !== '1.0.0') throw new Error('This preparation script is scoped to V1.0.0.');
+if (!/^\d+\.\d+\.\d+$/.test(pkg.version)) throw new Error('Expected a stable package version.');
+const escapedVersion = pkg.version.replaceAll('.', '\\.');
+const installerPattern = new RegExp(`^Codex[ .-]Monitor_${escapedVersion}_(?:.+\\.dmg|.+-setup\\.exe)$`);
 const names = ['dmg', 'exe'].map(ext => `Codex-Monitor-${pkg.version}.${ext}`);
 const digest = async p => createHash('sha256').update(await readFile(p)).digest('hex');
 async function walk(dir) {
@@ -22,8 +24,8 @@ async function walk(dir) {
   return result;
 }
 const paths = await walk(input);
-const candidates = paths.filter(p => /^Codex[ .-]Monitor_1\.0\.0_.+\.dmg$/.test(basename(p)) || /^Codex[ .-]Monitor_1\.0\.0_.+-setup\.exe$/.test(basename(p)));
-if (!candidates.length) throw new Error('No V1.0.0 Codex Monitor DMG / NSIS installers found.');
+const candidates = paths.filter(p => installerPattern.test(basename(p)));
+if (!candidates.length) throw new Error(`No ${pkg.version} Codex Monitor DMG / NSIS installers found.`);
 const seen = new Set();
 const copies = [];
 for (const source of candidates) {

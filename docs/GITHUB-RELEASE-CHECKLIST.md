@@ -1,17 +1,20 @@
-# Codex Monitor GitHub 发布检查
+# Codex Monitor v1.1.0 GitHub 发布检查
 
-以 [V1.0.0 验收报告](v1.0.0-release-validation-report.md) 和 [发布准备指南](RELEASE.md) 为当前事实源。历史 v0.x 文档不代表 V1 验收结果。
+当前事实源为 [v1.1.0 发布验证报告](v1.1.0-release-validation-report.md) 和 [发布准备指南](RELEASE.md)。不沿用 v1.0.0 已完成的勾选状态。
 
-- [x] 分发目标为 `bennick1/codex-monitor`，版本一致为 `1.0.0`。
-- [x] V1 手动更新策略已经确认并由静态门槛验证，主运行时不会查询或安装上游产品。
-- [x] 固定构建 commit SHA、时间、系统/架构、Node/Rust 版本及源码清单。
-- [x] macOS 安装、启动、核心功能、Quota、Token、悬浮窗及实际使用由用户确认通过；自动化无法独立证明的全屏/Space 项按人工证据记录。
-- [x] Windows 实机人工验收由用户确认通过；详细环境和逐项记录未进入仓库，不补造字段。
-- [x] 签名/Gatekeeper/SmartScreen 边界如实记录为 Unsigned / Not Notarized，并由用户接受为 V1 发布限制。
-- [x] 两个平台制品与最终源码一致，`SHA256SUMS` 覆盖最终文件并复核成功。
-- [x] Git 拟提交文件没有 SQLite/WAL/SHM、`.codex`、`auth.json`、凭据、缓存、个人截图或打包文件。
-- [x] Release 文案仅使用合成/脱敏截图；名称为 `Codex Monitor v1.0.0`。
-- [x] 报告明确为 `Ready for v1.0.0 Release`。
-- [ ] 人工明确确认创建 Release 后，才创建/推送 `v1.0.0` 并上传附件。
+- [ ] Release Source SHA locked：package / Cargo / Tauri 均为 1.1.0，identifier 保持 app.quotafloat.desktop。
+- [ ] Release Build Source 已普通 fast-forward 推送 origin/main，workflow head_sha 与其完全一致。
+- [ ] Release Source 仅包含已授权 Vitest 4.1.11 安全修复、release workflow、artifact script、release docs 和必要 README 改动；没有生产逻辑或无关依赖变化。
+- [ ] 双平台 npm ci、updater policy、frontend tests、build、两项 audit、Rust fmt/test/clippy 全部通过；两项 audit 均为 0 vulnerabilities。
+- [ ] V1 → V1.1 migration verified：schema 1 → 2；历史 accounting/total 保留、model backfill、restart、incremental、failure rollback 测试保留且通过。
+- [ ] macOS candidate verified：Actions Universal DMG、metadata、arm64 + x86_64、hdiutil 与实际签名状态已记录。
+- [ ] Windows candidate verified：Actions x64 NSIS、普通用户 silent install/start/uninstall CI smoke 通过。
+- [ ] Windows real-machine acceptance：由用户明确提供通过结果。
+- [ ] macOS final candidate acceptance：Actions DMG final package smoke 由用户明确确认。
+- [ ] DMG / EXE SHA256 verified：本地重算与对应 Actions 内部 SHA 一致，SHA256SUMS 校验成功。
+- [ ] Release Notes approved：已披露 unsigned/not notarized、Unidentified、本机统计、schema 2 downgrade limitation 和手动更新。
+- [ ] 候选文件与私有运行材料未进入 Git；无 SQLite/WAL/SHM、真实用量截图、凭据或 runtime logs。
+- [ ] 报告区分 Release Build Source SHA 与 Latest Documentation SHA，未来 Tag 只指向实际构建源。
+- [ ] user explicitly approved release：用户明确“可以发布”。
 
-准备 workflow 只生成 Actions artifacts，不能替代真实机器验收，也不会创建草稿或公开 Release。不得用 `git add .` 混入本机资料；审核后按明确文件清单提交。
+Release Preparation 只生成 Actions artifacts，不创建 Tag、GitHub Release、Draft Release 或 Pre-release。最后一项在本轮必须保持未勾选。Windows runner 不等于 Windows 人工实机验收；候选生成后状态最多为 Awaiting Human Acceptance / Candidate Ready for Windows Human Acceptance。

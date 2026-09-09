@@ -1,6 +1,6 @@
 # Codex Monitor 发布准备
 
-V1.0.0 目标：`Codex-Monitor-1.0.0.dmg`、`Codex-Monitor-1.0.0.exe`、`SHA256SUMS`。最终结论以 [验收报告](v1.0.0-release-validation-report.md) 为准。
+V1.1.0 目标：`Codex-Monitor-1.1.0.dmg`、`Codex-Monitor-1.1.0.exe`、`SHA256SUMS`。最终结论以 [验收报告](v1.1.0-release-validation-report.md) 为准。
 
 ## 构建与制品
 
@@ -12,14 +12,14 @@ npm test
 cargo test --manifest-path src-tauri/Cargo.toml --locked
 npm run check:updater-policy
 npm run tauri -- build --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
-node scripts/prepare-release-artifacts.mjs src-tauri/target/release/bundle outputs/v1.0.0
+node scripts/prepare-release-artifacts.mjs src-tauri/target/release/bundle outputs/v1.1.0
 ```
 
 Windows PowerShell 把构建参数换成 `--bundles nsis`，同样使用命名脚本。Windows NSIS 配置为 `currentUser`，但 WebView2/运行时存在性和普通用户实际使用仍需实机确认。
 
 Universal Mac 先安装 `aarch64-apple-darwin`、`x86_64-apple-darwin`，构建追加 `--target universal-apple-darwin`，命名脚本输入目录改为 `src-tauri/target/universal-apple-darwin/release/bundle`。
 
-脚本只接受版本 1.0.0 的一个 DMG 和/或 NSIS setup.exe，拒绝同平台多个候选或覆盖不同内容。它把制品复制为目标名称，并对输出目录已有的最终安装包重算 `SHA256SUMS`。只有一个平台时这是部分清单；合并两平台后必须重新执行，不能直接拼接未知来源的校验文件。构建时间、来源 commit、源码差异和工具版本随构建证据保存到 ignored 的 outputs，不能把工作区构建写成已提交 SHA 的无差异产物。
+脚本以 package.json 当前稳定版本为唯一版本源，只接受该版本的一个 DMG 和/或 NSIS setup.exe，拒绝同平台多个候选或覆盖不同内容。它把制品复制为目标名称，并对输出目录已有的最终安装包重算 `SHA256SUMS`。只有一个平台时这是部分清单；合并两平台后必须重新执行，不能直接拼接未知来源的校验文件。构建时间、来源 commit、源码差异和工具版本随构建证据保存到 ignored 的 outputs，不能把工作区构建写成已提交 SHA 的无差异产物。
 
 ## GitHub Actions
 
@@ -27,14 +27,26 @@ CI 在 push/PR 上验证前端与 Windows/macOS 编译。`release.yml` 为手动
 
 V1 正式采用手动 GitHub Release 更新。运行时不注册 Tauri updater、不查询或安装上游版本；托盘下载入口只打开本项目 Releases。`npm run check:updater-policy` 在 CI 与 Release Preparation 中防止上游 updater 地址或 updater 依赖回归。
 
-V1.0.0 的分发边界为 **Unsigned / Not Notarized**。Windows Authenticode、Apple Developer ID 和 notarization 均未配置，不能声称 Apple verified、notarized 或已解决 Gatekeeper/SmartScreen；这些状态必须在 README、报告和 Release Notes 中如实披露。
+V1.1.0 的分发边界为 **Unsigned / Not Notarized**。Windows Authenticode、Apple Developer ID 和 notarization 均未配置，不能声称 Apple verified、notarized 或已解决 Gatekeeper/SmartScreen；这些状态必须在 README、报告和 Release Notes 中如实披露。
 
 ## 升级与数据
 
-V1 保留 `app.quotafloat.desktop`，配置与统计目录继续使用它。productName、binary 改名不保证旧安装升级、开始菜单和开机启动项自动迁移；参见 [名称迁移清单](v1.0.0-name-migration-inventory.md)。退出旧实例并做一致性备份；不得覆盖活跃 SQLite 或删除旧统计，需验证重启后四周期统计和检查点仍在。
+V1 保留 `app.quotafloat.desktop`，配置与统计目录继续使用它。productName、binary 改名不保证旧安装升级、开始菜单和开机启动项自动迁移；参见 [原名称迁移清单](v1.0.0-name-migration-inventory.md)。退出旧实例并做一致性备份；不得覆盖活跃 SQLite 或删除旧统计，需验证重启后四周期统计和检查点仍在。
 
 ## 人工确认后的发布
 
-只有 [发布检查清单](GITHUB-RELEASE-CHECKLIST.md) 全部满足、报告 Ready、用户明确批准后，才允许创建 `v1.0.0` Release，标题 `Codex Monitor v1.0.0`，使用 [Release 文案模板](RELEASE_TEMPLATE.md) 和两份验收过的最终安装包加完整校验文件。
+只有 [发布检查清单](GITHUB-RELEASE-CHECKLIST.md) 全部满足、报告 Ready、用户明确批准后，才允许创建 `v1.1.0` Release，标题 `Codex Monitor v1.1.0`，使用 [Release 文案模板](RELEASE_TEMPLATE.md) 和两份验收过的最终安装包加完整校验文件。
 
 本次准备不自动创建 Release，也不把本机数据库、会话、真实账号截图或安装包提交到 Git。
+
+## v1.1.0 候选来源与验收
+
+发布基础设施提交先完成本地 npm ci、updater-policy、npm test/build、全依赖与 omit=dev 两项 high audit（均须 0 vulnerabilities），以及 cargo fmt/test/clippy 和 git diff --check；不修改业务代码、SQLite schema 或统计口径；本轮仅额外授权 Vitest 4.1.11 安全修复，禁止无关依赖更新。提交信息为 `release: prepare Codex Monitor v1.1.0`，普通 fast-forward 推送 main 后锁定 Release Build Source SHA。手动 dispatch release.yml 并核验 run head_sha 等于该 SHA。
+
+下载同一成功 run 的 `codex-monitor-v1.1.0-macos-universal-unsigned` 和 `codex-monitor-v1.1.0-windows-x64-unsigned`，本地 outputs/v1.1.0 只保留 Codex-Monitor-1.1.0.dmg、Codex-Monitor-1.1.0.exe、SHA256SUMS 和必要脱敏证据。分别重算摘要、对比 Actions 内部 SHA，执行 `shasum -a 256 -c SHA256SUMS`。macOS 从实际下载的 DMG 执行 hdiutil verify，挂载检查名称、版本、identifier、file/lipo 架构与实际签名；不拿 debug 或旧本地包替代。
+
+v1.1.0 将 Token Statistics SQLite 从 schema 1 升级为 schema 2。保留迁移、总量/accounting 不变、model backfill、restart、incremental 和完整 rollback 自动测试。v1.0.0 不支持读升级后的 Token database；已验证拒绝路径不破坏数据，重新运行 v1.1.0 可读取。前期证据见 [功能验收报告](v1.1.0-feature-validation-report.md)，不把它改写为本轮 Actions 安装包人工验收。
+
+macOS 最终 Actions DMG 须人工确认安装、启动、Quota、Overview、By Model、默认 Quota Week、historical model data、Hover、Full-screen Space。Windows 按 [人工验收清单](v1.1.0-windows-human-acceptance-checklist.md) 单独验收。最终状态只能是 Awaiting Human Acceptance 或 Blocked；两平台人工通过后再单独 Closure。
+
+构建后可用 docs-only evidence commit 回填 Run ID、SHA256 和状态。报告必须区分 Release Build Source SHA 与 Latest Documentation SHA；未来 v1.1.0 Tag 必须指向实际生成最终制品的 Release Build Source SHA，不指向后续文档提交。即使所有验收通过，仍需用户明确“可以发布”，本任务不得创建 Tag 或任何 GitHub Release。

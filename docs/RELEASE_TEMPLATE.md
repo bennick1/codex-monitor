@@ -1,36 +1,41 @@
-# Codex Monitor v1.0.0
+# Codex Monitor v1.1.0
 
 A lightweight, local-first floating desktop monitor for Codex quota, reset times, and token usage on this machine.
 
 ## Features
 
-- Codex 5-hour and weekly quota with reset times and explicit unavailable/stale states.
-- Today, week, month, and locally collected total Token Statistics, with incremental scanning and SQLite persistence.
-- Compact `万` / `亿` summaries and exact comma-separated details.
+- **Per-model Token Statistics:** view Today, Quota Week, Month, and Total with each model's name, Token count, and share. By Model opens on Quota Week; Overview keeps its existing natural-week period.
+- **Quota Week:** aligns with the current Codex weekly quota's actual seven-day allowance window, not a calendar week. It starts at `weeklyResetAt - 604800 seconds` and includes usage before `queryAt` within the valid window. If that quota window is unavailable, no calendar-week substitute is used.
+- **History:** existing local Codex rollouts can supply model attribution for historical Token records. History that cannot be reliably attributed appears as **Unidentified**; complete attribution is not guaranteed.
+- Codex 5-hour and weekly quota, reset times, explicit unavailable/stale states, incremental local Token collection, and exact Token details.
 - Windows/macOS floating widget with tray controls and Chinese/English labels.
 
 ## Downloads
 
-- macOS: `Codex-Monitor-1.0.0.dmg` — Universal binary; **Unsigned / Not Notarized**.
-- Windows: `Codex-Monitor-1.0.0.exe` — x64 NSIS installer; unsigned publisher.
-- `SHA256SUMS` — must cover both final installers.
+- macOS: `Codex-Monitor-1.1.0.dmg` — Universal (`arm64` + `x86_64`); **Unsigned / Not Notarized**.
+- Windows: `Codex-Monitor-1.1.0.exe` — x64 NSIS installer; **unsigned publisher**.
+- `SHA256SUMS` — covers both final installers.
 
-Open the macOS DMG and drag Codex Monitor to Applications. On Windows, run the NSIS installer as a normal user and launch it from the Start menu. Sign in to Codex on the same machine to read quota.
+Open the macOS DMG and drag Codex Monitor to Applications. Run the Windows NSIS installer as a normal user. Quit the previous app before installing. Verify `SHA256SUMS` before installation.
 
-The macOS package is not Apple verified, notarized, or signed with an Apple Developer ID, so Gatekeeper may show a warning. Windows may show an unknown-publisher or SmartScreen warning. Verify `SHA256SUMS` before installation.
+The macOS package is not Apple verified, notarized, or signed with an Apple Developer ID; Gatekeeper may warn. Windows may show an unknown-publisher or SmartScreen warning. An ad-hoc linker signature is not a Developer ID signature.
 
-## Privacy
+## Upgrade and downgrade limitation
 
-Statistics remain local. No prompts, chats, source code, or account credentials are retained by the monitor. The quota reader uses the existing local login credential only for ChatGPT quota requests; the separate token collector stores minimal usage evidence. No telemetry or cloud sync. See [Privacy](https://github.com/bennick1/codex-monitor/blob/main/PRIVACY.md).
+The application identifier remains `app.quotafloat.desktop` to retain local settings and statistics. An existing v1.0.0 installation can be upgraded without first uninstalling; preserve a consistent backup and check settings, history, and restart behavior during final package acceptance.
 
-## Upgrade and limitations
+**v1.1.0 upgrades the Token Statistics SQLite database to schema 2.** Running v1.0.0 after this upgrade makes its Token Statistics unavailable because it cannot read schema 2. The previously verified refusal path does not damage the database, and v1.1.0 can reopen the original data. This is not supported downgrade compatibility with v1.0.0.
 
-- The legacy application identifier is retained to preserve local settings and historical statistics. Quit the old app before installing, keep a consistent data backup, and verify startup entries after renaming.
-- Local statistics do not represent account-wide or cross-device usage; missing history is marked.
-- Quota service response changes may require a compatibility fix.
-- No Pet, QQ Skin, AI chat, other AI platforms, cloud synchronization, or user system.
-- Updates are manual. The app does not query, download, or install updates; download newer versions only from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases).
+## Privacy and known limitations
 
-## Validation
+- Token Statistics are collected on this machine, not official account-wide or cross-device totals.
+- Historical model attribution may contain Unidentified records. Initial model backfill and restart integrity checks can take time; missing sources may be retried on a later startup.
+- SQLite schema 2 cannot be read by v1.0.0 Token Statistics.
+- macOS is unsigned / not notarized; Windows has an unsigned publisher.
+- Updates are manual through [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). There is no Tauri updater runtime or automatic download/install.
+- No automatic quota-to-Token capacity prediction is provided.
+- No telemetry or cloud synchronization. See [Privacy](https://github.com/bennick1/codex-monitor/blob/main/PRIVACY.md).
 
-The [V1.0.0 validation report](https://github.com/bennick1/codex-monitor/blob/main/docs/v1.0.0-release-validation-report.md) is Ready. macOS and Windows human acceptance passed; detailed Windows environment records were not supplied and are not inferred. Final unsigned candidates were built from commit `a4d3b3119e4411c52d4d7c51d7700bcf5ca0adc0` in [Release Preparation #33982068031](https://github.com/bennick1/codex-monitor/actions/runs/33982068031). The workflow passed tests, audit, updater-policy checks, macOS bundle verification, and Windows NSIS install/start/uninstall smoke. Verify the attached `SHA256SUMS` before installation.
+## Validation status
+
+This is release-preparation copy, not an announcement of publication. See the [v1.1.0 validation report](v1.1.0-release-validation-report.md) for the build source, Actions run, checksums, automated evidence, and separate macOS/Windows human acceptance states. CI success does not establish real-machine acceptance. A Tag or any GitHub Release requires the user's explicit “可以发布”.

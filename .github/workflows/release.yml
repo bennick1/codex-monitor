@@ -16,12 +16,12 @@ jobs:
             bundles: nsis
             target-args: ''
             bundle-dir: src-tauri/target/release/bundle
-            artifact-name: codex-monitor-v1.0.0-windows-x64-unsigned
+            artifact-name: codex-monitor-v1.1.0-windows-x64-unsigned
           - os: macos-latest
             bundles: app,dmg
             target-args: --target universal-apple-darwin
             bundle-dir: src-tauri/target/universal-apple-darwin/release/bundle
-            artifact-name: codex-monitor-v1.0.0-macos-universal-unsigned
+            artifact-name: codex-monitor-v1.1.0-macos-universal-unsigned
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -38,15 +38,20 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: npm run check:updater-policy
-      - name: Validate V1 version and record build environment
+      - name: Validate V1.1 version and record build environment
         shell: pwsh
         run: |
           $package = Get-Content -Raw package.json | ConvertFrom-Json
           $tauri = Get-Content -Raw src-tauri/tauri.conf.json | ConvertFrom-Json
-          if ($package.version -ne '1.0.0' -or $tauri.version -ne $package.version) {
-            throw 'Expected matching V1.0.0 package and Tauri versions.'
+          $metadataJson = cargo metadata --manifest-path src-tauri/Cargo.toml --no-deps --format-version 1 --locked
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot read Cargo package metadata.' }
+          $metadata = $metadataJson | ConvertFrom-Json
+          $cargoPackage = @($metadata.packages | Where-Object name -eq 'codex-monitor')
+          if ($package.version -ne '1.1.0' -or $tauri.version -ne $package.version -or $cargoPackage.Count -ne 1 -or $cargoPackage[0].version -ne $package.version) {
+            throw 'Expected matching V1.1.0 package, Cargo and Tauri versions.'
           }
-          New-Item -ItemType Directory -Force outputs/v1.0.0 | Out-Null
+          if ($tauri.identifier -ne 'app.quotafloat.desktop') { throw 'Unexpected application identifier.' }
+          New-Item -ItemType Directory -Force outputs/v1.1.0 | Out-Null
           @{
             commit = $env:GITHUB_SHA
             buildStartedAt = (Get-Date).ToUniversalTime().ToString('o')
@@ -58,10 +63,11 @@ jobs:
             tauri = (npx tauri --version | Select-Object -Last 1)
             runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
             platformSigning = 'Not configured; candidate artifacts only'
-          } | ConvertTo-Json | Set-Content -Encoding utf8 outputs/v1.0.0/build-environment.json
+          } | ConvertTo-Json | Set-Content -Encoding utf8 outputs/v1.1.0/build-environment.json
       - run: npm test
       - run: npm run build
       - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
@@ -94,7 +100,7 @@ jobs:
           Stop-Process -Id $app.Id -Force
           $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
           if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall failed: $($uninstall.ExitCode)" }
-      - name: Verify macOS bundle metadata
+      - name: Verify macOS bundle metadata and Universal architectures
         if: runner.os == 'macOS'
         shell: bash
         run: |
@@ -102,13 +108,17 @@ jobs:
           app_path="$(find '${{ matrix.bundle-dir }}/macos' -maxdepth 1 -name 'Codex Monitor.app' -print -quit)"
           test -n "$app_path"
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app_path/Contents/Info.plist")" = 'Codex Monitor'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Contents/Info.plist")" = '1.0.0'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Contents/Info.plist")" = '1.1.0'
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Contents/Info.plist")" = 'app.quotafloat.desktop'
+          executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Contents/Info.plist")"
+          file "$app_path/Contents/MacOS/$executable"
+          lipo -verify_arch arm64 x86_64 "$app_path/Contents/MacOS/$executable"
+          codesign -dv --verbose=4 "$app_path" 2>&1 || true
       - name: Name installers and generate SHA256
-        run: node scripts/prepare-release-artifacts.mjs "${{ matrix.bundle-dir }}" outputs/v1.0.0
+        run: node scripts/prepare-release-artifacts.mjs "${{ matrix.bundle-dir }}" outputs/v1.1.0
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
-          path: outputs/v1.0.0/
+          path: outputs/v1.1.0/
           if-no-files-found: error
           retention-days: 30
