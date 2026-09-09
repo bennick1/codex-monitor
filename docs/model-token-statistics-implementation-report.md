@@ -1,5 +1,31 @@
 # Codex Monitor v1.1.0 按模型 Token 统计实施报告
 
+## 2026-09-09 approved model-period adjustment
+
+Execution baseline: `92660889ebdc78f5cd73dd9ae1f702d9df2030ff`; feature commit: `6598809a53b8b992b5612a8f8d17de2b5ddb4738`; branch: `codex/model-rolling-periods`. Work was isolated from the original workspace and its uncommitted files. No push was performed.
+
+Current By Model API is `today / quotaPeriod / last7Days / last30Days / total`; this section supersedes the previous period definitions in the historical implementation notes below.
+
+| Period | Boundary |
+| --- | --- |
+| today | Earliest valid local midnight using system IANA timezone, through Q exclusive |
+| quotaPeriod | ProviderSnapshot.weeklyWindow.resetsAt minus windowSeconds, through Q exclusive; require windowSeconds = 604800 and start <= Q < reset; otherwise null, no fallback |
+| last7Days | [Q - 604800 seconds, Q), exact UTC duration |
+| last30Days | [Q - 2592000 seconds, Q), exact UTC duration |
+| total | Existing active persisted facts, unchanged future exclusion and time-status rules |
+
+All model periods share Q and the existing SQLite transaction. Overview remains `today / thisWeek / thisMonth / total` with unchanged local calendar boundaries. Decimal strings, input + output accounting, unknown remainder, ordering and overflow protection are unchanged. The existing quotaWeek boundary helper keeps its filename because it still validates the provider's weekly window; no extra query, listener, refresh state machine or network request was introduced. The user additionally approved only the one-line `service.rs` stale-result field rename.
+
+UI: `今日 / 额度周期 / 近7天 / 近30天 / 总计`; English: `Today / Quota Period / 7 Days / 30 Days / Total`. First entry defaults to quotaPeriod. At 306px, the full labels fit in both languages and Light/Dark; browser geometry checks, screenshots, long-slug ellipsis, internal list scrolling and focus exact-value visibility passed using synthetic data. This is local component/browser validation, not final installer human acceptance.
+
+Validation: npm ci passed with a temporary npm cache; Vitest 4.1.11, 99 tests / 12 files passed; build and updater policy passed; full and production npm audits each reported 0 vulnerabilities. Rust: 69 passed, 2 pre-existing ignored helper/performance tests; fmt and clippy with -D warnings passed. Dedicated coverage includes nanosecond half-open boundaries, spring/fall DST, Monday/month transitions, empty/huge totals, unknown and per-period reconciliation. Protected files, schema 2 and dependency manifests are unchanged.
+
+Real-data validation used the production aggregator and a read-only database connection, freezing one SQLite snapshot in memory. With the previously captured Provider window and its recorded queryAt, all five model sums reconciled. All non-model Snapshot fields and the renamed quota period exactly matched the start-SHA implementation on that same frozen data. A current system-time query separately reconciled today, last7Days, last30Days and total; quotaPeriod correctly stayed null because no fresh Provider snapshot was supplied. Both rolling totals differed from the respective calendar week/month totals. Database integrity and schema 2 checks passed. No real counts, model usage, quota values or reset timestamps are recorded here. The historical replay does not establish current live quota availability.
+
+Release state: **Feature Adjustment Ready for Release Preparation**. Previous source, workflow and installers are superseded as documented in the Release Validation Report. No Tag, GitHub Release, new release build source or official candidate was created. Enter another Release Preparation only after explicit user approval.
+
+## Historical implementation notes
+
 ## Git 与版本
 
 - 本次额度周修订起点：`f31af02ab6e56345a7c492c5caa000a367be8c92`。
