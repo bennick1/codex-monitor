@@ -112,7 +112,7 @@ jobs:
           test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Contents/Info.plist")" = 'app.quotafloat.desktop'
           executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Contents/Info.plist")"
           file "$app_path/Contents/MacOS/$executable"
-          lipo -verify_arch arm64 x86_64 "$app_path/Contents/MacOS/$executable"
+          lipo "$app_path/Contents/MacOS/$executable" -verify_arch arm64 x86_64
           codesign -dv --verbose=4 "$app_path" 2>&1 || true
       - name: Name installers and generate SHA256
         run: node scripts/prepare-release-artifacts.mjs "${{ matrix.bundle-dir }}" outputs/v1.1.0
