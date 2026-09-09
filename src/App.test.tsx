@@ -12,7 +12,7 @@ vi.mock("./lib/bridge", () => ({
   setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: vi.fn(), setAlwaysOnTop: vi.fn(),
 }));
 vi.mock("./lib/releasePage", () => ({ openReleasePage: vi.fn() }));
-const prefs = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light" };
+const prefs = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const quota = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 }, resetCredits: null, updatedAt: new Date().toISOString(), status: "ok", message: null };
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 beforeEach(() => {
@@ -85,5 +85,18 @@ describe("App hover integration with the real TokenUsage component", () => {
     act(() => { media.matches = true; change(); });
     expect(screen.getByRole("main").className).toContain("theme-dark");
     vi.unstubAllGlobals();
+  });
+
+  it("loads valid skins, rejects invalid values, and applies desktop changes immediately", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, selectedSkin: "blur" });
+    const view = render(<App />); await flush();
+    expect(screen.getByRole("main").className).toContain("quota-orb--skin-blur");
+    act(() => api.desktopListen.mock.calls[0][0].onPreferences({ ...prefs, selectedSkin: "computer" }));
+    expect(screen.getByRole("main").className).toContain("quota-orb--skin-computer");
+    view.unmount();
+
+    api.preferences.mockResolvedValue({ ...prefs, selectedSkin: "whatever" });
+    render(<App />); await flush();
+    expect(screen.getByRole("main").className).not.toMatch(/skin-(blur|computer)/);
   });
 });

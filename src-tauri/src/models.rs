@@ -54,6 +54,8 @@ pub struct WidgetPreferences {
     pub language: String,
     #[serde(default = "default_appearance")]
     pub appearance: String,
+    #[serde(default = "default_skin")]
+    pub selected_skin: String,
 }
 
 fn default_always_on_top() -> bool {
@@ -65,6 +67,9 @@ fn default_language() -> String {
 fn default_appearance() -> String {
     "light".into()
 }
+fn default_skin() -> String {
+    "default".into()
+}
 impl Default for WidgetPreferences {
     fn default() -> Self {
         Self {
@@ -75,6 +80,7 @@ impl Default for WidgetPreferences {
             auto_rotate_seconds: 12,
             language: default_language(),
             appearance: default_appearance(),
+            selected_skin: default_skin(),
         }
     }
 }
@@ -90,6 +96,9 @@ impl WidgetPreferences {
         }
         if self.appearance != "system" && self.appearance != "light" && self.appearance != "dark" {
             self.appearance = default_appearance();
+        }
+        if !matches!(self.selected_skin.as_str(), "default" | "blur" | "computer") {
+            self.selected_skin = default_skin();
         }
         self
     }

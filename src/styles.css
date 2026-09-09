@@ -1,4 +1,6 @@
 @font-face { font-family: "Quota Sans"; src: local("SF Pro Display"), local("Segoe UI Variable Display"); font-display: swap; }
+@font-face { font-family: "Blur Nunito"; src: url("../assets/fonts/Nunito-Variable.ttf") format("truetype"); font-weight: 200 1000; font-style: normal; font-display: swap; }
+@font-face { font-family: "Computer Bitcount"; src: url("../assets/fonts/BitcountSingle-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
 
 :root {
   font-family: "Quota Sans", "Segoe UI", system-ui, sans-serif;
@@ -236,6 +238,141 @@ button { font: inherit; }
 .quota-orb--theme-dark .orb-weekly-badge { color: #536AD2; }
 .quota-orb--theme-dark .orb-metric { color: #FFFFFF; }
 
+/* Computer restores the historical built-in case, status stripe, display,
+   and dot-matrix progress without changing the widget dimensions. */
+.quota-card--skin-computer { --computer-ink: #244f7b; --computer-screen: #b9d7eb; position: relative; border: 0; border-radius: 0; color: #20201d; background: url("../assets/computer-bg.svg") center / 100% 100% no-repeat; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.quota-card--skin-computer.quota-card--caution { --computer-ink: #a46317; --computer-screen: #f3cd87; }
+.quota-card--skin-computer.quota-card--critical { --computer-ink: #a33030; --computer-screen: #f4b29f; }
+.quota-card--skin-computer .aurora { display: none; }
+.quota-card--skin-computer::before { content: ""; position: absolute; z-index: 1; top: 32px; right: 2px; left: 2px; height: 20px; background: url("../assets/computer-stripes.svg") center / 100% 100% no-repeat; pointer-events: none; }
+.quota-card--skin-computer.quota-card--unavailable::before,
+.quota-card--skin-computer.quota-card--stale::before,
+.quota-card--skin-computer.quota-card--signed_out::before { background-image: url("../assets/computer-stripes-error.svg"); }
+.quota-card--skin-computer .card-header { position: relative; z-index: 2; }
+.quota-card--skin-computer .eyebrow,
+.quota-card--skin-computer .updated,
+.quota-card--skin-computer .reset-time,
+.quota-card--skin-computer .weekly-metric,
+.quota-card--skin-computer .weekly-metric span,
+.quota-card--skin-computer .weekly-metric p,
+.quota-card--skin-computer .reset-credit-row { color: #20201d; text-shadow: none; }
+.quota-card--skin-computer .card-actions { gap: 4px; padding: 0; background: transparent; }
+.quota-card--skin-computer .card-actions button { width: 25px; height: 25px; display: grid; place-items: center; padding: 0; border: 2px solid #a1a596; border-radius: 4px; color: #6f716a; background: #f3eee3; box-shadow: inset 0 1px 0 rgba(255,255,255,.72); backdrop-filter: none; }
+.quota-card--skin-computer .card-actions .pin-button--active,
+.quota-card--skin-computer .card-actions .expand-button--active { border: 1px solid #f3eee3; border-radius: 2px; color: #f3eee3; background: #1b1c18; box-shadow: none; }
+.quota-card--skin-computer .card-actions svg { width: 13px; height: 13px; }
+.quota-card--skin-computer .usage-indicator { width: 25px; height: 25px; display: grid; place-items: center; border: 2px solid #a1a596; border-radius: 4px; background: #f3eee3; box-shadow: inset 0 1px 0 rgba(255,255,255,.72); backdrop-filter: none; }
+.quota-card--skin-computer .primary-metric span { color: var(--computer-ink); font-family: "Computer Bitcount", monospace; font-size: 76px; font-weight: 400; line-height: .68; letter-spacing: 1px; text-shadow: none; }
+.quota-card--skin-computer .primary-metric small { margin: 0 0 3px 6px; color: var(--computer-ink); font-family: "Computer Bitcount", monospace; font-size: 29px; font-weight: 400; line-height: 1; transform: translateY(1px); }
+.quota-card--skin-computer .weekly-metric strong { font-family: "Computer Bitcount", monospace; font-size: 36px; font-weight: 400; line-height: .78; }
+.quota-card--skin-computer .weekly-metric > p { transform: translateY(-10px); }
+.quota-card--skin-computer .weekly-metric strong { transform: translateY(-6px); }
+.quota-card--skin-computer .reset-credit-row { transform: translateY(-8px); }
+.computer-progress { display: grid; grid-template-columns: repeat(34, minmax(0, 1fr)); gap: 4px; height: 10px; margin-top: 10px; }
+.computer-progress i { display: block; width: 100%; height: 10px; min-width: 0; border-radius: 1px; background: #ccc8b9; }
+.quota-card--skin-computer .computer-progress i.is-available { background: color-mix(in srgb, var(--computer-progress-start) calc(100% - var(--computer-progress-end-weight, 0%)), var(--computer-progress-end)); }
+.quota-card--skin-computer.quota-card--healthy .computer-progress { --computer-progress-start: #193564; --computer-progress-end: #4888b6; }
+.quota-card--skin-computer.quota-card--caution .computer-progress { --computer-progress-start: #ce7815; --computer-progress-end: #e4b573; }
+.quota-card--skin-computer.quota-card--critical .computer-progress { --computer-progress-start: #f62726; --computer-progress-end: #f26f5a; }
+.computer-gpt-mark { position: absolute; right: 1px; bottom: 9px; width: 56px; height: 44px; display: grid; place-items: center; }
+.quota-card--skin-computer .card-footer { bottom: 18px; }
+.computer-gpt-mark img { width: 100%; height: 100%; object-fit: contain; }
+.quota-orb--skin-computer { position: relative; width: 72px; height: 72px; margin: 4px; overflow: hidden; border: 0; border-radius: 0; color: #244f7b; background: transparent; background-clip: border-box; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; transform: scale(1.11); transform-origin: center; }
+.quota-orb--skin-computer .aurora { display: none; }
+.computer-orb-base { position: absolute; inset: 0; z-index: 0; width: 72px; height: 72px; pointer-events: none; }
+.computer-orb-screen { position: absolute; z-index: 1; top: 12.4365px; left: 14.3999px; width: 43.2px; height: 33.3818px; pointer-events: none; }
+.quota-orb--skin-computer .orb-metric,
+.quota-orb--skin-computer .orb-unavailable { position: absolute; z-index: 2; top: 12.4365px; left: 14.3999px; width: 43.2px; height: 33.3818px; display: grid; place-items: center; margin: 0; border: 0; border-radius: 0; color: #244f7b; background: transparent; box-shadow: none; }
+.quota-orb--skin-computer .orb-metric span { font-family: "Computer Bitcount", monospace; font-size: 27px; font-weight: 400; line-height: .72; letter-spacing: .5px; transform: translateY(3px); }
+.quota-orb--skin-computer.quota-card--healthy .orb-metric { color: #1f4176; }
+.quota-orb--skin-computer.quota-card--caution .orb-metric { color: #b36607; }
+.quota-orb--skin-computer.quota-card--critical .orb-metric { color: #e83d13; }
+.quota-orb--skin-computer.quota-card--healthy .orb-metric span,
+.quota-orb--skin-computer.quota-card--caution .orb-metric span,
+.quota-orb--skin-computer.quota-card--critical .orb-metric span { transform: translate(1px, 2px); }
+.quota-orb--skin-computer .orb-unavailable { color: #6f716a; }
+.quota-orb--skin-computer .computer-orb-error-symbol { display: block; width: auto; height: 25px; max-width: 30px; object-fit: contain; }
+.quota-orb--skin-computer .computer-orb-error-symbol--stale { width: 20px; height: 25px; transform: scale(.9); }
+.quota-orb--skin-computer .computer-orb-error-symbol--unavailable { width: 29px; height: 25px; }
+.quota-orb--skin-computer .computer-orb-error-symbol--signed_out { width: 25px; height: 25px; }
+.quota-card--skin-computer .error-state { margin-top: 30px; }
+.quota-card--skin-computer .error-state strong { color: #20201d; text-shadow: none; }
+.quota-card--skin-computer .error-state p { color: #524c4c; text-shadow: none; }
+.quota-card--skin-computer .error-refresh-button { border-color: #a1a596; color: #6f716a; background: #f3eee3; box-shadow: inset 0 1px 0 rgba(255,255,255,.72); }
+.quota-card--skin-computer .status-icon--computer { width: auto; height: 56px; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; border: 0; border-radius: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+.quota-card--skin-computer .computer-error-artwork { display: block; max-width: 142px; max-height: 56px; object-fit: contain; }
+.quota-card--skin-computer .computer-error-artwork--stale { width: 39px; height: 50px; }
+.quota-card--skin-computer .computer-error-artwork--unavailable { width: 58px; height: 51px; }
+.quota-card--skin-computer .computer-error-artwork--signed_out { width: 142px; height: 48px; }
+
+/* Blur is a self-contained built-in presentation layer. Its assets and
+   variables stay scoped so the default palette remains unchanged. */
+.quota-card--skin-blur.quota-card--healthy,
+.quota-card--skin-blur.quota-card--caution,
+.quota-card--skin-blur.quota-card--critical,
+.quota-card--skin-blur.quota-card--stale,
+.quota-card--skin-blur.quota-card--unavailable,
+.quota-card--skin-blur.quota-card--signed_out { color: #10171a; border: 0; border-radius: 40px; background-color: #edfdfd; background-position: center; background-repeat: no-repeat; background-size: cover; box-shadow: none; }
+.quota-card--skin-blur.quota-card--healthy { background-image: url("../assets/blur/blur-healthy.png"); }
+.quota-card--skin-blur.quota-card--caution { background-image: url("../assets/blur/blur-caution.png"); }
+.quota-card--skin-blur.quota-card--critical { background-image: url("../assets/blur/blur-critical.png"); }
+.quota-card--skin-blur.quota-card--stale { background: url("../assets/blur/blur-unavailable.png") center / 100% 100% no-repeat; }
+.quota-card--skin-blur.quota-card--unavailable { background: url("../assets/blur/blur-unavailable.png") center / 100% 100% no-repeat; }
+.quota-card--skin-blur.quota-card--signed_out { background: url("../assets/blur/blur-signedout.png") center / 100% 100% no-repeat; }
+.quota-card--skin-blur.quota-card--healthy .aurora,
+.quota-card--skin-blur.quota-card--caution .aurora,
+.quota-card--skin-blur.quota-card--critical .aurora,
+.quota-card--skin-blur.quota-card--stale .aurora,
+.quota-card--skin-blur.quota-card--unavailable .aurora,
+.quota-card--skin-blur.quota-card--signed_out .aurora { display: none; }
+.quota-card--skin-blur .eyebrow,
+.quota-card--skin-blur .updated,
+.quota-card--skin-blur .reset-time,
+.quota-card--skin-blur .weekly-metric,
+.quota-card--skin-blur .weekly-metric span { color: rgba(16,23,26,.68); text-shadow: none; }
+.quota-card--skin-blur .primary-metric { margin-top: 0; padding-top: 8px; }
+.quota-card--skin-blur .primary-metric span { font-family: "Blur Nunito", "Arial Rounded MT Bold", "SF Pro Rounded", ui-rounded, "Quota Sans", sans-serif; font-size: 64px; font-weight: 600; letter-spacing: -.09em; transform: translateY(4px); }
+.quota-card--skin-blur .primary-metric small { margin-bottom: 8px; font-family: "Blur Nunito", "Arial Rounded MT Bold", "SF Pro Rounded", ui-rounded, sans-serif; font-size: 19px; font-weight: 600; transform: translateY(4px); }
+.quota-card--skin-blur .weekly-metric strong,
+.quota-card--skin-blur .weekly-metric strong small { font-family: "Blur Nunito", "Arial Rounded MT Bold", "SF Pro Rounded", ui-rounded, sans-serif; font-weight: 500; }
+.quota-card--skin-blur .error-state strong { color: #10171a; text-shadow: none; }
+.quota-card--skin-blur .error-state p { color: rgba(16,23,26,.68); text-shadow: none; }
+.quota-card--skin-blur .card-actions button,
+.quota-card--skin-blur .usage-indicator { border: 0; background: rgba(255,255,255,.75); box-shadow: none; backdrop-filter: none; }
+.quota-card--skin-blur .card-actions .pin-button,
+.quota-card--skin-blur .card-actions .expand-button { color: #798183; }
+.quota-card--skin-blur .card-actions button:hover { background-color: transparent; filter: brightness(.96); }
+.quota-card--skin-blur .card-actions .pin-button--active,
+.quota-card--skin-blur .card-actions .expand-button--active { border: 0; color: #1c3136; background: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,.75), 0 3px 10px rgba(77,145,150,.12); }
+.quota-card--skin-blur .usage-indicator i { background: rgba(19,67,68,.55); box-shadow: none; }
+.blur-progress { height: 8px; display: grid; grid-template-columns: repeat(20, 1fr); align-items: center; gap: 5px; margin-top: 18px; }
+.blur-progress i { justify-self: center; display: block; background: rgba(87,154,151,.25); transition: transform .3s ease, background-color .3s ease; }
+.blur-progress i.is-available { width: 8px; height: 8px; border-radius: 2px; background: color-mix(in srgb, var(--blur-progress-start, #6CE180) calc(100% - var(--blur-progress-end-weight, 0%)), var(--blur-progress-end, #9EFFCA)); box-shadow: 0 2px 4px var(--blur-progress-shadow, #D4FFE9); }
+.blur-progress i.is-used { width: 4px; height: 4px; border-radius: 50%; background: rgba(54,110,105,.28); }
+.quota-card--skin-blur.quota-card--caution .blur-progress { --blur-progress-start: #DE9C50; --blur-progress-end: #FDD992; --blur-progress-shadow: #FFF2D4; }
+.quota-card--skin-blur.quota-card--caution .blur-progress i.is-used { background: #EDDCBE; }
+.quota-card--skin-blur.quota-card--critical .blur-progress { --blur-progress-start: #994A3D; --blur-progress-end: #EA8070; --blur-progress-shadow: #FFDCD4; }
+.quota-card--skin-blur.quota-card--critical .blur-progress i.is-used { background: #DBABA5; }
+.quota-orb--skin-blur.quota-card--healthy,
+.quota-orb--skin-blur.quota-card--caution,
+.quota-orb--skin-blur.quota-card--critical,
+.quota-orb--skin-blur.quota-card--stale,
+.quota-orb--skin-blur.quota-card--unavailable,
+.quota-orb--skin-blur.quota-card--signed_out { border: 0; background-position: center; background-repeat: no-repeat; background-size: cover; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.quota-orb--skin-blur.quota-card--healthy { background-image: url("../assets/blur/blur-healthy.png"); }
+.quota-orb--skin-blur.quota-card--caution { background-image: url("../assets/blur/blur-caution.png"); }
+.quota-orb--skin-blur.quota-card--critical { background-image: url("../assets/blur/blur-critical.png"); }
+.quota-orb--skin-blur.quota-card--stale { background-image: url("../assets/blur/blur-unavailable.png"); }
+.quota-orb--skin-blur.quota-card--unavailable { background-image: url("../assets/blur/blur-unavailable.png"); }
+.quota-orb--skin-blur.quota-card--signed_out { background-image: url("../assets/blur/blur-signedout.png"); }
+.quota-orb--skin-blur.quota-card--healthy .aurora,
+.quota-orb--skin-blur.quota-card--caution .aurora,
+.quota-orb--skin-blur.quota-card--critical .aurora,
+.quota-orb--skin-blur.quota-card--stale .aurora,
+.quota-orb--skin-blur.quota-card--unavailable .aurora,
+.quota-orb--skin-blur.quota-card--signed_out .aurora { display: none; }
+.quota-orb--skin-blur .orb-metric { color: #10171a; font-family: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", "Arial Rounded MT Bold", sans-serif; }
+
 .orb-metric { display: flex; align-items: flex-end; justify-content: center; line-height: .86; letter-spacing: -.06em; }
 .orb-metric span { font-size: 27px; font-weight: 560; font-variant-numeric: tabular-nums; }
 .orb-metric small { margin: 0 0 3px 1px; font-size: 10px; font-weight: 750; letter-spacing: 0; }
@@ -405,3 +542,24 @@ button { font: inherit; }
 .token-model-view { display: flex; flex-direction: column; min-height: 0; }
 .token-model-list { flex: 0 1 auto; }
 .token-model-list .token-exact { text-align: left; }
+
+/* The restored 306px skin artwork now encloses the current 506px card. Keep
+   token content readable while preserving every existing layout coordinate. */
+.quota-card--tokens.quota-card--skin-blur.quota-card--stale,
+.quota-card--tokens.quota-card--skin-blur.quota-card--unavailable,
+.quota-card--tokens.quota-card--skin-blur.quota-card--signed_out { background-size: cover; }
+.quota-card--skin-blur .token-usage,
+.quota-card--skin-computer .token-usage { min-width: 0; color: #17191f; border-color: rgba(32,32,29,.22); text-shadow: none; }
+.quota-card--skin-blur .primary-metric { color: #10171a; }
+.quota-card--skin-blur .token-meta,
+.quota-card--skin-computer .token-meta { color: #394152; }
+.quota-card--skin-blur .token-exact { color: #17191f; background: rgba(237,253,253,.96); }
+.quota-card--skin-computer .token-exact { color: #20201d; background: rgba(243,238,227,.97); }
+.quota-card--skin-blur .token-value:focus-visible,
+.quota-card--skin-blur .token-switch button:focus-visible { outline-color: #315f9f; }
+.quota-card--skin-computer .token-value:focus-visible,
+.quota-card--skin-computer .token-switch button:focus-visible { outline-color: #244f7b; }
+.quota-card--skin-blur .token-switch button[aria-pressed="true"],
+.quota-card--skin-computer .token-switch button[aria-pressed="true"] { background: rgba(23,25,31,.1); }
+.quota-card--skin-blur .token-switch button:hover,
+.quota-card--skin-computer .token-switch button:hover { background: rgba(23,25,31,.15); }

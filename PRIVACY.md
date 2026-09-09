@@ -17,9 +17,9 @@ Codex Monitor stores widget preferences in its own application config directory:
 - always-on-top state
 - pinned provider
 - auto-rotate interval
-- language, Light / Dark / Follow system appearance, and persistent expansion
+- language, Light / Dark / Follow system appearance, selected built-in skin, and persistent expansion
 
-Removed supporter-license, skin and reminder fields in older settings are ignored and omitted from subsequent preference saves. The app no longer reads hardware identifiers or generates device request codes. Existing position settings and the Token Statistics database are preserved.
+The valid historical `selectedSkin` values (`default`, `blur`, and `computer`) are retained as a normal local preference. Removed supporter-license, unlock, and reminder fields in older settings are ignored and omitted from subsequent preference saves. Skin selection and bundled skin assets add no network requests. The app no longer reads hardware identifiers or generates device request codes. Existing position settings and the Token Statistics database are preserved.
 
 Token Statistics stores `token-statistics.sqlite3` and its SQLite WAL/SHM files in the app's local data directory. It retains only token counters, UTC timestamps and time quality, hashed thread/response/source identities, source-relative paths and file fingerprints, checkpoints, unresolved candidates, and reconciliation links. Absolute source paths exist only in memory; source-relative paths are not returned to the frontend. Hashes support indexing and deduplication; they are not encryption.
 

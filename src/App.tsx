@@ -7,9 +7,16 @@ import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
 import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
-import type { ProviderSnapshot, WidgetPreferences, WidgetTheme } from "./types";
+import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light" };
+const DEFAULT_PREFS: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
+const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
+  ...DEFAULT_PREFS,
+  ...value,
+  language: normalizeLanguage(value.language),
+  selectedSkin: normalizeSkin(value.selectedSkin),
+});
 const INITIAL_SNAPSHOT: ProviderSnapshot = {
   provider: "codex",
   displayName: "CODEX",
@@ -59,6 +66,7 @@ export default function App() {
     releaseOpenFailed: "Could not open GitHub Releases.",
   };
   const theme: WidgetTheme = preferences.appearance === "system" ? (systemDark ? "dark" : "light") : preferences.appearance;
+  const skin: WidgetSkin = preferences.selectedSkin;
   useEffect(() => {
     // This only reconciles the transparent-window safety inset after a theme
     // change. A platform refusal is non-fatal: the current widget geometry is
@@ -115,7 +123,7 @@ export default function App() {
         await new Promise((resolve) => window.setTimeout(resolve, 120));
         return getPreferences().catch(() => DEFAULT_PREFS);
       });
-      setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) });
+      setPreferences(normalizePreferences(value));
       // Window-state may restore the last expanded footprint while React starts
       // as an orb. Reconcile once, unless the user has already begun hovering.
       if (!value.stayExpanded && hoverSequence.current === 0) {
@@ -138,7 +146,7 @@ export default function App() {
     let cancelled = false;
     let cleanup: () => void = () => {};
     void listenDesktopEvents({
-      onPreferences: (value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) }),
+      onPreferences: (value) => setPreferences(normalizePreferences(value)),
       onRefresh: refreshAll,
       onRelease: () => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed)),
     }).then((value) => {
@@ -225,7 +233,7 @@ export default function App() {
   }, [operation.expandFailed, preferences.stayExpanded]);
 
   if (compact) {
-    return <QuotaOrb snapshot={current} language={language} onDrag={() => startDragging()} onHover={handleHover} theme={theme} style={cardStyle} />;
+    return <QuotaOrb snapshot={current} language={language} onDrag={() => startDragging()} onHover={handleHover} theme={theme} skin={skin} style={cardStyle} />;
   }
 
   return (
@@ -237,14 +245,14 @@ export default function App() {
       onNext={() => setActiveIndex((value) => (value + 1) % snapshots.length)}
       onTogglePin={() => savePreferences({ ...preferences, pinnedProvider: preferences.pinnedProvider ? null : current.provider })}
       onToggleStayExpanded={() => savePreferences({ ...preferences, stayExpanded: !preferences.stayExpanded })}
-      onLock={() => { setOperationError(null); void setAlwaysOnTop(!preferences.alwaysOnTop).then((value) => setPreferences({ ...DEFAULT_PREFS, ...value, language: normalizeLanguage(value.language) })).catch(() => setOperationError(operation.alwaysOnTopFailed)); }}
+      onLock={() => { setOperationError(null); void setAlwaysOnTop(!preferences.alwaysOnTop).then((value) => setPreferences(normalizePreferences(value))).catch(() => setOperationError(operation.alwaysOnTopFailed)); }}
       onDrag={() => startDragging()}
       onHover={handleHover}
       onRefresh={refreshAll}
       tokens={tokens}
       isConsuming={consumingProviders.has(current.provider)}
       theme={theme}
-
+      skin={skin}
       style={cardStyle}
       notice={operationError}
     />

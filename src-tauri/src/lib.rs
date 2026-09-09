@@ -34,6 +34,79 @@ const EXPANDED_LOGICAL_HEIGHT: f64 = 506.0;
 const EDGE_SAFE_INSET_LOGICAL: f64 = 4.0;
 const SNAP_THRESHOLD_LOGICAL: f64 = 24.0;
 const POSITION_EPSILON: u32 = 2;
+const DEFAULT_SKIN_ID: &str = "default";
+const BLUR_SKIN_ID: &str = "blur";
+const COMPUTER_SKIN_ID: &str = "computer";
+const SKIN_BLUR_MENU_ID: &str = "skin-blur";
+const SKIN_COMPUTER_MENU_ID: &str = "skin-computer";
+
+fn skin_for_menu_id(menu_id: &str) -> Option<&'static str> {
+    match menu_id {
+        SKIN_BLUR_MENU_ID => Some(BLUR_SKIN_ID),
+        SKIN_COMPUTER_MENU_ID => Some(COMPUTER_SKIN_ID),
+        _ => None,
+    }
+}
+
+fn appearance_for_menu_id(menu_id: &str) -> Option<&'static str> {
+    match menu_id {
+        "theme-system" => Some("system"),
+        "theme-dark" => Some("dark"),
+        "theme-light" => Some("light"),
+        _ => None,
+    }
+}
+
+fn preferences_for_theme_menu(
+    preferences: &WidgetPreferences,
+    menu_id: &str,
+) -> Option<WidgetPreferences> {
+    let mut next = preferences.clone();
+    if let Some(selected_skin) = skin_for_menu_id(menu_id) {
+        next.selected_skin = selected_skin.into();
+    } else {
+        let appearance = appearance_for_menu_id(menu_id)?;
+        next.appearance = appearance.into();
+        next.selected_skin = DEFAULT_SKIN_ID.into();
+    }
+    Some(next.normalized())
+}
+
+fn skin_check_state(selected_skin: &str) -> (bool, bool) {
+    (
+        selected_skin == BLUR_SKIN_ID,
+        selected_skin == COMPUTER_SKIN_ID,
+    )
+}
+
+#[derive(Clone, Copy)]
+struct ThemeMenuLabels {
+    theme: &'static str,
+    default_skin: &'static str,
+    system: &'static str,
+    dark: &'static str,
+    light: &'static str,
+}
+
+fn theme_menu_labels(language: &str) -> ThemeMenuLabels {
+    if language == "en" {
+        ThemeMenuLabels {
+            theme: "Theme",
+            default_skin: "Default skin",
+            system: "Follow system",
+            dark: "Dark",
+            light: "Light",
+        }
+    } else {
+        ThemeMenuLabels {
+            theme: "主题",
+            default_skin: "默认皮肤",
+            system: "跟随系统",
+            dark: "深色",
+            light: "浅色",
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 enum HorizontalDock {
@@ -177,7 +250,84 @@ mod preference_migration_tests {
         let dir = tempfile::tempdir().unwrap();
         let prefs = load_preferences(&dir.path().join("preferences.json"));
         assert_eq!(prefs.appearance, "light");
+        assert_eq!(prefs.selected_skin, DEFAULT_SKIN_ID);
         assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 0);
+    }
+
+    #[test]
+    fn stored_skin_accepts_only_the_three_builtin_values() {
+        for (stored, expected) in [
+            (DEFAULT_SKIN_ID, DEFAULT_SKIN_ID),
+            (BLUR_SKIN_ID, BLUR_SKIN_ID),
+            (COMPUTER_SKIN_ID, COMPUTER_SKIN_ID),
+            ("whatever", DEFAULT_SKIN_ID),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("preferences.json");
+            let value = serde_json::json!({ "selectedSkin": stored });
+            fs::write(&path, serde_json::to_vec(&value).unwrap()).unwrap();
+            assert_eq!(load_preferences(&path).selected_skin, expected);
+        }
+    }
+
+    #[test]
+    fn tray_skin_ids_map_only_to_free_builtin_skins() {
+        assert_eq!(skin_for_menu_id(SKIN_BLUR_MENU_ID), Some(BLUR_SKIN_ID));
+        assert_eq!(
+            skin_for_menu_id(SKIN_COMPUTER_MENU_ID),
+            Some(COMPUTER_SKIN_ID)
+        );
+        assert_eq!(skin_for_menu_id("supporter-skin-blur"), None);
+        assert_eq!(skin_for_menu_id("skin-unknown"), None);
+    }
+
+    #[test]
+    fn tray_skin_selection_is_free_mutually_exclusive_and_restart_safe() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("preferences.json");
+        let original = WidgetPreferences::default();
+
+        let blur = preferences_for_theme_menu(&original, SKIN_BLUR_MENU_ID).unwrap();
+        assert_eq!(skin_check_state(&blur.selected_skin), (true, false));
+        persist_preferences(&path, &blur).unwrap();
+        assert_eq!(
+            skin_check_state(&load_preferences(&path).selected_skin),
+            (true, false)
+        );
+
+        let computer = preferences_for_theme_menu(&blur, SKIN_COMPUTER_MENU_ID).unwrap();
+        assert_eq!(skin_check_state(&computer.selected_skin), (false, true));
+        persist_preferences(&path, &computer).unwrap();
+        assert_eq!(
+            skin_check_state(&load_preferences(&path).selected_skin),
+            (false, true)
+        );
+
+        for (menu_id, appearance) in [
+            ("theme-system", "system"),
+            ("theme-dark", "dark"),
+            ("theme-light", "light"),
+        ] {
+            let default = preferences_for_theme_menu(&computer, menu_id).unwrap();
+            assert_eq!(default.appearance, appearance);
+            assert_eq!(default.selected_skin, DEFAULT_SKIN_ID);
+            assert_eq!(skin_check_state(&default.selected_skin), (false, false));
+        }
+        assert!(preferences_for_theme_menu(&original, "supporter-skin-blur").is_none());
+    }
+
+    #[test]
+    fn tray_theme_labels_match_the_existing_chinese_and_english_structure() {
+        let zh = theme_menu_labels("zh-CN");
+        assert_eq!(
+            [zh.theme, zh.default_skin, zh.system, zh.dark, zh.light],
+            ["主题", "默认皮肤", "跟随系统", "深色", "浅色"]
+        );
+        let en = theme_menu_labels("en");
+        assert_eq!(
+            [en.theme, en.default_skin, en.system, en.dark, en.light],
+            ["Theme", "Default skin", "Follow system", "Dark", "Light"]
+        );
     }
 
     #[test]
@@ -207,12 +357,33 @@ mod preference_migration_tests {
                 assert_eq!(prefs.auto_rotate_seconds, 42);
                 assert_eq!(prefs.language, "en");
                 assert_eq!(prefs.appearance, appearance);
+                let expected_skin = if matches!(skin, BLUR_SKIN_ID | COMPUTER_SKIN_ID) {
+                    skin
+                } else {
+                    DEFAULT_SKIN_ID
+                };
+                assert_eq!(prefs.selected_skin, expected_skin);
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 7);
-                assert!(saved.get("license").is_none());
-                assert!(saved.get("selectedSkin").is_none());
+                assert_eq!(saved.as_object().unwrap().len(), 8);
+                assert_eq!(
+                    saved.get("selectedSkin").and_then(|value| value.as_str()),
+                    Some(expected_skin)
+                );
+                for obsolete in [
+                    "license",
+                    "licenses",
+                    "unlockedSkin",
+                    "unlockedSkins",
+                    "supporterPromptFirstSeenAt",
+                    "supporterPromptShownAt",
+                ] {
+                    assert!(
+                        saved.get(obsolete).is_none(),
+                        "obsolete field {obsolete} persisted"
+                    );
+                }
                 assert_eq!(fs::read(&db_path).unwrap(), b"untouched database sentinel");
                 assert_eq!(
                     fs::read(&window_path).unwrap(),
@@ -220,7 +391,9 @@ mod preference_migration_tests {
                 );
                 // Backup recovery must use the same compatibility path.
                 fs::write(&path, b"invalid").unwrap();
-                assert_eq!(load_preferences(&path).language, "en");
+                let recovered = load_preferences(&path);
+                assert_eq!(recovered.language, "en");
+                assert_eq!(recovered.selected_skin, expected_skin);
             }
         }
     }
@@ -256,6 +429,16 @@ fn persist_preferences(path: &PathBuf, value: &WidgetPreferences) -> Result<(), 
         return Err(format!("failed to commit settings: {error}"));
     }
     Ok(())
+}
+
+fn apply_theme_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPreferences> {
+    let state = app.try_state::<AppState>()?;
+    let mut preferences = state.preferences.lock().ok()?;
+    let normalized = preferences_for_theme_menu(&preferences, menu_id)?;
+    persist_preferences(&state.preferences_path, &normalized).ok()?;
+    *preferences = normalized.clone();
+    let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
+    Some(normalized)
 }
 
 #[tauri::command]
@@ -1053,13 +1236,28 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let theme_dark = CheckMenuItem::with_id(app, "theme-dark", "Dark", true, false, None::<&str>)?;
     let theme_light =
         CheckMenuItem::with_id(app, "theme-light", "Light", true, false, None::<&str>)?;
+    let skin_blur =
+        CheckMenuItem::with_id(app, SKIN_BLUR_MENU_ID, "Blur", true, false, None::<&str>)?;
+    let skin_computer = CheckMenuItem::with_id(
+        app,
+        SKIN_COMPUTER_MENU_ID,
+        "Computer",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let default_skin = Submenu::with_items(
         app,
         "Default skin / 默认皮肤",
         true,
         &[&theme_system, &theme_dark, &theme_light],
     )?;
-    let theme = Submenu::with_items(app, "Theme / 主题", true, &[&default_skin])?;
+    let theme = Submenu::with_items(
+        app,
+        "Theme / 主题",
+        true,
+        &[&default_skin, &skin_blur, &skin_computer],
+    )?;
     let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
     let autostart = CheckMenuItem::with_id(
         app,
@@ -1105,9 +1303,28 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                 .map(|prefs| prefs.appearance.clone())
         })
         .unwrap_or_else(|| "system".into());
+    let initial_skin = app
+        .try_state::<AppState>()
+        .and_then(|state| {
+            state
+                .preferences
+                .lock()
+                .ok()
+                .map(|prefs| prefs.selected_skin.clone())
+        })
+        .unwrap_or_else(|| DEFAULT_SKIN_ID.into());
     let _ = theme_system.set_checked(initial_appearance == "system");
     let _ = theme_dark.set_checked(initial_appearance == "dark");
     let _ = theme_light.set_checked(initial_appearance == "light");
+    let (blur_checked, computer_checked) = skin_check_state(&initial_skin);
+    let _ = skin_blur.set_checked(blur_checked);
+    let _ = skin_computer.set_checked(computer_checked);
+    let initial_theme_labels = theme_menu_labels(&initial_language);
+    let _ = theme.set_text(initial_theme_labels.theme);
+    let _ = default_skin.set_text(initial_theme_labels.default_skin);
+    let _ = theme_system.set_text(initial_theme_labels.system);
+    let _ = theme_dark.set_text(initial_theme_labels.dark);
+    let _ = theme_light.set_text(initial_theme_labels.light);
     if initial_language != "en" {
         let _ = show.set_text("显示 / 隐藏");
         let _ = refresh.set_text("立即刷新");
@@ -1115,20 +1332,8 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         let _ = unlock.set_text("解锁悬浮窗");
         let _ = pin.set_text("固定 / 取消固定 Codex");
         let _ = language.set_text("Switch to English");
-        let _ = theme.set_text("主题");
-        let _ = default_skin.set_text("默认皮肤");
-        let _ = theme_system.set_text("跟随系统");
-        let _ = theme_dark.set_text("深色");
-        let _ = theme_light.set_text("浅色");
         let _ = autostart.set_text("开机启动");
         let _ = quit.set_text("退出");
-    }
-    if initial_language == "en" {
-        let _ = theme.set_text("Theme");
-        let _ = default_skin.set_text("Default skin");
-        let _ = theme_system.set_text("Follow system");
-        let _ = theme_dark.set_text("Dark");
-        let _ = theme_light.set_text("Light");
     }
     #[cfg(debug_assertions)]
     let menu = Menu::with_items(
@@ -1166,6 +1371,8 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let theme_system_state = theme_system.clone();
     let theme_dark_state = theme_dark.clone();
     let theme_light_state = theme_light.clone();
+    let skin_blur_state = skin_blur.clone();
+    let skin_computer_state = skin_computer.clone();
     let quit_menu = quit.clone();
     #[cfg(debug_assertions)]
     let test_short_window_menu = test_short_window.clone();
@@ -1260,19 +1467,12 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                         } else {
                             "Switch to English"
                         });
-                        let _ = theme_menu.set_text(if english { "Theme" } else { "主题" });
-                        let _ = default_skin_menu.set_text(if english {
-                            "Default skin"
-                        } else {
-                            "默认皮肤"
-                        });
-                        let _ = theme_system_menu.set_text(if english {
-                            "Follow system"
-                        } else {
-                            "跟随系统"
-                        });
-                        let _ = theme_dark_menu.set_text(if english { "Dark" } else { "深色" });
-                        let _ = theme_light_menu.set_text(if english { "Light" } else { "浅色" });
+                        let labels = theme_menu_labels(&normalized.language);
+                        let _ = theme_menu.set_text(labels.theme);
+                        let _ = default_skin_menu.set_text(labels.default_skin);
+                        let _ = theme_system_menu.set_text(labels.system);
+                        let _ = theme_dark_menu.set_text(labels.dark);
+                        let _ = theme_light_menu.set_text(labels.light);
                         let _ = autostart_menu.set_text(if english {
                             "Start at login"
                         } else {
@@ -1283,25 +1483,19 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                     }
                 }
             }
-            "theme-system" | "theme-dark" | "theme-light" => {
-                if let Some(state) = app.try_state::<AppState>() {
-                    if let Ok(mut prefs) = state.preferences.lock() {
-                        prefs.appearance = match event.id.as_ref() {
-                            "theme-dark" => "dark".into(),
-                            "theme-light" => "light".into(),
-                            _ => "system".into(),
-                        };
-                        let normalized = prefs.clone().normalized();
-                        *prefs = normalized.clone();
-                        if persist_preferences(&state.preferences_path, &normalized).is_ok() {
-                            let _ =
-                                theme_system_state.set_checked(normalized.appearance == "system");
-                            let _ = theme_dark_state.set_checked(normalized.appearance == "dark");
-                            let _ = theme_light_state.set_checked(normalized.appearance == "light");
-                            let _ =
-                                app.emit_to("widget", "preferences-changed", normalized.clone());
-                        }
-                    }
+            "theme-system"
+            | "theme-dark"
+            | "theme-light"
+            | SKIN_BLUR_MENU_ID
+            | SKIN_COMPUTER_MENU_ID => {
+                if let Some(normalized) = apply_theme_menu_selection(app, event.id.as_ref()) {
+                    let _ = theme_system_state.set_checked(normalized.appearance == "system");
+                    let _ = theme_dark_state.set_checked(normalized.appearance == "dark");
+                    let _ = theme_light_state.set_checked(normalized.appearance == "light");
+                    let (blur_checked, computer_checked) =
+                        skin_check_state(&normalized.selected_skin);
+                    let _ = skin_blur_state.set_checked(blur_checked);
+                    let _ = skin_computer_state.set_checked(computer_checked);
                 }
             }
             "autostart" => {

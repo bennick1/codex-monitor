@@ -10,6 +10,7 @@ V1.1.0 release candidates are being prepared. Updates are manual: Codex Monitor 
 - **Codex quota monitoring:** remaining 5-hour and weekly quota, reset times, and explicit unavailable/stale states.
 - **Token usage statistics:** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
 - **Per-model Token Statistics:** Today, Quota Week, Month, and Total with model, Token count, and share. Quota Week follows the actual seven-day Codex quota window, not a calendar week; uncertain historical attribution appears as Unidentified.
+- **Three free built-in skins:** Default (Follow system, Dark, or Light), Blur, and Computer. Skin selection is local, persists across restarts, and has no activation step.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
 - **Windows/macOS support:** a shared interface with Light, Dark, and Follow system appearances and Chinese/English labels. Platform acceptance is tracked separately in the release report.
 
@@ -41,7 +42,7 @@ v1.1.0 upgrades Token Statistics to SQLite schema 2. v1.0.0 cannot read the upgr
 1. Sign in to Codex on this machine, then launch Codex Monitor.
 2. Hover over the orb to view quota and Token Statistics. Pin the card to keep it expanded.
 3. Hover or focus each Token value to see the exact count, such as `12,685,398` for `1268.54万`.
-4. Use the tray menu to refresh, open the manual release download page, change language/appearance, show or hide the widget, or quit.
+4. Use the tray menu to refresh, open the manual release download page, switch among the Default, Blur, and Computer skins, change language/appearance, show or hide the widget, or quit.
 
 On macOS the app is a menu-bar accessory: it intentionally has no Dock or Command-Tab entry. Fullscreen Spaces and sleep/wake behavior must pass the tests in the release report.
 

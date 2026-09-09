@@ -5,8 +5,18 @@ import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, Cl
 import { memo, type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { clampPercent, formatDateTime, formatResetDate, formatResetTime, quotaTier } from "../lib/format";
 import { copy, normalizeLanguage } from "../lib/i18n";
-import type { Language, ProviderSnapshot, WidgetPreferences, WidgetTheme } from "../types";
+import type { Language, ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "../types";
 import { ProviderMark } from "./ProviderMark";
+import computerGptLogoUrl from "../../assets/computer-gpt-logo.svg";
+import computerOrbBaseUrl from "../../assets/computer-orb-base.svg";
+import computerOrbHealthyUrl from "../../assets/computer-orb-screen-healthy.svg";
+import computerOrbCautionUrl from "../../assets/computer-orb-screen-caution.svg";
+import computerOrbCriticalUrl from "../../assets/computer-orb-screen-critical.svg";
+import computerErrorUnavailableUrl from "../../assets/computer-error-unavailable.svg";
+import computerErrorStaleUrl from "../../assets/computer-error-stale.svg";
+import computerErrorSignedOutUrl from "../../assets/computer-error-signedout.svg";
+import computerOrbErrorScreenUrl from "../../assets/computer-orb-screen-error.svg";
+import computerOrbGptUrl from "../../assets/computer-orb-gpt.svg";
 
 interface Props {
   tokens?: TokenStatisticsView;
@@ -25,6 +35,7 @@ interface Props {
   notice?: ReactNode;
   initialShowCreditTip?: boolean;
   theme?: WidgetTheme;
+  skin?: WidgetSkin;
   style?: CSSProperties;
 }
 
@@ -33,6 +44,15 @@ function StatusIcon({ status, expired = false }: { status: ProviderSnapshot["sta
   if (status === "stale" || expired) return <ClockCounterClockwise weight="duotone" />;
   if (status === "unavailable") return <CloudSlash weight="duotone" />;
   return <WarningCircle weight="duotone" />;
+}
+
+function ComputerErrorArtwork({ status }: { status: ProviderSnapshot["status"] }) {
+  const src = status === "signed_out"
+    ? computerErrorSignedOutUrl
+    : status === "stale"
+      ? computerErrorStaleUrl
+      : computerErrorUnavailableUrl;
+  return <img className={`computer-error-artwork computer-error-artwork--${status}`} src={src} alt="" />;
 }
 
 function localizedBackendMessage(message: string | null, language: Language): string | null {
@@ -46,6 +66,30 @@ function localizedBackendMessage(message: string | null, language: Language): st
   if (normalized.includes("missing the 5h")) return "额度响应缺少 5 小时窗口。";
   if (normalized.includes("refresh is already running")) return "额度正在刷新，请稍候。";
   return message;
+}
+
+function BlurProgress({ percent, label }: { percent: number; label: string }) {
+  const segmentCount = 20;
+  const availableCount = Math.round((Math.max(0, Math.min(100, percent)) / 100) * segmentCount);
+  return <div className="blur-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+    {Array.from({ length: segmentCount }, (_, index) => {
+      const available = index < availableCount;
+      const endWeight = available && availableCount > 1 ? (index / (availableCount - 1)) * 100 : 0;
+      return <i key={index} className={available ? "is-available" : "is-used"} style={available ? { "--blur-progress-end-weight": `${endWeight}%` } as CSSProperties : undefined} aria-hidden="true" />;
+    })}
+  </div>;
+}
+
+function ComputerProgress({ percent, label }: { percent: number; label: string }) {
+  const segmentCount = 34;
+  const availableCount = Math.round((Math.max(0, Math.min(100, percent)) / 100) * segmentCount);
+  return <div className="computer-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
+    {Array.from({ length: segmentCount }, (_, index) => {
+      const available = index < availableCount;
+      const endWeight = available && availableCount > 1 ? (index / (availableCount - 1)) * 100 : 0;
+      return <i key={index} className={available ? "is-available" : "is-used"} style={available ? { "--computer-progress-end-weight": `${endWeight}%` } as CSSProperties : undefined} aria-hidden="true" />;
+    })}
+  </div>;
 }
 
 export const QuotaCard = memo(function QuotaCard({
@@ -65,6 +109,7 @@ export const QuotaCard = memo(function QuotaCard({
   notice = null,
   initialShowCreditTip = false,
   theme,
+  skin = "default",
   style,
 }: Props) {
   const [showCreditTip, setShowCreditTip] = useState(initialShowCreditTip);
@@ -96,7 +141,7 @@ export const QuotaCard = memo(function QuotaCard({
 
   return (
     <main
-      className={`quota-card quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}`}
+      className={`quota-card quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}`}
       style={style}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
@@ -107,7 +152,7 @@ export const QuotaCard = memo(function QuotaCard({
       {notice ? <div className="operation-notice" role="status">{notice}</div> : null}
       <header className="card-header">
         <div>
-          <p className="eyebrow">{`${snapshot.displayName} · ${snapshot.plan ?? t.accountFallback}`}</p>
+          <p className="eyebrow">{skin === "computer" ? "codex·plus" : `${snapshot.displayName} · ${snapshot.plan ?? t.accountFallback}`}</p>
           {snapshot.status !== "stale" ? <p className="updated">{displayingWeeklyAsPrimary ? t.weeklyShortRemaining : t.shortRemaining}</p> : null}
         </div>
         {!preferences.locked ? (
@@ -130,7 +175,11 @@ export const QuotaCard = memo(function QuotaCard({
           <section className="primary-metric" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)}>
             <span>{displayPercent}</span><small>%</small>
           </section>
-          <div className="progress" role="progressbar" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={displayPercent}><span style={{ width: `${displayPercent}%` }} /></div>
+          {skin === "blur"
+            ? <BlurProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
+            : skin === "computer"
+              ? <ComputerProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
+              : <div className="progress" role="progressbar" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={displayPercent}><span style={{ width: `${displayPercent}%` }} /></div>}
           <p className="reset-time">{formatResetTime(displayWindow?.resetsAt ?? null, new Date(), language)}{displayWindow?.resetsAt ? ` · ${formatDateTime(displayWindow.resetsAt, language)}` : ""}</p>
           <footer className="card-footer">
             <div className="weekly-metric">
@@ -148,12 +197,14 @@ export const QuotaCard = memo(function QuotaCard({
                 </div>
               ) : null}
             </div>
-            <ProviderMark />
+            {skin === "blur" ? null : skin === "computer" ? <div className="computer-gpt-mark"><img src={computerGptLogoUrl} alt="GPT" /></div> : <ProviderMark />}
           </footer>
         </>
       ) : (
         <section className="error-state" aria-live="polite">
-          <div className="status-icon" aria-hidden="true"><StatusIcon status={snapshot.status} expired={staleExpired} /></div>
+          {skin === "computer"
+            ? <div className="status-icon status-icon--computer" aria-hidden="true"><ComputerErrorArtwork status={snapshot.status} /></div>
+            : <div className="status-icon" aria-hidden="true"><StatusIcon status={snapshot.status} expired={staleExpired} /></div>}
           <strong>{snapshot.status === "signed_out" ? t.signedInRequired : staleExpired ? t.staleExpired : t.temporarilyUnavailable}</strong>
           <p>{message ?? t.errorUnavailable}</p>
           {snapshot.status === "stale" ? (
@@ -169,7 +220,7 @@ export const QuotaCard = memo(function QuotaCard({
   );
 });
 
-export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, language = "zh-CN", theme, style }: Pick<Props, "snapshot" | "onDrag" | "onHover" | "theme" | "style"> & { language?: Language }) {
+export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, language = "zh-CN", theme, skin = "default", style }: Pick<Props, "snapshot" | "onDrag" | "onHover" | "theme" | "skin" | "style"> & { language?: Language }) {
   const [idle, setIdle] = useState(false);
   const idleTimer = useRef<number | null>(null);
   const activeLanguage = normalizeLanguage(language);
@@ -180,6 +231,16 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
   const displayingWeeklyAsPrimary = primary === null && weekly !== null;
   const tier = quotaTier(displayPercent);
   const available = snapshot.status === "ok" && displayPercent !== null;
+  const computerScreen = tier === "caution"
+    ? computerOrbCautionUrl
+    : tier === "critical"
+      ? computerOrbCriticalUrl
+      : computerOrbHealthyUrl;
+  const computerOrbErrorSymbol = snapshot.status === "signed_out"
+    ? computerOrbGptUrl
+    : snapshot.status === "stale"
+      ? computerErrorStaleUrl
+      : computerErrorUnavailableUrl;
   useEffect(() => {
     idleTimer.current = window.setTimeout(() => setIdle(true), 2000);
     return () => {
@@ -195,7 +256,7 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
 
   return (
     <main
-      className={`quota-orb quota-card--${snapshot.status} quota-card--${tier}${theme ? ` quota-orb--theme-${theme}` : ""}${displayingWeeklyAsPrimary ? " quota-orb--weekly" : ""}${idle ? " quota-orb--idle" : ""}`}
+      className={`quota-orb quota-card--${snapshot.status} quota-card--${tier}${theme ? ` quota-orb--theme-${theme}` : ""}${skin === "blur" ? " quota-orb--skin-blur" : ""}${skin === "computer" ? " quota-orb--skin-computer" : ""}${displayingWeeklyAsPrimary ? " quota-orb--weekly" : ""}${idle ? " quota-orb--idle" : ""}`}
       style={style}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => onHover(false)}
@@ -203,7 +264,9 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
       aria-label={available ? (displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent!) : t.availableLabel(displayPercent!)) : localizedBackendMessage(snapshot.message, activeLanguage) ?? t.unavailableStatus}
     >
       <div className="aurora" aria-hidden="true" />
-      {available && displayingWeeklyAsPrimary ? (
+      {skin === "computer" ? <img className="computer-orb-base" src={computerOrbBaseUrl} alt="" aria-hidden="true" /> : null}
+      {skin === "computer" ? <img className="computer-orb-screen" src={available ? computerScreen : computerOrbErrorScreenUrl} alt="" aria-hidden="true" /> : null}
+      {available && displayingWeeklyAsPrimary && skin !== "computer" ? (
         <span className="orb-weekly-badge" aria-hidden="true">
           <svg viewBox="0 0 55 17" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M7.3687 52.2894C13.0674 47.8486 17 38.4172 17 27.5C17 16.5828 13.0674 7.15141 7.3687 2.71063C3.88364 -0.00516105 0 3.58172 0 8L0 47C0 51.4183 3.88364 55.0052 7.3687 52.2894Z" fill="currentColor" transform="matrix(0 1 -1 0 55 0)" />
@@ -214,11 +277,13 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
       {available ? (
         <section className="orb-metric">
           <span>{displayPercent}</span>
-          <small>%</small>
+          {skin !== "computer" ? <small>%</small> : null}
         </section>
       ) : (
         <section className="orb-unavailable">
-          <StatusIcon status={snapshot.status} />
+          {skin === "computer"
+            ? <img className={`computer-orb-error-symbol computer-orb-error-symbol--${snapshot.status}`} src={computerOrbErrorSymbol} alt="" aria-hidden="true" />
+            : <StatusIcon status={snapshot.status} />}
         </section>
       )}
     </main>
