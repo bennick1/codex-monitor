@@ -47,6 +47,6 @@ V1 保留 `app.quotafloat.desktop`，配置与统计目录继续使用它。prod
 
 v1.1.0 将 Token Statistics SQLite 从 schema 1 升级为 schema 2。保留迁移、总量/accounting 不变、model backfill、restart、incremental 和完整 rollback 自动测试。v1.0.0 不支持读升级后的 Token database；已验证拒绝路径不破坏数据，重新运行 v1.1.0 可读取。前期证据见 [功能验收报告](v1.1.0-feature-validation-report.md)，不把它改写为本轮 Actions 安装包人工验收。
 
-macOS 最终 Actions DMG 须人工确认安装、启动、Quota、Overview、By Model、默认 Quota Week、historical model data、Hover、Full-screen Space。Windows 按 [人工验收清单](v1.1.0-windows-human-acceptance-checklist.md) 单独验收。最终状态只能是 Awaiting Human Acceptance 或 Blocked；两平台人工通过后再单独 Closure。
+macOS 最终 Actions DMG 须人工确认安装、启动、Quota、Overview、By Model、默认 Quota Period、Today / Quota Period / 7 Days / 30 Days / Total、historical model data、Hover、Full-screen Space。Windows 按 [人工验收清单](v1.1.0-windows-human-acceptance-checklist.md) 单独验收。最终状态只能是 Awaiting Human Acceptance 或 Blocked；两平台人工通过后再单独 Closure。
 
 构建后可用 docs-only evidence commit 回填 Run ID、SHA256 和状态。报告必须区分 Release Build Source SHA 与 Latest Documentation SHA；未来 v1.1.0 Tag 必须指向实际生成最终制品的 Release Build Source SHA，不指向后续文档提交。即使所有验收通过，仍需用户明确“可以发布”，本任务不得创建 Tag 或任何 GitHub Release。

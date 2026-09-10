@@ -4,8 +4,8 @@ A lightweight, local-first floating desktop monitor for Codex quota, reset times
 
 ## Features
 
-- **Per-model Token Statistics:** view Today, Quota Week, Month, and Total with each model's name, Token count, and share. By Model opens on Quota Week; Overview keeps its existing natural-week period.
-- **Quota Week:** aligns with the current Codex weekly quota's actual seven-day allowance window, not a calendar week. It starts at `weeklyResetAt - 604800 seconds` and includes usage before `queryAt` within the valid window. If that quota window is unavailable, no calendar-week substitute is used.
+- **Per-model Token Statistics:** view Today, Quota Period, 7 Days, 30 Days, and Total with each model's name, Token count, and share. By Model opens on Quota Period; Overview keeps Today, This Week, This Month, and Total.
+- **Quota Period and rolling periods:** Quota Period aligns with the valid Codex weekly quota window and has no natural-week fallback. 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows, not the natural week or current month.
 - **History:** existing local Codex rollouts can supply model attribution for historical Token records. History that cannot be reliably attributed appears as **Unidentified**; complete attribution is not guaranteed.
 - Codex 5-hour and weekly quota, reset times, explicit unavailable/stale states, incremental local Token collection, and exact Token details.
 - Windows/macOS floating widget with tray controls and Chinese/English labels.

@@ -9,7 +9,7 @@ V1.1.0 release candidates are being prepared. Updates are manual: Codex Monitor 
 - **Lightweight floating widget:** collapses into an orb, expands on hover, with pinning and tray controls.
 - **Codex quota monitoring:** remaining 5-hour and weekly quota, reset times, and explicit unavailable/stale states.
 - **Token usage statistics:** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
-- **Per-model Token Statistics:** Today, Quota Week, Month, and Total with model, Token count, and share. Quota Week follows the actual seven-day Codex quota window, not a calendar week; uncertain historical attribution appears as Unidentified.
+- **Per-model Token Statistics:** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
 - **Three free built-in skins:** Default (Follow system, Dark, or Light), Blur, and Computer. Skin selection is local, persists across restarts, and has no activation step.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
 - **Windows/macOS support:** a shared interface with Light, Dark, and Follow system appearances and Chinese/English labels. Platform acceptance is tracked separately in the release report.
