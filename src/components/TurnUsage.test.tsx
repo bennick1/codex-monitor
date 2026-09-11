@@ -57,3 +57,15 @@ it('keeps many rows and exact extreme integers in the internal list', () => {
   expect(container.querySelectorAll('.token-turn-list .token-turn-row')).toHaveLength(40);
   expect(screen.getByLabelText('synthetic-model-very-long-name: 9,999')).toBeTruthy();
 });
+
+it.each(["zh-CN", "en"] as const)('retains full precision behind quota ellipsis and in accessible details in %s', language => {
+  const remaining = 65.12345678901234;
+  const {container} = render(<TokenUsage language={language} view={{...INITIAL_TOKEN_VIEW,snapshot:snapshot([turn({weeklyRemaining:remaining})])}} />);
+  fireEvent.click(screen.getByRole('button',{name:language === 'en' ? 'By turn' : '按对话'}));
+  const quota = screen.getByLabelText(`${language === 'en' ? 'Weekly remaining' : '周额度剩余'}: ${remaining}%`);
+  const display = quota.querySelector('.token-turn-quota-value');
+  expect(display?.textContent).toBe('65.12345678901234%');
+  expect(quota.querySelector('[role="tooltip"]')?.textContent).toContain('65.12345678901234%');
+  expect(container.querySelectorAll('.token-turn-row')).toHaveLength(1);
+  quota.focus(); expect(document.activeElement).toBe(quota);
+});

@@ -34,7 +34,7 @@ export function TurnUsage({ statistics, language, loading }: { statistics: TurnT
             <span className="token-exact" role="tooltip">{model}: {exact} · {zh ? "完成" : "Completed"}: {formatDateTime(row.completedAt, language)}</span>
           </span>
           <span role="cell" className="token-turn-quota" tabIndex={0} aria-label={`${zh ? "周额度剩余" : "Weekly remaining"}: ${remaining}`}>
-            {remaining}<span className="token-exact" role="tooltip">{zh ? "完成后观测的周额度剩余" : "Weekly remaining observed after completion"}: {remaining} · {zh ? "观测" : "Observed"}: {observation}</span>
+            <span className="token-turn-quota-value">{remaining}</span><span className="token-exact" role="tooltip">{zh ? "完成后观测的周额度剩余" : "Weekly remaining observed after completion"}: {remaining} · {zh ? "观测" : "Observed"}: {observation}</span>
           </span>
         </div>;
       })}

@@ -582,6 +582,7 @@ button { font: inherit; }
 .token-turn-row { min-height: 26px; }
 .token-turn-effort { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .token-turn-row .token-value, .token-turn-quota { text-align: right; font-variant-numeric: tabular-nums; }
+.token-turn-quota-value { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .token-turn-row .token-value { font-weight: 600; }
 .token-turn-row .token-value--long { font-size: 10px; line-height: 14px; }
 .token-turn-quota:hover .token-exact, .token-turn-quota:focus .token-exact { display: block; }

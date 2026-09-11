@@ -122,3 +122,25 @@ it("invalidates the quota period exactly at reset without guessing the next rese
   expect(api.get).toHaveBeenLastCalledWith(null);
   expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod).toBeNull();
 });
+
+it.each([true, false])("clears turn rows immediately on changed or invalid quota even when refresh fails (models=%s)", async hasModels => {
+  vi.setSystemTime(new Date("2026-09-07T04:00:00Z"));
+  const quota = { provider: "codex" as const, displayName: "CODEX", plan: null, shortWindow: null, resetCredits: null, status: "ok" as const, message: null, updatedAt: new Date().toISOString(), weeklyWindow: { resetsAt: "2026-09-11T09:09:19+08:00", windowSeconds: 604800, remainingPercent: 50 } };
+  const initial = tokenSnapshot({ turnStatistics: {weeklyResetAt:quota.weeklyWindow.resetsAt,turns:[{model:"synthetic",effort:"high",tokens:"123",completedAt:"2026-09-07T03:00:00Z",weeklyRemaining:null,quotaObservedAt:null,isPartial:false}]} });
+  if (!hasModels) initial.modelStatistics = null;
+  api.get.mockResolvedValue(initial);
+  const hook = renderHook(({value}) => useTokenStatistics(true,value), {initialProps:{value:quota}}); await flush();
+  expect(hook.result.current.snapshot?.turnStatistics?.turns).toHaveLength(1);
+  const pending = deferred<TokenStatisticsSnapshot>(); api.get.mockReturnValueOnce(pending.promise);
+  hook.rerender({value:{...quota,weeklyWindow:{...quota.weeklyWindow,resetsAt:"2026-09-12T09:09:19+08:00"}}}); await flush();
+  expect(hook.result.current.snapshot?.turnStatistics).toBeNull();
+  expect(hook.result.current.snapshot?.today).toEqual(initial.today);
+  api.get.mockRejectedValue(new Error("offline"));
+  hook.rerender({value:{...quota,weeklyWindow:{...quota.weeklyWindow,resetsAt:"invalid"}}}); await flush();
+  // A late response for the previous valid period cannot restore its rows.
+  await act(async()=>pending.resolve(initial)); await tick(500); await flush();
+  expect(hook.result.current.failed).toBe(true);
+  expect(hook.result.current.snapshot?.turnStatistics).toBeNull();
+  expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod ?? null).toBeNull();
+  expect(hook.result.current.snapshot?.today).toEqual(initial.today);
+});
