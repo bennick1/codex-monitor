@@ -1003,6 +1003,49 @@ mod geometry_tests {
     }
 
     #[test]
+    fn first_expanded_drag_does_not_jump_back_on_height_sync() {
+        let collapsed = rect(100, 100, 80);
+        let current = WidgetRect {
+            position: PhysicalPosition::new(300, 200),
+            size: PhysicalSize::new(314, 460),
+        };
+        let previous = WidgetGeometryState {
+            mode: WidgetMode::Expanded,
+            dock: DockState::default(),
+            collapsed_rect: collapsed,
+            expanded_rect: Some(current),
+            user_moved_expanded: false,
+        };
+        for mode in [ExpandedHeightMode::Full, ExpandedHeightMode::Compact] {
+            let size = PhysicalSize::new(314, widget_window_size(mode.height(), 1.0, 4));
+            assert_eq!(
+                resized_expanded_position(
+                    current,
+                    size,
+                    Some(previous),
+                    true,
+                    PhysicalPosition::new(0, 0),
+                    PhysicalSize::new(1920, 1040),
+                    4
+                ),
+                current.position
+            );
+            assert_eq!(
+                resized_expanded_position(
+                    current,
+                    size,
+                    Some(previous),
+                    false,
+                    PhysicalPosition::new(0, 0),
+                    PhysicalSize::new(1920, 1040),
+                    4
+                ),
+                collapsed.position
+            );
+        }
+    }
+
+    #[test]
     fn expansion_stays_above_a_bottom_taskbar() {
         let position = expanded_position_in_bounds(
             rect(1844, 964, 80),
@@ -1362,27 +1405,29 @@ fn sync_widget_appearance(
         widget_window_size(expanded_height(state.inner()), scale_factor, safe_inset),
     );
     let previous = state.geometry.lock().ok().and_then(|value| *value);
+    let dragging = state
+        .drag_mode
+        .lock()
+        .ok()
+        .is_some_and(|mode| matches!(*mode, Some(WidgetMode::Expanded)));
     let position = if let Some(monitor) = &monitor {
-        if let Some(geometry) = previous.filter(|g| !g.user_moved_expanded) {
-            expanded_position(
-                geometry.collapsed_rect,
-                size,
-                geometry.dock,
-                monitor,
-                work_area,
-                safe_inset as i32,
-            )
-        } else {
-            let (origin, bounds) = work_area
-                .map(|area| {
-                    (
-                        PhysicalPosition::new(area.position.x, area.position.y),
-                        PhysicalSize::new(area.size.width, area.size.height),
-                    )
-                })
-                .unwrap_or_else(|| (*monitor.position(), *monitor.size()));
-            resized_position_in_bounds(current.position, size, origin, bounds, safe_inset as i32)
-        }
+        let (origin, bounds) = work_area
+            .map(|area| {
+                (
+                    PhysicalPosition::new(area.position.x, area.position.y),
+                    PhysicalSize::new(area.size.width, area.size.height),
+                )
+            })
+            .unwrap_or_else(|| (*monitor.position(), *monitor.size()));
+        resized_expanded_position(
+            current,
+            size,
+            previous,
+            dragging,
+            origin,
+            bounds,
+            safe_inset as i32,
+        )
     } else {
         current.position
     };
@@ -1398,6 +1443,29 @@ fn sync_widget_appearance(
         }
     }
     Ok(())
+}
+
+fn resized_expanded_position(
+    current: WidgetRect,
+    size: PhysicalSize<u32>,
+    previous: Option<WidgetGeometryState>,
+    dragging: bool,
+    origin: PhysicalPosition<i32>,
+    bounds: PhysicalSize<u32>,
+    inset: i32,
+) -> PhysicalPosition<i32> {
+    if let Some(geometry) = previous.filter(|g| !g.user_moved_expanded && !dragging) {
+        expanded_position_in_bounds(
+            geometry.collapsed_rect,
+            size,
+            geometry.dock,
+            origin,
+            bounds,
+            inset,
+        )
+    } else {
+        resized_position_in_bounds(current.position, size, origin, bounds, inset)
+    }
 }
 
 fn resized_position_in_bounds(

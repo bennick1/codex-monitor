@@ -986,7 +986,13 @@ fn concurrent_refresh_is_coalesced_and_queries_use_committed_generation() {
             assert_eq!(s.total.unwrap().total_tokens, "120");
             break;
         }
-        assert!(begin.elapsed() < Duration::from_secs(5));
+        assert!(
+            begin.elapsed() < Duration::from_secs(5),
+            "startup readiness deadline exceeded: status={}, generation={}, warnings={:?}",
+            s.status,
+            s.generation,
+            s.quality.warning_codes
+        );
         std::thread::sleep(Duration::from_millis(5));
     }
     let mut joins = Vec::new();
