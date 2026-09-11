@@ -187,6 +187,28 @@ impl TokenStatisticsService {
         service
     }
 
+    /// Called only after an existing successful quota refresh; performs no network IO.
+    pub fn record_quota_observation(
+        &self,
+        weekly: Option<&crate::models::UsageWindow>,
+        observed_at: chrono::DateTime<chrono::Utc>,
+    ) -> std::result::Result<bool, String> {
+        let root = self
+            .inner
+            .runtime
+            .lock()
+            .map_err(|_| "statisticsUnavailable".to_string())?
+            .root
+            .clone();
+        // No reliable source identity yet: do not attach an observation to a guessed root.
+        let Some(root) = root else { return Ok(false) };
+        let result = (|| -> Result<bool> {
+            let mut db = store::open(self.inner.path.as_ref().ok_or("databasePathUnavailable")?)?;
+            super::turns::observe(&mut db, &root, weekly, observed_at)
+        })();
+        result.map_err(|e| e.0.to_string())
+    }
+
     pub fn refresh(&self) -> RefreshResult {
         self.inner.trigger.request();
         let state = self.inner.runtime.lock().unwrap_or_else(|e| e.into_inner());
@@ -235,6 +257,7 @@ impl TokenStatisticsService {
                 if let Some(models) = &mut snapshot.model_statistics {
                     models.periods.quota_period = None;
                 }
+                snapshot.turn_statistics = None;
                 snapshot.is_stale = snapshot.total.is_some();
                 snapshot.quality.warning_codes.push(e.0.into());
                 if snapshot.total.is_some() {

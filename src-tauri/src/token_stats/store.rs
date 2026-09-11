@@ -67,12 +67,13 @@ pub fn open(path: &Path) -> Result<Connection> {
         tx.execute_batch(include_str!("schema.sql"))?;
         tx.execute_batch(include_str!("model_schema.sql"))?;
         tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
+        tx.execute_batch(include_str!("turn_schema.sql"))?;
         tx.commit()?;
     }
     // Refuse foreign/newer databases before any migration or journal mutation.
     let version: i64 = connection.query_row("PRAGMA user_version", [], |r| r.get(0))?;
     let app: i64 = connection.query_row("PRAGMA application_id", [], |r| r.get(0))?;
-    if app != APPLICATION_ID || !matches!(version, 1 | SCHEMA_VERSION) {
+    if app != APPLICATION_ID || !matches!(version, 1 | 2 | SCHEMA_VERSION) {
         return Err("databaseIncompatible".into());
     }
     let parser: i64 = connection.query_row(
@@ -102,6 +103,9 @@ pub fn open(path: &Path) -> Result<Connection> {
         // Complete the internal metadata revision before committing schema 2.
         // A late DDL failure must also roll back the tables and user_version.
         tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
+        if version < 3 {
+            tx.execute_batch(include_str!("turn_schema.sql"))?;
+        }
         tx.commit()?;
     }
     validate(&connection)?;

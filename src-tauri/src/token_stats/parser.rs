@@ -27,6 +27,10 @@ struct Payload<'a> {
     turn_id: Option<Cow<'a, str>>,
     #[serde(borrow)]
     model: Option<&'a RawValue>,
+    #[serde(borrow)]
+    effort: Option<&'a RawValue>,
+    #[serde(borrow)]
+    completed_at: Option<&'a RawValue>,
     response_id: Option<Cow<'a, str>>,
     #[serde(borrow)]
     usage: Option<&'a RawValue>,
@@ -116,6 +120,14 @@ pub fn parse(line: &[u8]) -> Event {
                 .filter(|m| {
                     !m.trim().is_empty() && m.len() <= 512 && !m.chars().any(char::is_control)
                 }),
+            p.effort
+                .and_then(|v| serde_json::from_str::<String>(v.get()).ok())
+                .filter(|v| {
+                    !v.is_empty()
+                        && v.len() <= 64
+                        && v.chars()
+                            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+                }),
         ),
         "token_usage_record" => {
             let (Some(thread), Some(response), Some(counts)) = (
@@ -158,7 +170,19 @@ pub fn parse(line: &[u8]) -> Event {
                 Some("task_started" | "task_complete" | "turn_aborted")
             ) =>
         {
-            Event::ModelBoundary
+            if p.kind.as_deref() == Some("task_started") {
+                Event::Started
+            } else {
+                Event::Lifecycle {
+                    turn: identity(p.turn_id.as_deref()),
+                    completed_at: p
+                        .completed_at
+                        .and_then(|v| serde_json::from_str::<i64>(v.get()).ok())
+                        .and_then(|v| DateTime::<Utc>::from_timestamp(v, 0))
+                        .map(|v| v.to_rfc3339_opts(SecondsFormat::Nanos, true)),
+                    aborted: p.kind.as_deref() == Some("turn_aborted"),
+                }
+            }
         }
         _ => Event::Ignore,
     }

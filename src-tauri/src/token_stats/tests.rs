@@ -1503,7 +1503,7 @@ fn model_parser_preserves_slug_and_ignores_bodies_and_invalid_optional_model() {
         let mut event = model_turn("a", "placeholder");
         event["payload"]["model"] = value;
         match parser::parse(event.to_string().as_bytes()) {
-            Event::Turn(Some(_), model) => assert_eq!(model.as_deref(), expected),
+            Event::Turn(Some(_), model, _) => assert_eq!(model.as_deref(), expected),
             _ => panic!("model metadata must not invalidate the accounting turn"),
         }
     }
@@ -1688,7 +1688,7 @@ fn v1_migration_and_metadata_backfill_preserve_all_accounting_and_deleted_source
         snapshot.total.unwrap().total_tokens,
     ];
     // Reconstruct exact V1: its unchanged schema.sql plus original accounting rows.
-    h.db.execute_batch("DROP TABLE model_checkpoints; DROP TABLE model_identities; DROP TABLE model_turns; DROP TABLE model_repairs; DROP INDEX model_fact_lookup; DROP INDEX model_source_lookup; PRAGMA user_version=1;").unwrap();
+    h.db.execute_batch("DROP TABLE quota_snapshots; DROP TABLE model_checkpoints; DROP TABLE model_identities; DROP TABLE model_turns; DROP TABLE model_repairs; DROP INDEX model_fact_lookup; DROP INDEX model_source_lookup; PRAGMA user_version=1;").unwrap();
     fs::remove_file(&deleted).unwrap();
     drop(h.db);
     h.db = store::open(&h.path).unwrap();
@@ -1696,7 +1696,7 @@ fn v1_migration_and_metadata_backfill_preserve_all_accounting_and_deleted_source
     assert_eq!(
         h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        2
+        3
     );
     assert_eq!(
         model_rows(&h.snapshot()),
@@ -1814,7 +1814,7 @@ fn late_model_metadata_initialization_failure_rolls_back_all_ddl() {
             repaired
                 .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            2
+            3
         );
         assert_eq!(accounting_dump(&repaired), before);
     }
@@ -2332,4 +2332,533 @@ fn rolling_periods_cross_monday_and_month_boundaries() {
     assert_eq!(p.periods.last30_days.total_tokens, "600");
     assert_eq!(s.this_week.unwrap().total_tokens, "100");
     assert_eq!(s.this_month.unwrap().total_tokens, "400");
+}
+
+fn completed_turn(id: &str, at: &str) -> Value {
+    json!({"type":"event_msg","timestamp":"2026-09-05T09:00:00Z","payload":{"type":"task_complete","turn_id":id,"completed_at": DateTime::parse_from_rfc3339(at).unwrap().timestamp(), "last_agent_message":"SECRET-BODY"}})
+}
+fn effort_turn(id: &str, model: &str, effort: Option<&str>) -> Value {
+    json!({"type":"turn_context","payload":{"turn_id":id,"model":model,"effort":effort,"prompt":"SECRET-PROMPT"}})
+}
+fn quota_window() -> aggregate::QuotaWindow {
+    aggregate::QuotaWindow {
+        resets_at: "2026-09-10T00:00:00Z".into(),
+        window_seconds: 604800,
+    }
+}
+fn by_turn(h: &mut Harness) -> Value {
+    let root = h.source.resolve().unwrap().1;
+    serde_json::to_value(
+        aggregate::query_with_quota(
+            &mut h.db,
+            &root,
+            DateTime::parse_from_rfc3339("2026-09-05T10:00:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            chrono_tz::UTC,
+            Some(&quota_window()),
+        )
+        .unwrap()
+        .turn_statistics,
+    )
+    .unwrap()
+}
+fn observation(h: &mut Harness, time: &str, percent: f64, reset: &str) -> super::Result<bool> {
+    let root = h.source.resolve().unwrap().1;
+    let weekly = crate::models::UsageWindow {
+        remaining_percent: percent,
+        resets_at: Some(reset.into()),
+        window_seconds: 604800,
+    };
+    super::turns::observe(
+        &mut h.db,
+        &root,
+        Some(&weekly),
+        DateTime::parse_from_rfc3339(time)
+            .unwrap()
+            .with_timezone(&Utc),
+    )
+}
+
+#[test]
+fn turn_rows_keep_repeated_models_efforts_sessions_and_completion_order() {
+    let mut h = Harness::new();
+    let mut values = vec![meta("main")];
+    for (i, effort) in [Some("high"), Some("high"), Some("xhigh"), None]
+        .into_iter()
+        .enumerate()
+    {
+        let id = format!("turn-{i}");
+        let mut fact = modern("main", &format!("r{i}"), 11, 11 * (i as i64 + 1));
+        fact["payload"]["turn_id"] = json!(id);
+        values.extend([
+            effort_turn(&id, "synthetic", effort),
+            fact,
+            completed_turn(&id, &format!("2026-09-05T01:0{i}:00Z")),
+        ]);
+    }
+    write(&h.log(), &values);
+    write(
+        &h.home.join("sessions/second.jsonl"),
+        &[
+            meta("other"),
+            effort_turn("turn-a", "synthetic", Some("ultra")),
+            modern("other", "r-other", 7, 7),
+            completed_turn("turn-a", "2026-09-05T01:05:00Z"),
+        ],
+    );
+    h.scan();
+    let before = accounting_dump(&h.db);
+    let result = by_turn(&mut h);
+    let rows = result["turns"].as_array().unwrap();
+    assert_eq!(rows.len(), 5);
+    assert_eq!(rows[0]["effort"], "high");
+    assert_eq!(rows[1]["effort"], "high");
+    assert_eq!(rows[2]["effort"], "xhigh");
+    assert!(rows[3]["effort"].is_null());
+    assert_eq!(rows[4]["effort"], "ultra");
+    assert_eq!(rows[0]["tokens"], "11");
+    assert!(rows.iter().all(|r| r["weeklyRemaining"].is_null()));
+    assert!(!result.to_string().contains("SECRET"));
+    assert!(!result.to_string().contains("turn-a"));
+    h.restart();
+    h.scan();
+    assert_eq!(by_turn(&mut h), result);
+    assert_eq!(accounting_dump(&h.db), before);
+}
+
+#[test]
+fn completion_requires_explicit_turn_and_timestamp_and_excludes_abort() {
+    for mode in [
+        "abort",
+        "missing-turn",
+        "missing-time",
+        "bad-time",
+        "started",
+        "conflicting-time",
+    ] {
+        let mut h = Harness::new();
+        let mut end = completed_turn("turn-a", AT);
+        match mode {
+            "abort" => end["payload"]["type"] = json!("turn_aborted"),
+            "missing-turn" => {
+                end["payload"].as_object_mut().unwrap().remove("turn_id");
+            }
+            "missing-time" => {
+                end["payload"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("completed_at");
+            }
+            "bad-time" => end["payload"]["completed_at"] = json!("invalid"),
+            "started" => end["payload"]["type"] = json!("task_started"),
+            _ => {}
+        }
+        let mut values = vec![
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            modern("main", "r", 10, 10),
+            end,
+        ];
+        if mode == "abort" {
+            values.push(completed_turn("turn-a", AT));
+        }
+        if mode == "conflicting-time" {
+            values.push(completed_turn("turn-a", "2026-09-05T01:00:01Z"));
+        }
+        write(&h.log(), &values);
+        h.scan();
+        assert!(
+            by_turn(&mut h)["turns"].as_array().unwrap().is_empty(),
+            "{mode}"
+        );
+        assert_eq!(h.total(), "10");
+    }
+}
+
+#[test]
+fn metadata_conflicts_are_unknown_without_losing_reliable_turn_tokens() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            effort_turn("turn-a", "different", Some("max")),
+            modern("main", "r", 10, 10),
+            completed_turn("turn-a", AT),
+        ],
+    );
+    h.scan();
+    let rows = by_turn(&mut h);
+    assert_eq!(rows["turns"][0]["model"], "unknown");
+    assert!(rows["turns"][0]["effort"].is_null());
+    assert_eq!(rows["turns"][0]["tokens"], "10");
+}
+
+#[test]
+fn observations_validate_precisely_and_preserve_rising_remaining() {
+    let mut h = Harness::new();
+    write(&h.log(), &[meta("main")]);
+    h.scan();
+    let root = h.source.resolve().unwrap().1;
+    let now = DateTime::parse_from_rfc3339(AT)
+        .unwrap()
+        .with_timezone(&Utc);
+    assert!(!super::turns::observe(&mut h.db, &root, None, now).unwrap());
+    for invalid in [f64::NAN, f64::INFINITY, -0.01, 100.01] {
+        assert!(observation(&mut h, AT, invalid, "2026-09-10T00:00:00Z").is_err());
+    }
+    for invalid in ["invalid", "2020-01-01T00:00:00Z", "2029-01-01T00:00:00Z"] {
+        assert!(!observation(&mut h, AT, 70.0, invalid).unwrap());
+    }
+    assert!(observation(&mut h, AT, 65.123456, "2026-09-10T00:00:00Z").unwrap());
+    assert!(observation(
+        &mut h,
+        "2026-09-05T01:01:00Z",
+        87.654321,
+        "2026-09-10T00:00:00Z"
+    )
+    .unwrap());
+    assert!(!observation(&mut h, AT, 99.0, "2026-09-10T00:00:00Z").unwrap());
+    let saved: Vec<f64> =
+        h.db.prepare("SELECT remaining_percent FROM quota_snapshots ORDER BY observed_at")
+            .unwrap()
+            .query_map([], |r| r.get(0))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+    assert_eq!(saved, vec![65.123456, 87.654321]);
+    assert!(h
+        .db
+        .execute("UPDATE quota_snapshots SET remaining_percent=101", [])
+        .is_err());
+}
+
+#[test]
+fn turns_associate_first_same_period_post_completion_observation_with_15_minute_limit() {
+    for (offset, expected) in [(0, Some(63.25)), (15, Some(63.25)), (16, None)] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                effort_turn("turn-a", "synthetic", Some("high")),
+                modern("main", "r", 10, 10),
+                completed_turn("turn-a", AT),
+            ],
+        );
+        write(
+            &h.home.join("sessions/parallel.jsonl"),
+            &[
+                meta("parallel"),
+                effort_turn("turn-a", "synthetic", Some("high")),
+                modern("parallel", "r-other", 20, 20),
+                completed_turn("turn-a", AT),
+            ],
+        );
+        h.scan();
+        observation(&mut h, "2026-09-05T00:59:59Z", 80.0, "2026-09-10T00:00:00Z").unwrap();
+        observation(&mut h, "2026-09-05T01:00:00Z", 91.0, "2026-09-09T00:00:00Z").unwrap();
+        observation(
+            &mut h,
+            &format!("2026-09-05T01:{offset:02}:00Z"),
+            63.25,
+            "2026-09-10T00:00:00Z",
+        )
+        .unwrap();
+        observation(&mut h, "2026-09-05T01:20:00Z", 90.0, "2026-09-10T00:00:00Z").unwrap();
+        let rows = by_turn(&mut h);
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
+        for row in rows["turns"].as_array().unwrap() {
+            assert_eq!(row["weeklyRemaining"], json!(expected));
+        }
+    }
+}
+
+#[test]
+fn v2_to_v3_migration_rolls_back_early_and_final_ddl_and_restarts() {
+    for blocker in ["quota_snapshots", "turn_completion_lookup"] {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("schema.sqlite3");
+        let db = rusqlite::Connection::open(&path).unwrap();
+        db.execute_batch(include_str!("schema.sql")).unwrap();
+        db.execute_batch(include_str!("model_schema.sql")).unwrap();
+        db.execute_batch(&format!("CREATE TABLE {blocker}(blocker TEXT)"))
+            .unwrap();
+        let before = accounting_dump(&db);
+        assert!(store::open(&path).is_err());
+        assert_eq!(
+            db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            db.query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('model_turns') WHERE name='effort'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            0
+        );
+        assert_eq!(accounting_dump(&db), before);
+        db.execute_batch(&format!("DROP TABLE {blocker}")).unwrap();
+        drop(db);
+        for _ in 0..2 {
+            let migrated = store::open(&path).unwrap();
+            assert_eq!(
+                migrated
+                    .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                    .unwrap(),
+                3
+            );
+            assert_eq!(accounting_dump(&migrated), before);
+        }
+    }
+}
+
+#[test]
+fn v3_metadata_backfill_preserves_v2_accounting_and_model_results() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("max")),
+            modern("main", "r", 9007199254740993, 9007199254740993),
+            completed_turn("turn-a", AT),
+        ],
+    );
+    h.scan();
+    let before = accounting_dump(&h.db);
+    let overview = h.total();
+    let models = model_rows(&h.snapshot());
+    h.db.execute_batch("DROP TABLE quota_snapshots; DROP INDEX turn_completion_lookup; DROP INDEX turn_identity_lookup; ALTER TABLE model_turns DROP COLUMN effort; ALTER TABLE model_turns DROP COLUMN effort_conflict; ALTER TABLE model_turns DROP COLUMN completed_at; ALTER TABLE model_turns DROP COLUMN completion_status; PRAGMA user_version=2").unwrap();
+    h.restart();
+    assert_eq!(accounting_dump(&h.db), before);
+    assert_eq!(h.total(), overview);
+    assert_eq!(model_rows(&h.snapshot()), models);
+    h.scan();
+    assert_eq!(accounting_dump(&h.db), before);
+    assert_eq!(model_rows(&h.snapshot()), models);
+    let rows = by_turn(&mut h);
+    assert_eq!(rows["turns"][0]["tokens"], "9007199254740993");
+    assert_eq!(rows["turns"][0]["effort"], "max");
+    assert!(rows["turns"][0]["weeklyRemaining"].is_null());
+}
+
+#[test]
+fn turn_legacy_ownership_excludes_unbounded_deltas_and_reconciliation_never_double_counts() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            legacy(100, 100),
+            legacy(300, 1),
+            completed_turn("turn-a", AT),
+            effort_turn("turn-b", "synthetic", Some("high")),
+            legacy(500, 1),
+            completed_turn("turn-b", "2026-09-05T01:01:00Z"),
+        ],
+    );
+    h.scan();
+    let result = by_turn(&mut h);
+    assert_eq!(result["turns"].as_array().unwrap().len(), 1);
+    assert_eq!(result["turns"][0]["tokens"], "300");
+    assert_eq!(h.total(), "500");
+    let mut reconciled = Harness::new();
+    write(
+        &reconciled.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            modern("main", "response-a", 120, 120),
+            legacy(120, 120),
+            completed_turn("turn-a", AT),
+        ],
+    );
+    reconciled.scan();
+    assert_eq!(by_turn(&mut reconciled)["turns"][0]["tokens"], "120");
+    assert_eq!(reconciled.total(), "120");
+    reconciled.restart();
+    reconciled.scan();
+    assert_eq!(by_turn(&mut reconciled)["turns"][0]["tokens"], "120");
+}
+
+#[test]
+fn turn_identity_conflict_excludes_precise_rows_and_invalid_period_is_unavailable() {
+    let mut h = Harness::new();
+    let mut duplicate = modern("main", "r", 10, 10);
+    duplicate["payload"]["turn_id"] = json!("turn-b");
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            modern("main", "r", 10, 10),
+            completed_turn("turn-a", AT),
+            effort_turn("turn-b", "synthetic", Some("high")),
+            duplicate,
+            completed_turn("turn-b", AT),
+        ],
+    );
+    h.scan();
+    assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+    assert_eq!(h.total(), "10");
+    assert!(h.snapshot().turn_statistics.is_none());
+    let root = h.source.resolve().unwrap().1;
+    let now = DateTime::parse_from_rfc3339(AT)
+        .unwrap()
+        .with_timezone(&Utc);
+    for window in [
+        aggregate::QuotaWindow {
+            resets_at: "bad".into(),
+            window_seconds: 604800,
+        },
+        aggregate::QuotaWindow {
+            resets_at: quota_window().resets_at,
+            window_seconds: 18000,
+        },
+    ] {
+        assert!(super::turns::query(&h.db, &root, now, Some(&window), false)
+            .unwrap()
+            .is_none());
+    }
+}
+
+#[test]
+fn turn_completion_period_uses_exact_reset_and_never_natural_week() {
+    let mut h = Harness::new();
+    let mut events = vec![meta("main")];
+    for (i, at) in [
+        "2026-09-02T23:59:59Z",
+        "2026-09-03T00:00:00Z",
+        "2026-09-05T09:59:59Z",
+        "2026-09-10T00:00:00Z",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let id = format!("t-{i}");
+        let mut fact = modern("main", &format!("r-{i}"), 10, 10 * (i as i64 + 1));
+        fact["payload"]["turn_id"] = json!(id);
+        events.extend([
+            effort_turn(&id, "synthetic", Some("low")),
+            fact,
+            completed_turn(&id, at),
+        ]);
+    }
+    write(&h.log(), &events);
+    h.scan();
+    let rows = by_turn(&mut h);
+    assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        rows["turns"][0]["completedAt"],
+        "2026-09-03T00:00:00.000000000Z"
+    );
+}
+
+#[test]
+fn turn_future_facts_and_clock_rollback_observations_are_deferred() {
+    let mut h = Harness::new();
+    let mut future = modern("main", "future", 20, 30);
+    future["timestamp"] = json!("2026-09-05T10:00:00Z");
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "synthetic", Some("high")),
+            modern("main", "current", 10, 10),
+            future,
+            completed_turn("turn-a", "2026-09-05T09:59:00Z"),
+        ],
+    );
+    h.scan();
+    observation(&mut h, "2026-09-05T10:01:00Z", 77.0, "2026-09-10T00:00:00Z").unwrap();
+    let result = by_turn(&mut h);
+    assert_eq!(result["turns"][0]["tokens"], "10");
+    assert!(result["turns"][0]["weeklyRemaining"].is_null());
+    let root = h.source.resolve().unwrap().1;
+    let later = DateTime::parse_from_rfc3339("2026-09-05T10:02:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let result = super::turns::query(&h.db, &root, later, Some(&quota_window()), false)
+        .unwrap()
+        .unwrap();
+    assert_eq!(result.turns[0].tokens, "30");
+    assert_eq!(result.turns[0].weekly_remaining, Some(77.0));
+}
+
+#[test]
+fn v3_first_statement_failure_leaves_v2_and_all_metadata_untouched() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("early.sqlite3");
+    let db = rusqlite::Connection::open(&path).unwrap();
+    db.execute_batch(include_str!("schema.sql")).unwrap();
+    db.execute_batch(include_str!("model_schema.sql")).unwrap();
+    // Duplicate column injects failure in the first V3 ALTER, before any V3 DDL succeeds.
+    db.execute_batch("ALTER TABLE model_turns ADD COLUMN effort TEXT")
+        .unwrap();
+    let before = accounting_dump(&db);
+    assert!(store::open(&path).is_err());
+    assert_eq!(
+        db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        db.query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE name IN ('quota_snapshots','model_repairs')",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0
+    );
+    assert_eq!(db.query_row("SELECT COUNT(*) FROM pragma_table_info('model_turns') WHERE name IN ('completed_at','effort_conflict')",[],|r|r.get::<_,i64>(0)).unwrap(),0);
+    assert_eq!(accounting_dump(&db), before);
+    db.execute_batch("ALTER TABLE model_turns DROP COLUMN effort")
+        .unwrap();
+    drop(db);
+    let migrated = store::open(&path).unwrap();
+    assert_eq!(
+        migrated
+            .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        3
+    );
+}
+
+#[test]
+fn lifecycle_parser_distinguishes_started_completed_and_aborted_semantics() {
+    use super::model::Event;
+    let started = json!({"type":"event_msg","payload":{"type":"task_started","turn_id":"turn-a"}});
+    assert!(matches!(
+        parser::parse(started.to_string().as_bytes()),
+        Event::Started
+    ));
+    let completed = completed_turn("turn-a", AT);
+    let complete = parser::parse(completed.to_string().as_bytes());
+    let Event::Lifecycle {
+        turn: Some(turn),
+        completed_at: Some(at),
+        aborted: false,
+    } = complete
+    else {
+        panic!("completion metadata missing")
+    };
+    assert_eq!(turn, super::model::key(&["codex", "turn-a"]));
+    assert_eq!(at, parser::timestamp(Some(AT)).unwrap());
+    let aborted = json!({"type":"event_msg","payload":{"type":"turn_aborted","turn_id":"turn-a"}});
+    assert!(matches!(
+        parser::parse(aborted.to_string().as_bytes()),
+        Event::Lifecycle {
+            turn: Some(_),
+            completed_at: None,
+            aborted: true
+        }
+    ));
 }

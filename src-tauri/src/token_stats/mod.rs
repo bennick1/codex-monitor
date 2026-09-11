@@ -7,6 +7,7 @@ mod parser;
 mod reader;
 pub(crate) mod service;
 mod store;
+mod turns;
 
 pub use service::TokenStatisticsService;
 
@@ -39,7 +40,7 @@ impl std::fmt::Display for Error {
 }
 impl std::error::Error for Error {}
 type Result<T> = std::result::Result<T, Error>;
-const SCHEMA_VERSION: i64 = 2;
+const SCHEMA_VERSION: i64 = 3;
 const PARSER_VERSION: i64 = 1;
 
 #[cfg(test)]

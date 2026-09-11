@@ -39,7 +39,7 @@ pub fn observe(db: &Connection, p: &Position<'_>, c: &mut Context, event: &Event
             c.turn = None;
             c.previous_turn = None;
         }
-        Event::Turn(turn, model) => {
+        Event::Turn(turn, model, effort) => {
             if c.turn != *turn {
                 c.previous_turn = None;
             }
@@ -51,7 +51,21 @@ pub fn observe(db: &Connection, p: &Position<'_>, c: &mut Context, event: &Event
                     ON CONFLICT(root,thread,turn) DO UPDATE SET
                     conflict=MAX(model_turns.conflict,excluded.conflict,CASE WHEN model_turns.model IS NOT NULL AND excluded.model IS NOT NULL AND model_turns.model != excluded.model THEN 1 ELSE 0 END),
                     model=COALESCE(model_turns.model,excluded.model)", params![p.root,thread,turn,model,c.conflict])?;
+                db.execute("UPDATE model_turns SET effort_conflict=MAX(effort_conflict, CASE WHEN effort IS NOT NULL AND ?4 IS NOT NULL AND effort != ?4 THEN 1 ELSE 0 END), effort=COALESCE(effort,?4) WHERE root=?1 AND thread=?2 AND turn=?3", params![p.root,thread,turn,effort])?;
             }
+        }
+        Event::Lifecycle {
+            turn,
+            completed_at,
+            aborted,
+        } => {
+            if let (false, Some(thread), Some(turn)) = (c.conflict, &c.thread, turn) {
+                if *aborted || completed_at.is_some() {
+                    db.execute("INSERT INTO model_turns(root,thread,turn,completed_at,completion_status) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(root,thread,turn) DO UPDATE SET completion_status=CASE WHEN model_turns.completion_status='aborted' OR excluded.completion_status='aborted' THEN 'aborted' WHEN model_turns.completed_at IS NOT NULL AND model_turns.completed_at != excluded.completed_at THEN 'conflict' ELSE COALESCE(model_turns.completion_status,excluded.completion_status) END, completed_at=COALESCE(model_turns.completed_at,excluded.completed_at)", params![p.root,thread,turn,completed_at,if *aborted { "aborted" } else { "completed" }])?;
+                }
+            }
+            c.turn = None;
+            c.previous_turn = None;
         }
         Event::Modern(r) => {
             // The record's own thread/turn are authoritative, never the previous context.
@@ -87,7 +101,7 @@ pub fn observe(db: &Connection, p: &Position<'_>, c: &mut Context, event: &Event
             c.previous_turn = c.turn.clone();
             c.previous_usage = Some(event.cumulative.clone());
         }
-        Event::Problem(_) | Event::ModelBoundary => {
+        Event::Problem(_) | Event::Started => {
             c.turn = None;
             c.previous_turn = None;
         }
