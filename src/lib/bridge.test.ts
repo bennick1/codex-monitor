@@ -41,3 +41,10 @@ describe("widget transitions", () => {
     ]);
   });
 });
+
+it('serializes height/appearance sync with expansion and clamps using monitor work area', async () => {
+  const { syncWidgetAppearance, setWidgetExpanded } = await import('./bridge');
+  await Promise.all([syncWidgetAppearance('dark', 'compact'), setWidgetExpanded(true), syncWidgetAppearance('light', 'full'), setWidgetExpanded(false)]);
+  expect(api.calls).toEqual(['start:sync_widget_appearance','end:sync_widget_appearance','start:expand_widget','end:expand_widget','start:sync_widget_appearance','end:sync_widget_appearance','start:collapse_widget','end:collapse_widget']);
+  expect(api.invoke).toHaveBeenCalledWith('sync_widget_appearance', {appearance:'dark',expandedHeightMode:'compact',workArea:{position:{x:0,y:0},size:{width:1920,height:1040}}});
+});

@@ -34,7 +34,22 @@ export interface ModelTokenStatistics {
   periods: Record<Exclude<ModelTokenPeriodKey, "quotaPeriod">, ModelTokenPeriod> & { quotaPeriod: ModelTokenPeriod | null };
 }
 
+export interface TurnTokenUsage {
+  model: string;
+  effort: string | null;
+  tokens: TokenInteger;
+  completedAt: string;
+  weeklyRemaining: number | null;
+  quotaObservedAt: string | null;
+  isPartial: boolean;
+}
+export interface TurnTokenStatistics {
+  weeklyResetAt: string;
+  turns: TurnTokenUsage[];
+}
+
 export interface TokenStatisticsSnapshot {
+  turnStatistics?: TurnTokenStatistics | null;
   schemaVersion: number;
   generation: TokenInteger;
   scope: "localCodexHome";

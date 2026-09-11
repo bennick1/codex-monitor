@@ -1,3 +1,4 @@
+import { expandedHeightMode } from "./lib/widgetGeometry";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
@@ -67,12 +68,13 @@ export default function App() {
   };
   const theme: WidgetTheme = preferences.appearance === "system" ? (systemDark ? "dark" : "light") : preferences.appearance;
   const skin: WidgetSkin = preferences.selectedSkin;
+  const heightMode = expandedHeightMode(current);
   useEffect(() => {
     // This only reconciles the transparent-window safety inset after a theme
     // change. A platform refusal is non-fatal: the current widget geometry is
     // still usable and users should never see an internal resize error.
-    void syncWidgetAppearance(theme).catch(() => undefined);
-  }, [theme]);
+    void syncWidgetAppearance(theme, heightMode).catch(() => undefined);
+  }, [theme, heightMode]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");

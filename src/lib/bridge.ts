@@ -75,10 +75,18 @@ export async function setAlwaysOnTop(alwaysOnTop: boolean): Promise<WidgetPrefer
   return invoke<WidgetPreferences>("set_widget_always_on_top", { alwaysOnTop });
 }
 
-export async function syncWidgetAppearance(appearance: "light" | "dark"): Promise<void> {
-  if (!isTauri()) return;
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("sync_widget_appearance", { appearance });
+export function syncWidgetAppearance(appearance: "light" | "dark", expandedHeightMode: "full" | "compact" = "full"): Promise<void> {
+  if (!isTauri()) return Promise.resolve();
+  return enqueueWidgetTransition(async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const { currentMonitor } = await import("@tauri-apps/api/window");
+    const monitor = await currentMonitor().catch(() => null);
+    const workArea = monitor ? {
+      position: { x: monitor.workArea.position.x, y: monitor.workArea.position.y },
+      size: { width: monitor.workArea.size.width, height: monitor.workArea.size.height },
+    } : null;
+    await invoke("sync_widget_appearance", { appearance, expandedHeightMode, workArea });
+  });
 }
 
 export async function startDragging(): Promise<void> {

@@ -1,13 +1,12 @@
+import { expandedHeightMode } from "../lib/widgetGeometry";
 import { quotaAvailable } from "../lib/quotaWeek";
 import { TokenUsage } from "./TokenUsage";
 import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
-import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, Info, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
 import { memo, type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { clampPercent, formatDateTime, formatResetDate, formatResetTime, quotaTier } from "../lib/format";
 import { copy, normalizeLanguage } from "../lib/i18n";
 import type { Language, ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "../types";
-import { ProviderMark } from "./ProviderMark";
-import computerGptLogoUrl from "../../assets/computer-gpt-logo.svg";
 import computerOrbBaseUrl from "../../assets/computer-orb-base.svg";
 import computerOrbHealthyUrl from "../../assets/computer-orb-screen-healthy.svg";
 import computerOrbCautionUrl from "../../assets/computer-orb-screen-caution.svg";
@@ -141,7 +140,7 @@ export const QuotaCard = memo(function QuotaCard({
 
   return (
     <main
-      className={`quota-card quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}`}
+      className={`quota-card quota-card--height-${expandedHeightMode(snapshot)} quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}`}
       style={style}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
@@ -183,8 +182,10 @@ export const QuotaCard = memo(function QuotaCard({
           <p className="reset-time">{formatResetTime(displayWindow?.resetsAt ?? null, new Date(), language)}{displayWindow?.resetsAt ? ` · ${formatDateTime(displayWindow.resetsAt, language)}` : ""}</p>
           <footer className="card-footer">
             <div className="weekly-metric">
-              {displayingWeeklyAsPrimary ? <p className="weekly-note"><Info weight="bold" aria-hidden="true" />{t.shortWindowUnavailable}</p> : <p>{t.weeklyUntil(formatResetDate(snapshot.weeklyWindow?.resetsAt ?? null, language))}</p>}
-              <strong className={displayingWeeklyAsPrimary ? "weekly-value--unavailable" : undefined}>{displayingWeeklyAsPrimary ? "--" : weekly ?? "--"}<small>{displayingWeeklyAsPrimary || weekly === null ? "" : "%"}</small></strong>
+              {!displayingWeeklyAsPrimary ? <>
+                <p>{t.weeklyUntil(formatResetDate(snapshot.weeklyWindow?.resetsAt ?? null, language))}</p>
+                <strong>{weekly ?? "--"}<small>{weekly === null ? "" : "%"}</small></strong>
+              </> : null}
               <div className="reset-credit-row" onMouseDown={(event) => event.stopPropagation()}>
                 <span>{snapshot.resetCredits === null ? t.resetCreditUnknown : t.resetCredits(snapshot.resetCredits)}</span>
                 {snapshot.resetCredits !== null && snapshot.resetCredits > 0 ? (
@@ -197,7 +198,6 @@ export const QuotaCard = memo(function QuotaCard({
                 </div>
               ) : null}
             </div>
-            {skin === "blur" ? null : skin === "computer" ? <div className="computer-gpt-mark"><img src={computerGptLogoUrl} alt="GPT" /></div> : <ProviderMark />}
           </footer>
         </>
       ) : (

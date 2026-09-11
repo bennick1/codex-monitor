@@ -31,6 +31,32 @@ use tauri_plugin_window_state::Builder as WindowStateBuilder;
 const COLLAPSED_LOGICAL_SIZE: f64 = 72.0;
 const EXPANDED_LOGICAL_SIZE: f64 = 306.0;
 const EXPANDED_LOGICAL_HEIGHT: f64 = 506.0;
+const COMPACT_EXPANDED_LOGICAL_HEIGHT: f64 = 452.0;
+
+#[derive(Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+enum ExpandedHeightMode {
+    #[default]
+    Full,
+    Compact,
+}
+
+impl ExpandedHeightMode {
+    fn height(self) -> f64 {
+        match self {
+            Self::Full => EXPANDED_LOGICAL_HEIGHT,
+            Self::Compact => COMPACT_EXPANDED_LOGICAL_HEIGHT,
+        }
+    }
+}
+
+fn expanded_height(state: &AppState) -> f64 {
+    state
+        .expanded_height_mode
+        .lock()
+        .map(|mode| mode.height())
+        .unwrap_or(EXPANDED_LOGICAL_HEIGHT)
+}
 const EDGE_SAFE_INSET_LOGICAL: f64 = 4.0;
 const SNAP_THRESHOLD_LOGICAL: f64 = 24.0;
 const POSITION_EPSILON: u32 = 2;
@@ -180,6 +206,7 @@ struct AppState {
     #[cfg(debug_assertions)]
     simulate_short_window_for_testing: Mutex<bool>,
     geometry: Mutex<Option<WidgetGeometryState>>,
+    expanded_height_mode: Mutex<ExpandedHeightMode>,
     drag_mode: Mutex<Option<WidgetMode>>,
 }
 
@@ -215,9 +242,44 @@ fn apply_short_window_test_override(
     snapshots
 }
 
-async fn fetch_snapshots_uncached(state: &State<'_, AppState>) -> Vec<ProviderSnapshot> {
+// Explicit debug-only fixture for native feature validation in an isolated
+// application-data directory. Release builds always use the real provider.
+async fn fetch_provider_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
+    #[cfg(debug_assertions)]
+    if std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1") {
+        return ProviderSnapshot {
+            provider: "codex".into(),
+            display_name: "CODEX".into(),
+            plan: Some("TEST".into()),
+            short_window: None,
+            weekly_window: Some(UsageWindow {
+                remaining_percent: 64.25,
+                resets_at: Some(
+                    (chrono::Utc::now().date_naive() + chrono::Duration::days(3))
+                        .and_hms_opt(0, 0, 0)
+                        .expect("valid fixture time")
+                        .and_utc()
+                        .to_rfc3339(),
+                ),
+                window_seconds: 604_800,
+            }),
+            reset_credits: Some(1),
+            reset_credit_expires_at: vec![],
+            updated_at: chrono::Utc::now().to_rfc3339(),
+            status: "ok".into(),
+            message: None,
+        };
+    }
+    codex::fetch_snapshot(client).await
+}
+
+async fn fetch_snapshots_uncached(
+    state: &State<'_, AppState>,
+    token_service: &token_stats::TokenStatisticsService,
+) -> Vec<ProviderSnapshot> {
     let _guard = state.fetch_lock.lock().await;
-    let values = vec![codex::fetch_snapshot(&state.client).await];
+    let values = vec![fetch_provider_snapshot(&state.client).await];
+    persist_quota_observations(token_service, &values).await;
     if let Ok(mut cache) = state.snapshot_cache.lock() {
         *cache = Some((Instant::now(), values.clone()));
     }
@@ -442,7 +504,10 @@ fn apply_theme_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPr
 }
 
 #[tauri::command]
-async fn get_snapshots(state: State<'_, AppState>) -> Result<Vec<ProviderSnapshot>, String> {
+async fn get_snapshots(
+    state: State<'_, AppState>,
+    token_service: State<'_, token_stats::TokenStatisticsService>,
+) -> Result<Vec<ProviderSnapshot>, String> {
     const CACHE_TTL: Duration = Duration::from_secs(30);
     if let Ok(cache) = state.snapshot_cache.lock() {
         if let Some((time, values)) = &*cache {
@@ -472,7 +537,8 @@ async fn get_snapshots(state: State<'_, AppState>) -> Result<Vec<ProviderSnapsho
             }
         }
     }
-    let values = vec![codex::fetch_snapshot(&state.client).await];
+    let values = vec![fetch_provider_snapshot(&state.client).await];
+    persist_quota_observations(token_service.inner(), &values).await;
     if let Ok(mut cache) = state.snapshot_cache.lock() {
         *cache = Some((Instant::now(), values.clone()));
     }
@@ -480,8 +546,35 @@ async fn get_snapshots(state: State<'_, AppState>) -> Result<Vec<ProviderSnapsho
 }
 
 #[tauri::command]
-async fn refresh_snapshots(state: State<'_, AppState>) -> Result<Vec<ProviderSnapshot>, String> {
-    Ok(fetch_snapshots_uncached(&state).await)
+async fn refresh_snapshots(
+    state: State<'_, AppState>,
+    token_service: State<'_, token_stats::TokenStatisticsService>,
+) -> Result<Vec<ProviderSnapshot>, String> {
+    Ok(fetch_snapshots_uncached(&state, token_service.inner()).await)
+}
+
+async fn persist_quota_observations(
+    service: &token_stats::TokenStatisticsService,
+    snapshots: &[ProviderSnapshot],
+) {
+    // Capture actual successful refresh time, never cache-read time. Debug display
+    // overrides run later and must not enter the observation ledger.
+    let observed_at = chrono::Utc::now();
+    for snapshot in snapshots
+        .iter()
+        .filter(|s| s.provider == "codex" && s.status == "ok")
+    {
+        let service = service.clone();
+        let weekly = snapshot.weekly_window.clone();
+        let result = tauri::async_runtime::spawn_blocking(move || {
+            service.record_quota_observation(weekly.as_ref(), observed_at)
+        })
+        .await;
+        if !matches!(result, Ok(Ok(_))) {
+            // Do not log snapshots, paths, identities or account data.
+            eprintln!("weekly quota observation persistence failed");
+        }
+    }
 }
 
 fn clamp_position_to_monitor(
@@ -490,19 +583,12 @@ fn clamp_position_to_monitor(
     monitor: &tauri::Monitor,
     safe_inset: i32,
 ) -> PhysicalPosition<i32> {
-    let monitor_position = monitor.position();
-    let monitor_size = monitor.size();
-    let left = monitor_position.x;
-    let top = monitor_position.y;
-    let right = left + monitor_size.width as i32;
-    let bottom = top + monitor_size.height as i32;
-    PhysicalPosition::new(
-        position
-            .x
-            .clamp(left - safe_inset, right - size.width as i32 + safe_inset),
-        position
-            .y
-            .clamp(top - safe_inset, bottom - size.height as i32 + safe_inset),
+    resized_position_in_bounds(
+        position,
+        size,
+        *monitor.position(),
+        *monitor.size(),
+        safe_inset,
     )
 }
 
@@ -779,7 +865,7 @@ fn expand_widget(
     );
     let expanded_size = PhysicalSize::new(
         widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
-        widget_window_size(EXPANDED_LOGICAL_HEIGHT, scale_factor, safe_inset),
+        widget_window_size(expanded_height(state.inner()), scale_factor, safe_inset),
     );
     let Some(monitor) = monitor else {
         window
@@ -842,6 +928,78 @@ mod geometry_tests {
     fn window_size_includes_the_transparent_safe_inset() {
         assert_eq!(window_size_for_visual_size(72, 4), 80);
         assert_eq!(widget_window_size(306.0, 1.5, 6), 471);
+    }
+
+    #[test]
+    fn both_expanded_heights_preserve_bottom_anchor_and_inset_at_multiple_scales() {
+        for scale in [1.0, 1.5, 2.0] {
+            let inset = logical_to_physical(EDGE_SAFE_INSET_LOGICAL, scale);
+            let collapsed = widget_window_size(COLLAPSED_LOGICAL_SIZE, scale, inset);
+            let bounds = PhysicalSize::new((1920.0 * scale) as u32, (1040.0 * scale) as u32);
+            for mode in [ExpandedHeightMode::Full, ExpandedHeightMode::Compact] {
+                let size = PhysicalSize::new(
+                    widget_window_size(EXPANDED_LOGICAL_SIZE, scale, inset),
+                    widget_window_size(mode.height(), scale, inset),
+                );
+                let anchor = WidgetRect {
+                    position: PhysicalPosition::new(
+                        bounds.width as i32 - collapsed as i32 + inset as i32,
+                        bounds.height as i32 - collapsed as i32 + inset as i32,
+                    ),
+                    size: PhysicalSize::new(collapsed, collapsed),
+                };
+                let position = expanded_position_in_bounds(
+                    anchor,
+                    size,
+                    DockState {
+                        horizontal: Some(HorizontalDock::Right),
+                        vertical: Some(VerticalDock::Bottom),
+                    },
+                    PhysicalPosition::new(0, 0),
+                    bounds,
+                    inset as i32,
+                );
+                assert_eq!(
+                    position.x + size.width as i32 - inset as i32,
+                    bounds.width as i32
+                );
+                assert_eq!(
+                    position.y + size.height as i32 - inset as i32,
+                    bounds.height as i32
+                );
+                assert!(matches!(
+                    infer_mode(WidgetRect { position, size }, anchor.size),
+                    WidgetMode::Expanded
+                ));
+            }
+        }
+    }
+
+    #[test]
+    fn height_growth_clamps_user_moved_window_without_changing_collapse_anchor() {
+        let origin = PhysicalPosition::new(-1280, 0);
+        let bounds = PhysicalSize::new(1280, 984);
+        let position = PhysicalPosition::new(-318, 700);
+        for mode in [ExpandedHeightMode::Full, ExpandedHeightMode::Compact] {
+            let height = widget_window_size(mode.height(), 1.0, 4);
+            let next = resized_position_in_bounds(
+                position,
+                PhysicalSize::new(314, height),
+                origin,
+                bounds,
+                4,
+            );
+            assert_eq!(next.x, position.x);
+            assert_eq!(next.y + height as i32 - 4, 984);
+        }
+        let tiny = resized_position_in_bounds(
+            position,
+            PhysicalSize::new(314, 514),
+            origin,
+            PhysicalSize::new(100, 100),
+            4,
+        );
+        assert_eq!(tiny, PhysicalPosition::new(-1284, -4));
     }
 
     #[test]
@@ -996,7 +1154,7 @@ fn finish_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), 
     );
     let expanded_size = PhysicalSize::new(
         widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
-        widget_window_size(EXPANDED_LOGICAL_HEIGHT, scale_factor, safe_inset),
+        widget_window_size(expanded_height(state.inner()), scale_factor, safe_inset),
     );
     let mode = state
         .drag_mode
@@ -1173,6 +1331,8 @@ fn set_widget_always_on_top(
 #[tauri::command]
 fn sync_widget_appearance(
     _appearance: String,
+    expanded_height_mode: Option<ExpandedHeightMode>,
+    work_area: Option<WorkAreaPayload>,
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
@@ -1180,30 +1340,85 @@ fn sync_widget_appearance(
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
     let current = current_widget_rect(&window)?;
-    let (_, scale_factor) = monitor_and_scale(&window)?;
+    let (monitor, scale_factor) = monitor_and_scale(&window)?;
     let safe_inset = safe_inset_for_current_appearance(state.inner(), scale_factor);
-    let expanded_threshold = logical_to_physical(
-        (COLLAPSED_LOGICAL_SIZE + EXPANDED_LOGICAL_SIZE) / 2.0,
-        scale_factor,
+    if let Some(mode) = expanded_height_mode {
+        *state
+            .expanded_height_mode
+            .lock()
+            .map_err(|_| "widget height unavailable".to_string())? = mode;
+    }
+    let collapsed_size = PhysicalSize::new(
+        widget_window_size(COLLAPSED_LOGICAL_SIZE, scale_factor, safe_inset),
+        widget_window_size(COLLAPSED_LOGICAL_SIZE, scale_factor, safe_inset),
     );
-    let visual_size = if current.size.width > expanded_threshold {
-        EXPANDED_LOGICAL_SIZE
-    } else {
-        COLLAPSED_LOGICAL_SIZE
-    };
-    let side = widget_window_size(visual_size, scale_factor, safe_inset);
-    let height = widget_window_size(
-        if visual_size == EXPANDED_LOGICAL_SIZE {
-            EXPANDED_LOGICAL_HEIGHT
+    if matches!(infer_mode(current, collapsed_size), WidgetMode::Collapsed) {
+        return window
+            .set_size(collapsed_size)
+            .map_err(|_| "failed to resize widget".to_string());
+    }
+    let size = PhysicalSize::new(
+        widget_window_size(EXPANDED_LOGICAL_SIZE, scale_factor, safe_inset),
+        widget_window_size(expanded_height(state.inner()), scale_factor, safe_inset),
+    );
+    let previous = state.geometry.lock().ok().and_then(|value| *value);
+    let position = if let Some(monitor) = &monitor {
+        if let Some(geometry) = previous.filter(|g| !g.user_moved_expanded) {
+            expanded_position(
+                geometry.collapsed_rect,
+                size,
+                geometry.dock,
+                monitor,
+                work_area,
+                safe_inset as i32,
+            )
         } else {
-            visual_size
-        },
-        scale_factor,
-        safe_inset,
-    );
+            let (origin, bounds) = work_area
+                .map(|area| {
+                    (
+                        PhysicalPosition::new(area.position.x, area.position.y),
+                        PhysicalSize::new(area.size.width, area.size.height),
+                    )
+                })
+                .unwrap_or_else(|| (*monitor.position(), *monitor.size()));
+            resized_position_in_bounds(current.position, size, origin, bounds, safe_inset as i32)
+        }
+    } else {
+        current.position
+    };
     window
-        .set_size(PhysicalSize::new(side, height))
-        .map_err(|_| "failed to resize widget for appearance".to_string())
+        .set_position(position)
+        .map_err(|_| "failed to position resized widget".to_string())?;
+    window
+        .set_size(size)
+        .map_err(|_| "failed to resize widget for appearance".to_string())?;
+    if let Ok(mut saved) = state.geometry.lock() {
+        if let Some(geometry) = saved.as_mut() {
+            geometry.expanded_rect = Some(WidgetRect { position, size });
+        }
+    }
+    Ok(())
+}
+
+fn resized_position_in_bounds(
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+    origin: PhysicalPosition<i32>,
+    bounds: PhysicalSize<u32>,
+    inset: i32,
+) -> PhysicalPosition<i32> {
+    let min_x = origin.x - inset;
+    let min_y = origin.y - inset;
+    PhysicalPosition::new(
+        position.x.clamp(
+            min_x,
+            (origin.x + bounds.width as i32 - size.width as i32 + inset).max(min_x),
+        ),
+        position.y.clamp(
+            min_y,
+            (origin.y + bounds.height as i32 - size.height as i32 + inset).max(min_y),
+        ),
+    )
 }
 
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
@@ -1558,6 +1773,12 @@ pub fn run() {
         ))
         .plugin(window_state)
         .setup(|app| {
+            #[cfg(debug_assertions)]
+            if std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
+                && app.config().identifier == "app.quotafloat.desktop"
+            {
+                return Err("native fixtures require an isolated validation identifier".into());
+            }
             let token_db = app
                 .path()
                 .app_local_data_dir()
@@ -1586,8 +1807,13 @@ pub fn run() {
                 fetch_lock: tokio::sync::Mutex::new(()),
                 snapshot_cache: Mutex::new(None),
                 #[cfg(debug_assertions)]
-                simulate_short_window_for_testing: Mutex::new(false),
+                simulate_short_window_for_testing: Mutex::new(
+                    std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
+                        && std::env::var("CODEX_MONITOR_SYNTHETIC_SHORT_WINDOW").as_deref()
+                            == Ok("1"),
+                ),
                 geometry: Mutex::new(None),
+                expanded_height_mode: Mutex::new(ExpandedHeightMode::Full),
                 drag_mode: Mutex::new(None),
             });
             if let Err(error) = setup_tray(app) {

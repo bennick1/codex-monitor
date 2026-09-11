@@ -50,8 +50,8 @@ describe("token status and field presentation", () => {
   });
   it("keeps confirmed results during scan and shows per-item partial quality", () => {
     show(tokenSnapshot({ status: "scanning", thisWeek: totals("1200", true), today: null }));
-    expect(screen.queryByText("扫描中 · 统计不完整")).toBeNull();
-    expect(screen.getByLabelText("本周: 1,200 · 统计不完整")).toBeTruthy();
+    expect(screen.queryByText("扫描中")).toBeNull();
+    expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
     expect(screen.getByText("…")).toBeTruthy();
   });
   it("uses scan coverage and fact count to distinguish unconfirmed zeros", () => {
@@ -60,7 +60,7 @@ describe("token status and field presentation", () => {
     expect(screen.getAllByText("…")).toHaveLength(4);
     view.unmount();
     show(tokenSnapshot({ status: "empty", total: zero, today: zero, thisWeek: zero, thisMonth: zero }));
-    expect(screen.getByLabelText("今日: 0 · 统计不完整")).toBeTruthy();
+    expect(screen.getByLabelText("今日: 0")).toBeTruthy();
   });
   it("does not clear good fields when another period is missing", () => {
     const { container } = show(tokenSnapshot({ status: "partial", today: null }));
@@ -146,8 +146,8 @@ describe("model token presentation", () => {
   it("retains confirmed model amounts during stale scan and marks partial exact details", () => {
     show(tokenSnapshot({ status: "scanning", isStale: true, thisWeek: totals("1200", true) }));
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
-    expect(screen.queryByText("扫描中 · 统计不完整 · 暂未更新")).toBeNull();
-    const value = screen.getByLabelText("gpt-synthetic-alpha: 800 · 统计不完整");
+    expect(screen.queryByText("扫描中 · 暂未更新")).toBeNull();
+    const value = screen.getByLabelText("gpt-synthetic-alpha: 800");
     expect(value.querySelector("small")?.textContent).toBe("*");
   });
   it("does not expose unconfirmed model rows or invent zero for absent model data", () => {
@@ -216,8 +216,8 @@ it.each(["zh-CN", "en"] as const)("removes metadata while retaining numeric part
       const value = container.querySelector(mode === "overview" ? '[data-period="thisWeek"] .token-value' : '.token-model-list .token-value')!;
       const partialText = language === "en" ? "Incomplete" : "统计不完整";
       expect(value.querySelector("small")?.textContent ?? null).toBe(isPartial ? "*" : null);
-      expect(value.getAttribute("aria-label")?.includes(partialText)).toBe(isPartial);
-      expect(value.querySelector('[role="tooltip"]')?.textContent?.includes(partialText)).toBe(isPartial);
+      expect(value.getAttribute("aria-label")?.includes(partialText)).toBe(false);
+      expect(value.querySelector('[role="tooltip"]')?.textContent?.includes(partialText)).toBe(false);
     }
     unmount();
   }

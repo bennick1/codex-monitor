@@ -563,3 +563,29 @@ button { font: inherit; }
 .quota-card--skin-computer .token-switch button[aria-pressed="true"] { background: rgba(23,25,31,.1); }
 .quota-card--skin-blur .token-switch button:hover,
 .quota-card--skin-computer .token-switch button:hover { background: rgba(23,25,31,.15); }
+
+/* v1.2: two measured geometry modes; only token lists scroll. */
+.quota-card--tokens { height: 506px; }
+.quota-card--tokens.quota-card--height-compact { height: 452px; }
+.quota-card--tokens .token-usage { top: 284px; bottom: 16px; padding-top: 10px; display: flex; flex-direction: column; min-height: 0; }
+.quota-card--tokens.quota-card--height-compact .token-usage { top: 230px; }
+.token-heading { flex-direction: column; align-items: stretch; gap: 4px; margin-bottom: 6px; flex-shrink: 0; }
+.token-heading .token-switch { justify-content: space-between; }
+.token-heading .token-switch button { flex: 1; line-height: 24px; }
+.token-model-view, .token-turn-view { flex: 1; min-height: 0; }
+.token-model-list { max-height: none; flex: 1; }
+.token-turn-view { display: flex; flex-direction: column; }
+.token-turn-header, .token-turn-row { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 77px) 48px; gap: 4px; align-items: center; font-size: 11px; line-height: 18px; }
+.token-turn-header { flex-shrink: 0; font-weight: 650; min-height: 24px; }
+.token-turn-header > :nth-child(n+3) { text-align: right; }
+.token-turn-list { min-height: 0; flex: 1; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; }
+.token-turn-row { min-height: 26px; }
+.token-turn-effort { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.token-turn-row .token-value, .token-turn-quota { text-align: right; font-variant-numeric: tabular-nums; }
+.token-turn-row .token-value { font-weight: 600; }
+.token-turn-row .token-value--long { font-size: 10px; line-height: 14px; }
+.token-turn-quota:hover .token-exact, .token-turn-quota:focus .token-exact { display: block; }
+.token-turn-quota:focus-visible, .token-model-name:focus-visible { outline: 2px solid #315f9f; outline-offset: -2px; }
+.token-turn-row .token-exact { text-align: left; }
+/* Decorative aurora overflow must never make focus scroll the outer card. */
+.quota-card--tokens { overflow: clip; }
