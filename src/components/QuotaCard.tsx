@@ -152,7 +152,7 @@ export const QuotaCard = memo(function QuotaCard({
       {notice ? <div className="operation-notice" role="status">{notice}</div> : null}
       <header className="card-header">
         <div>
-          <p className="eyebrow">{skin === "computer" ? "codex·plus" : `${snapshot.displayName} · ${snapshot.plan ?? t.accountFallback}`}</p>
+          <p className="eyebrow">Codex-Monitor</p>
           {snapshot.status !== "stale" ? <p className="updated">{displayingWeeklyAsPrimary ? t.weeklyShortRemaining : t.shortRemaining}</p> : null}
         </div>
         {!preferences.locked ? (

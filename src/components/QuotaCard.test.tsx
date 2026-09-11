@@ -138,3 +138,19 @@ describe("TokenUsage drag boundary", () => {
     expect(drag).toHaveBeenCalledOnce();
   });
 });
+
+
+describe("expanded product title", () => {
+  for (const skin of ["default", "blur", "computer"] as const) {
+    for (const language of ["zh-CN", "en"] as const) {
+      it.each(["PROLITE", "PRO", null])(`uses the fixed title in ${skin} / ${language} with plan %s`, (plan) => {
+        const { container } = render(<QuotaCard snapshot={{ ...snapshot, plan }} preferences={{ ...preferences, language }}
+          tokens={{ ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot() }} skin={skin}
+          providerCount={1} onPrevious={vi.fn()} onNext={vi.fn()} onTogglePin={vi.fn()}
+          onLock={vi.fn()} onToggleStayExpanded={vi.fn()} onDrag={vi.fn()} onHover={vi.fn()} />);
+        expect(container.querySelector(".card-header .eyebrow")?.textContent).toBe("Codex-Monitor");
+        expect(container.textContent).not.toMatch(/CODEX · PROLITE|CODEX · PRO|codex·plus/);
+      });
+    }
+  }
+});

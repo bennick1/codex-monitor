@@ -60,7 +60,8 @@ describe("App hover integration with the real TokenUsage component", () => {
   it("Token failure leaves quota and controls usable; later event updates visible totals", async () => {
     api.get.mockRejectedValue(new Error("offline"));
     render(<App />); await flush(); fireEvent.mouseEnter(screen.getByRole("main")); await flush();
-    expect(screen.getByText("统计暂不可用")).toBeTruthy();
+    expect(screen.queryByText("统计暂不可用")).toBeNull();
+    expect(screen.getAllByText("—")).toHaveLength(4);
     expect(screen.getByRole("progressbar")).toBeTruthy();
     expect(screen.getByRole("button", { name: "取消置顶" })).toBeTruthy();
     api.get.mockResolvedValue(tokenSnapshot({ today: totals("456") }));
@@ -75,7 +76,7 @@ describe("App hover integration with the real TokenUsage component", () => {
     expect(api.refreshTokens).toHaveBeenCalledOnce();
     expect(screen.getByRole("progressbar")).toBeTruthy();
     expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
-    if (failed === "tokens") expect(screen.getByText("暂未更新")).toBeTruthy();
+    if (failed === "tokens") expect(screen.queryByText("暂未更新")).toBeNull();
   });
   it("preserves follow-system appearance while open", async () => {
     let change = () => {}; const media = { matches: false, addEventListener: (_: string, cb: () => void) => { change = cb; }, removeEventListener: vi.fn() };

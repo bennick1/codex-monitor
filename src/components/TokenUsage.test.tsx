@@ -18,8 +18,8 @@ describe("token status and field presentation", () => {
     expect(screen.getByLabelText("本周: 1,200").childNodes[0].textContent).toBe("1200");
     expect(screen.getByLabelText("本月: 3,450,000").childNodes[0].textContent).toBe("345.00万");
     expect(screen.getByLabelText("总计: 9,007,199,254,740,993").textContent).toContain("9,007,199,254,740,993");
-    expect(container.querySelector('time')?.dateTime).toBe("2026-09-05T15:49:00Z");
-    expect(screen.getByText("本机 Codex 已采集用量")).toBeTruthy();
+    expect(container.querySelector("time")).toBeNull();
+    expect(screen.queryByText("本机 Codex 已采集用量")).toBeNull();
   });
   it.each(["zh-CN", "en"] as const)("uses Chinese summary units and grouped exact details in %s", (language) => {
     const snapshot = tokenSnapshot({
@@ -46,11 +46,11 @@ describe("token status and field presentation", () => {
     show(tokenSnapshot({ status }));
     expect(screen.getByRole("region", { name: "Token 用量" })).toBeTruthy();
     const labels = { ready: null, scanning: "扫描中", partial: "统计不完整", empty: "暂无本机用量记录", unavailable: "统计暂不可用" };
-    if (labels[status]) expect(screen.getByText(labels[status]!)).toBeTruthy();
+    if (labels[status]) expect(screen.queryByText(labels[status]!)).toBeNull();
   });
   it("keeps confirmed results during scan and shows per-item partial quality", () => {
     show(tokenSnapshot({ status: "scanning", thisWeek: totals("1200", true), today: null }));
-    expect(screen.getByText("扫描中 · 统计不完整")).toBeTruthy();
+    expect(screen.queryByText("扫描中 · 统计不完整")).toBeNull();
     expect(screen.getByLabelText("本周: 1,200 · 统计不完整")).toBeTruthy();
     expect(screen.getByText("…")).toBeTruthy();
   });
@@ -73,11 +73,11 @@ describe("token status and field presentation", () => {
     view.unmount();
     show(null, true);
     expect(screen.getAllByText("—")).toHaveLength(4);
-    expect(screen.getByText("统计暂不可用")).toBeTruthy();
+    expect(screen.queryByText("统计暂不可用")).toBeNull();
   });
   it.each([false, true])("retains a snapshot marked stale by backend or IPC failure (%s)", (failed) => {
     show(tokenSnapshot({ isStale: !failed }), failed);
-    expect(screen.getByText("暂未更新")).toBeTruthy();
+    expect(screen.queryByText("暂未更新")).toBeNull();
     expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
   });
   it("never presents query time as scan time", () => {
@@ -134,19 +134,19 @@ describe("model token presentation", () => {
       expect(screen.getByRole("button", { name: "Quota Period" }).getAttribute("aria-pressed")).toBe("true");
     }
   });
-  it.each(["scanning", "partial", "empty", "unavailable"] as const)("retains shared %s feedback in model mode", (status) => {
+  it.each(["scanning", "partial", "empty", "unavailable"] as const)("omits footer feedback for %s in model mode", (status) => {
     const snapshot = tokenSnapshot({ status });
     show(snapshot);
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     const labels = { scanning: "扫描中", partial: "统计不完整", empty: "暂无本机用量记录", unavailable: "统计暂不可用" };
-    expect(screen.getByText(labels[status])).toBeTruthy();
-    expect(screen.getByText("本机 Codex 已采集用量")).toBeTruthy();
-    expect(screen.getByText(/成功采集/)).toBeTruthy();
+    expect(screen.queryByText(labels[status])).toBeNull();
+    expect(screen.queryByText("本机 Codex 已采集用量")).toBeNull();
+    expect(screen.queryByText(/成功采集/)).toBeNull();
   });
   it("retains confirmed model amounts during stale scan and marks partial exact details", () => {
     show(tokenSnapshot({ status: "scanning", isStale: true, thisWeek: totals("1200", true) }));
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
-    expect(screen.getByText("扫描中 · 统计不完整 · 暂未更新")).toBeTruthy();
+    expect(screen.queryByText("扫描中 · 统计不完整 · 暂未更新")).toBeNull();
     const value = screen.getByLabelText("gpt-synthetic-alpha: 800 · 统计不完整");
     expect(value.querySelector("small")?.textContent).toBe("*");
   });
@@ -159,7 +159,7 @@ describe("model token presentation", () => {
     show(tokenSnapshot({ status: "unavailable", modelStatistics: null }));
     fireEvent.click(screen.getByRole("button", { name: "按模型" }));
     expect(screen.getByText("—")).toBeTruthy();
-    expect(screen.getByText("统计暂不可用")).toBeTruthy();
+    expect(screen.queryByText("统计暂不可用")).toBeNull();
   });
   it("keeps future long model names accessible and every row inside the scroll container", () => {
     const snapshot = tokenSnapshot();
@@ -199,4 +199,26 @@ it.each(["zh-CN", "en"] as const)("maps all five model periods and preserves ove
   }
   fireEvent.click(screen.getByRole("button", { name: zh ? "总览" : "Overview" }));
   expect(container.querySelector(".token-grid")!.innerHTML).toBe(overview);
+});
+
+
+it.each(["zh-CN", "en"] as const)("removes metadata while retaining numeric partial details in %s", (language) => {
+  for (const isPartial of [false, true]) {
+    const snapshot = tokenSnapshot({ status: isPartial ? "partial" : "ready", thisWeek: totals("1200", isPartial) });
+    const { container, unmount } = render(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot }} />);
+    for (const mode of ["overview", "models"]) {
+      if (mode === "models") fireEvent.click(screen.getByRole("button", { name: language === "en" ? "By model" : "按模型" }));
+      expect(container.querySelector(".token-meta")).toBeNull();
+      expect(container.querySelector(".token-status")).toBeNull();
+      expect(container.querySelector("time")).toBeNull();
+      expect(screen.queryByText(/本机 Codex 已采集用量|Collected on this Mac\/PC · Codex|成功采集|Last success|^扫描|^Scan/)).toBeNull();
+      expect(screen.queryByText(/^(统计不完整|Incomplete)$/)).toBeNull();
+      const value = container.querySelector(mode === "overview" ? '[data-period="thisWeek"] .token-value' : '.token-model-list .token-value')!;
+      const partialText = language === "en" ? "Incomplete" : "统计不完整";
+      expect(value.querySelector("small")?.textContent ?? null).toBe(isPartial ? "*" : null);
+      expect(value.getAttribute("aria-label")?.includes(partialText)).toBe(isPartial);
+      expect(value.querySelector('[role="tooltip"]')?.textContent?.includes(partialText)).toBe(isPartial);
+    }
+    unmount();
+  }
 });

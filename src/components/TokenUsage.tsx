@@ -14,18 +14,14 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
     overview: "总览", models: "按模型", unknown: "未识别模型", period: "统计周期", noPeriod: "当前周期暂无用量",
     periodLabels: ["今日", "额度周期", "近7天", "近30天", "总计"],
     title: "Token 用量", labels: ["今日", "本周", "本月", "总计"],
-    scope: "本机 Codex 已采集用量", scanning: "扫描中", loading: "正在读取",
-    partial: "统计不完整", empty: "暂无本机用量记录", unavailable: "统计暂不可用",
-    stale: "暂未更新", listener: "实时更新暂不可用", scanned: "扫描", success: "成功采集",
+    partial: "统计不完整",
   } : {
     overview: "Overview", models: "By model", unknown: "Unidentified", period: "Period", noPeriod: "No usage in this period",
     periodLabels: ["Today", "Quota Period", "7 Days", "30 Days", "Total"],
     title: "Token usage", labels: ["Today", "This week", "This month", "Total"],
-    scope: "Collected on this Mac/PC · Codex", scanning: "Scanning", loading: "Loading",
-    partial: "Incomplete", empty: "No local usage records", unavailable: "Statistics unavailable",
-    stale: "Not up to date", listener: "Live updates unavailable", scanned: "Scan", success: "Last success",
+    partial: "Incomplete",
   };
-  const { snapshot, failed, loading, listenerFailed } = view;
+  const { snapshot, failed, loading } = view;
   const items = [snapshot?.today, snapshot?.thisWeek, snapshot?.thisMonth, snapshot?.total];
   const unconfirmedScan = snapshot?.status === "scanning" && !snapshot.lastSuccessAt
     && (!snapshot.total || snapshot.total.factCount === "0");
@@ -35,20 +31,6 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
   const models = modelPeriod?.models.filter((item) => item.model !== "unknown") ?? [];
   models.push(...(modelPeriod?.models.filter((item) => item.model === "unknown") ?? []));
   const selectedPartial = period === "today" || period === "total" ? snapshot?.[period]?.isPartial : partial;
-  const stale = failed || snapshot?.isStale || listenerFailed;
-  const messages = [
-    snapshot?.status === "scanning" ? t.scanning : !snapshot && loading && !failed ? t.loading : null,
-    partial ? t.partial : null,
-    snapshot?.status === "empty" ? t.empty : null,
-    snapshot?.status === "unavailable" || (!snapshot && failed) ? t.unavailable : null,
-    stale && snapshot ? t.stale : null,
-    listenerFailed && !snapshot ? t.listener : null,
-  ].filter(Boolean);
-  // queryAtUtc is deliberately never presented as collection time.
-  const timestamp = snapshot?.lastSuccessAt ?? snapshot?.lastScanAt;
-  const date = timestamp ? new Date(timestamp) : null;
-  const time = date && Number.isFinite(date.getTime())
-    ? date.toLocaleString(language, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : null;
   return <section className={`token-usage${mode === "models" ? " token-usage--models" : ""}`} aria-labelledby={id}
     onMouseDown={(event) => event.stopPropagation()}>
     <div className="token-heading">
@@ -98,10 +80,5 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
           })}
         </ul>}
     </div>}
-    <div className="token-meta" role="status">
-      {messages.length ? <p className="token-status">{messages.join(" · ")}</p> : null}
-      <p>{t.scope}</p>
-      {time ? <p>{snapshot?.lastSuccessAt ? t.success : t.scanned} <time dateTime={timestamp!}>{time}</time></p> : null}
-    </div>
   </section>;
 }
