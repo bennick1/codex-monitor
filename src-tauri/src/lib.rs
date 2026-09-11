@@ -1568,9 +1568,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let mut builder = TrayIconBuilder::with_id("main")
         .menu(&menu)
         .tooltip("Codex Monitor");
-    if let Some(icon) = app.default_window_icon() {
-        builder = builder.icon(icon.clone());
-    }
+    builder = builder.icon(tauri::include_image!("icons/tray-32.png"));
     let autostart_menu = autostart.clone();
     let show_menu = show.clone();
     let refresh_menu = refresh.clone();
