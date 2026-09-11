@@ -49,7 +49,8 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
   const date = timestamp ? new Date(timestamp) : null;
   const time = date && Number.isFinite(date.getTime())
     ? date.toLocaleString(language, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }) : null;
-  return <section className={`token-usage${mode === "models" ? " token-usage--models" : ""}`} aria-labelledby={id}>
+  return <section className={`token-usage${mode === "models" ? " token-usage--models" : ""}`} aria-labelledby={id}
+    onMouseDown={(event) => event.stopPropagation()}>
     <div className="token-heading">
       <h2 id={id}>{t.title}</h2>
       <div className="token-switch" role="group" aria-label={t.title}>

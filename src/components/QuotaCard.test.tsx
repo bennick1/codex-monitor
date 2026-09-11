@@ -2,6 +2,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QuotaCard, QuotaOrb } from "./QuotaCard";
+import { tokenSnapshot } from "../test/tokenFixtures";
+import { INITIAL_TOKEN_VIEW } from "../lib/tokenStatisticsController";
 import { copy } from "../lib/i18n";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin } from "../types";
 
@@ -71,5 +73,68 @@ describe("free built-in widget skins", () => {
     if (skin === "default") expect(orb.className).not.toMatch(/skin-(blur|computer)/);
     else expect(orb.className).toContain(`quota-orb--skin-${skin}`);
     expect(orbView.container.innerHTML).not.toMatch(/supporter|license|purchase|unlock/i);
+  });
+});
+
+
+describe("TokenUsage drag boundary", () => {
+  function showTokens() {
+    const drag = vi.fn();
+    const view = render(<QuotaCard snapshot={snapshot} preferences={preferences}
+      tokens={{ ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot() }}
+      providerCount={1} onPrevious={vi.fn()} onNext={vi.fn()} onTogglePin={vi.fn()}
+      onLock={vi.fn()} onToggleStayExpanded={vi.fn()} onDrag={drag} onHover={vi.fn()} />);
+    return { ...view, drag };
+  }
+
+  it("switches By Model and Overview without starting card drag", () => {
+    const { drag } = showTokens();
+    for (const name of ["按模型", "总览"]) {
+      const button = screen.getByRole("button", { name });
+      fireEvent.mouseDown(button, { button: 0 });
+      fireEvent.click(button);
+      expect(button.getAttribute("aria-pressed")).toBe("true");
+      expect(drag).not.toHaveBeenCalled();
+    }
+  });
+
+  it("switches all five model periods without starting card drag", () => {
+    const { drag } = showTokens();
+    fireEvent.click(screen.getByRole("button", { name: "按模型" }));
+    for (const name of ["今日", "额度周期", "近7天", "近30天", "总计"]) {
+      const button = screen.getByRole("button", { name });
+      fireEvent.mouseDown(button, { button: 0 });
+      fireEvent.click(button);
+      expect(button.getAttribute("aria-pressed")).toBe("true");
+      expect(drag).not.toHaveBeenCalled();
+    }
+  });
+
+  it("keeps exact values focusable and list interactions outside card drag", () => {
+    const { drag } = showTokens();
+    const exact = screen.getByLabelText("本周: 1,200");
+    expect(fireEvent.mouseDown(exact, { button: 0 })).toBe(true);
+    exact.focus();
+    expect(document.activeElement).toBe(exact);
+    expect(drag).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "按模型" }));
+    const list = screen.getByRole("list", { name: "按模型 · 额度周期" });
+    const model = screen.getByText("gpt-synthetic-alpha");
+    const modelExact = screen.getByLabelText("gpt-synthetic-alpha: 800");
+    for (const element of [list, model, modelExact]) {
+      expect(fireEvent.mouseDown(element, { button: 0 })).toBe(true);
+      fireEvent.click(element);
+    }
+    modelExact.focus();
+    expect(document.activeElement).toBe(modelExact);
+    expect(fireEvent.wheel(list, { deltaY: 100 })).toBe(true);
+    fireEvent.scroll(list, { target: { scrollTop: 100 } });
+    expect(drag).not.toHaveBeenCalled();
+  });
+
+  it("preserves drag on the card outside TokenUsage", () => {
+    const { drag } = showTokens();
+    fireEvent.mouseDown(screen.getByRole("main"), { button: 0 });
+    expect(drag).toHaveBeenCalledOnce();
   });
 });
