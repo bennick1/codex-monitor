@@ -1,21 +1,36 @@
-# Codex Monitor v1.2 Branding Sources
+# Codex Monitor v1.2 Branding Source of Truth
 
-These assets are the approved visual direction for Codex Monitor v1.2.0.
+## Approved visual source
 
-## Roles
+`app-icon-reference.png` is the only currently approved v1.2 icon visual source.
 
-- `app-icon-reference.png`: reduced-size visual snapshot of the user-approved App Icon. Dark rounded-square tile, segmented C-shaped monitoring ring, cyan → blue → violet gradient, and four ascending data bars.
-- `tray-icon-reference.png`: reduced-size visual snapshot of the user-approved Tray Icon. It uses the same identity, simplified to three ascending bars for small-size legibility.
-- `app-icon-source.svg`: scalable technical source derived from the approved App Icon for runtime/platform asset generation.
-- `tray-icon-source.svg`: scalable technical source derived from the approved Tray Icon for runtime tray/menu-bar asset generation.
+It is the user-selected original **CM** design:
 
-## Locked visual rules
+- dark rounded-square app tile;
+- large cyan/blue **C** monitoring ring;
+- white-to-light-blue **M** monogram in the center;
+- segmented status ticks on the upper-right arc;
+- no data-bar chart inside the C;
+- no separate approved Tray redesign yet.
 
-1. Do not redesign the C-shaped ring or replace it with a third-party/OpenAI/Codex logo.
-2. Do not add text inside the icon.
-3. Preserve the dark navy rounded-square background and cyan/blue/violet monitoring identity.
-4. App Icon uses four ascending bars; Tray Icon uses the simplified three-bar form.
-5. Runtime/platform derivatives may crop transparent/showcase padding, rasterize, resize, or adapt technically for macOS/Windows, but must preserve the approved identity.
-6. Small-size validation at 16–32 px is required before accepting tray derivatives.
+The file is a reduced raster reference of the exact approved visual direction. It is the comparison source for rebuilding technical SVG/runtime assets.
 
-The PNG files are review snapshots, not direct platform masters. Use the SVG sources as the scalable technical inputs and treat the PNGs as the visual comparison references.
+## Correction notice
+
+All previous v1.2 branding assets based on the **C-ring + ascending data bars** design were created from the wrong candidate and are invalidated.
+
+They must not be reused as App, Tray, tiny-size, ICO, ICNS, Windows Store, Android, iOS, or validation sources.
+
+The previous runtime icon validation/contact-sheet evidence for that wrong candidate is also invalidated.
+
+## Runtime state after correction
+
+Until the approved CM design is rebuilt into runtime assets, the branch intentionally falls back to the pre-v1.2 runtime icon set. `tray-32.png` is only a compatibility copy of the previous 32px icon so the current dedicated Tray code path remains buildable.
+
+Do not treat that compatibility icon as the v1.2 design.
+
+## Next implementation rule
+
+Recreate App/Tray technical sources from `app-icon-reference.png`, validate them against the reference, regenerate every runtime platform asset, and only then resume native icon acceptance.
+
+Do not change the product feature implementation, Schema 3, Token accounting, quota observation rules, or By Turn behavior while correcting branding.
