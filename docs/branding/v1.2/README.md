@@ -1,36 +1,59 @@
-# Codex Monitor v1.2 Branding Source of Truth
+# Codex Monitor v1.2 CM branding
 
-## Approved visual source
+**Correct CM Runtime Rebuilt — Awaiting Human Visual Acceptance**
 
-`app-icon-reference.png` is the only currently approved v1.2 icon visual source.
+## Approved Reference
 
-It is the user-selected original **CM** design:
+The only approved visual reference is [app-icon-reference.png](app-icon-reference.png).
 
-- dark rounded-square app tile;
-- large cyan/blue **C** monitoring ring;
-- white-to-light-blue **M** monogram in the center;
-- segmented status ticks on the upper-right arc;
-- no data-bar chart inside the C;
-- no separate approved Tray redesign yet.
+- Size: **1,316,884 bytes**; dimensions: **1254 × 1254**.
+- SHA-256: `373af7dca75b1e45310c6c8b43602d44f16629c1f5225279f0efdb8c98af45c5`.
+- Identity: **C + M + segmented monitoring arc**.
+- **C + Bars = Superseded**. Old ascending bars, three-bar Tray and violet artifacts are not active sources, build inputs, runtime assets or current validation evidence.
 
-The file is a reduced raster reference of the exact approved visual direction. It is the comparison source for rebuilding technical SVG/runtime assets.
+## Maintained technical sources
 
-## Correction notice
+- [app-icon-source.svg](app-icon-source.svg): manually traced editable paths for the central dark rounded tile, cyan-to-blue C, ice-white/light-blue M, six status ticks and fading tail arc. Gradients, rim highlight and restrained internal glow approximate the reference material. This is a technical reconstruction; exact material/visual fidelity remains subject to human review.
+- [app-icon-small-source.svg](app-icon-small-source.svg): 16/20px optical derivative. Same tile, C/M geometry and composition; three spaced key ticks, no C blur glow, stronger M edge. It is not the superseded historical file that used this filename.
+- Runtime [icon.svg](../../../src-tauri/icons/icon.svg) is byte-identical to the main source. Runtime master is [app-master-1024.png](../../../src-tauri/icons/app-master-1024.png).
 
-All previous v1.2 branding assets based on the **C-ring + ascending data bars** design were created from the wrong candidate and are invalidated.
+The viewBox crops the approved reference coordinate system to `195 183 864 864`. Only the tile is drawn. No exterior gray presentation canvas or drop shadow is embedded; transparent corners and a small antialiasing margin surround the tile. No embedded reference raster, font, text mark, chart or external resource is used in either SVG.
 
-They must not be reused as App, Tray, tiny-size, ICO, ICNS, Windows Store, Android, iOS, or validation sources.
+## Rebuild
 
-The previous runtime icon validation/contact-sheet evidence for that wrong candidate is also invalidated.
+After `npm ci`, run:
 
-## Runtime state after correction
+```sh
+node scripts/generate-brand-icons.mjs
+```
 
-Until the approved CM design is rebuilt into runtime assets, the branch intentionally falls back to the pre-v1.2 runtime icon set. `tray-32.png` is only a compatibility copy of the previous 32px icon so the current dedicated Tray code path remains buildable.
+Requirements: the lockfile-installed Tauri v2 CLI (validated with 2.11.4) and Python 3 with Pillow (validated with Pillow 12.3.0). If the default Python lacks Pillow, set `BRANDING_PYTHON` to an existing interpreter with Pillow. No package/version/lockfile change is required. Run from any working directory; paths resolve from the script.
 
-Do not treat that compatibility icon as the v1.2 design.
+The script verifies reference integrity, renders the CM SVG with Tauri, regenerates Windows Square/StoreLogo, Android and iOS assets, then creates explicit ICO/ICNS representations and review sheets. It removes alpha ≤ 1 quantization fringe and makes iOS backgrounds opaque dark blue. This postprocessing does not introduce another artwork source. Contact-sheet fonts use Pillow's bundled font.
 
-## Next implementation rule
+| Output | Source |
+| --- | --- |
+| App and Tray 16/20px; ICO 16/20px; ICNS `icp4`; iOS 20px | Tiny CM SVG |
+| App 24/32/48/64/128/256/512/1024px; Tray 24/32px | Main CM SVG |
+| ICO 24/32/48/64/128/256px | Main CM SVG |
+| ICNS other 1x / 2x representations | Main CM SVG at actual pixel dimensions |
+| Windows Square/StoreLogo, Android, other iOS sizes | Main CM SVG through Tauri |
 
-Recreate App/Tray technical sources from `app-icon-reference.png`, validate them against the reference, regenerate every runtime platform asset, and only then resume native icon acceptance.
+ICO entries: **16, 20, 24, 32, 48, 64, 128, 256**.
 
-Do not change the product feature implementation, Schema 3, Token accounting, quota observation rules, or By Turn behavior while correcting branding.
+ICNS entries: `icp4` 16@1x, `icp5` 32@1x, `icp6` 64@1x, `ic07` 128@1x, `ic08` 256@1x, `ic09` 512@1x, `ic10` 512@2x, `ic11` 16@2x, `ic12` 32@2x, `ic13` 128@2x, `ic14` 256@2x. Retina representations are rendered at their actual pixel dimensions, so 16@2x retains the full 32px source.
+
+Native code still includes `icons/tray-32.png`. Tray behavior and bundle configuration are unchanged.
+
+## Technical evidence and human review
+
+[technical-validation.json](validation/technical-validation.json) records decoded sizes and container mappings. Validation checks SVG component structure, PNG alpha/corner/fringe and component colour regions, platform decode, all ICO/ICNS PNG payloads, independent Pillow container decode, and exact container-to-generated-source mapping. These are technical presence signals, not an automatic judgment of CM recognition or visual similarity.
+
+- [All sizes — light](validation/cm-all-sizes-light.png)
+- [All sizes — dark](validation/cm-all-sizes-dark.png)
+- [Tiny App + Tray — light](validation/cm-tiny-light.png)
+- [Tiny App + Tray — dark](validation/cm-tiny-dark.png)
+
+All-size sheets include actual 16/20/24/32/48/64/128/256/512/1024px rasters. Tiny sheets show actual 16/20/24/32px plus integer nearest-neighbor enlargements. Open sheets at 100% to inspect actual pixels; an automatically fitted preview changes their displayed size.
+
+**Ready for Correct CM Icon Human Validation.** User review of App/Tray identity, tiny readability, composition and material fidelity remains outstanding. This work does not establish macOS/Windows Native Final Acceptance, menu-bar/full-screen/Dock/edge acceptance or release readiness. Version stays **1.1.0**, identifier **app.quotafloat.desktop**.
