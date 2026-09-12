@@ -1,6 +1,6 @@
 # Codex Monitor v1.2 CM branding
 
-**Correct CM Runtime Rebuilt — Awaiting Human Visual Acceptance**
+**CM Material Fidelity Polish Complete — Awaiting Human Visual Acceptance**
 
 ## Approved Reference
 
@@ -10,6 +10,38 @@ The only approved visual reference is [app-icon-reference.png](app-icon-referenc
 - SHA-256: `373af7dca75b1e45310c6c8b43602d44f16629c1f5225279f0efdb8c98af45c5`.
 - Identity: **C + M + segmented monitoring arc**.
 - **C + Bars = Superseded**. Old ascending bars, three-bar Tray and violet artifacts are not active sources, build inputs, runtime assets or current validation evidence.
+
+## Material fidelity polish
+
+Baseline: `93ce0b2684cb7272bb30ccc8cb56fa045d0c3bb8`. The user confirmed CM identity, C/M/arc geometry, small-size readability and Tray direction at that baseline; large-size material fidelity remained pending. That confirmation does not establish native platform acceptance.
+
+The main SVG now refines material only:
+
+- Tile: multi-stop blue-black shading, a restrained surface vignette, softened rim and alpha-confined inner edge light/shadow.
+- C: mint/cyan/royal-blue stops, a soft coloured glow, fine edge depth and low-opacity cyan/mint light overlays.
+- M: ice-white to light-blue stops, softer blue reflection on the existing left overlay, fine cold edge lighting and a subtle white light overlay on the upper right.
+- Segments: green/cyan to blue-gray/dark-gray attenuation with restrained edge lighting; count and positions unchanged.
+- Arc tail: a subdued multi-stop dark blue-gray material.
+
+All existing `path d`, rectangle/ellipse coordinates and dimensions, radii, clip geometry, viewBox, C/M placement and stroke widths are unchanged. The three additional lighting uses reference the existing `#c`/`#m` definitions, contain no transform or geometry attributes, and add no new contour. Filter offsets operate only on light/shadow masks. The tiny SVG, generator and original validator are byte-identical to the baseline.
+
+App/Tray 16/20px and iOS 20px are byte-identical to the accepted baseline. 24/32px retain the main CM geometry; technical and tool-side enlarged review found no obvious blur/segment merging, so no Tray-specific generation change was needed. Material filters affect some antialias fringe alpha values at 24–256px; raster bounds and opaque interiors remain intact, and 512/1024 alpha channels are unchanged. This is not a claim of human visual acceptance.
+
+### Reference / Before / After
+
+- [Material comparison — light](validation/cm-material-compare-light.png)
+- [Material comparison — dark](validation/cm-material-compare-dark.png)
+- [Material technical evidence](validation/cm-material-technical-validation.json)
+
+Each sheet includes actual **256, 512 and 1024px** rows in three columns. Before assets are read from the exact baseline Git commit. Reference uses the frozen viewBox crop and baseline silhouette alpha solely to hide presentation corners; the original PNG is untouched. Open at 100% for actual-pixel material review.
+
+After generating runtime assets, reproduce these checks and sheets with the same Pillow-enabled interpreter:
+
+```sh
+python3 docs/branding/v1.2/validation/cm-material-review.py
+```
+
+Generation and review were repeated: **77 files byte-identical**, covering runtime assets, current sheets, material comparisons and their evidence. The existing generator also passed PNG/alpha/fringe/component checks and all 8 ICO / 11 ICNS representation decodes.
 
 ## Maintained technical sources
 
@@ -56,4 +88,4 @@ Native code still includes `icons/tray-32.png`. Tray behavior and bundle configu
 
 All-size sheets include actual 16/20/24/32/48/64/128/256/512/1024px rasters. Tiny sheets show actual 16/20/24/32px plus integer nearest-neighbor enlargements. Open sheets at 100% to inspect actual pixels; an automatically fitted preview changes their displayed size.
 
-**Ready for Correct CM Icon Human Validation.** User review of App/Tray identity, tiny readability, composition and material fidelity remains outstanding. This work does not establish macOS/Windows Native Final Acceptance, menu-bar/full-screen/Dock/edge acceptance or release readiness. Version stays **1.1.0**, identifier **app.quotafloat.desktop**.
+**Ready for CM Material Human Validation.** Human review of the newly polished large-size material fidelity remains outstanding. Baseline identity/geometry/small-size approval is retained; the material changes are not automatically accepted. This work does not establish macOS/Windows Native Final Acceptance, menu-bar/full-screen/Dock/edge acceptance or release readiness. Version stays **1.1.0**, identifier **app.quotafloat.desktop**.

@@ -1,0 +1,90 @@
+{
+  "baseline": "93ce0b2684cb7272bb30ccc8cb56fa045d0c3bb8",
+  "reference_unchanged": true,
+  "geometry_unchanged": true,
+  "geometry_records_compared": 19,
+  "material_overlays": {
+    "c-cyan-light-overlay": "#c",
+    "c-mint-light-overlay": "#c",
+    "m-ice-light-overlay": "#m"
+  },
+  "tiny_source_unchanged": true,
+  "generator_and_existing_validator_unchanged": true,
+  "tiny_byte_identical": {
+    "src-tauri/icons/app-16.png": "b9156decf77c0c212c4cc94795c88ebae7f2bd6277088ef0c5537ad3dbb17361",
+    "src-tauri/icons/app-20.png": "9e08970e7494a35840bed49cb269d30e3f48f0d0b3b23394efb7333c9c7fe452",
+    "src-tauri/icons/tray-16.png": "b9156decf77c0c212c4cc94795c88ebae7f2bd6277088ef0c5537ad3dbb17361",
+    "src-tauri/icons/tray-20.png": "9e08970e7494a35840bed49cb269d30e3f48f0d0b3b23394efb7333c9c7fe452",
+    "src-tauri/icons/ios/AppIcon-20x20@1x.png": "f83a5bc296e81d70100586dd86e4a23ca269534b4b4b215bed57beff34217f75"
+  },
+  "alpha_checks": [
+    {
+      "size": 16,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": true
+    },
+    {
+      "size": 20,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": true
+    },
+    {
+      "size": 24,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 32,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 48,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 64,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 128,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 256,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": false
+    },
+    {
+      "size": 512,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": true
+    },
+    {
+      "size": 1024,
+      "same_alpha_bbox": true,
+      "no_new_transparent_holes": true,
+      "alpha_byte_identical": true
+    }
+  ],
+  "glow_3sigma_inside_filter_and_tile": true,
+  "comparison_sizes": [
+    256,
+    512,
+    1024
+  ],
+  "reference_display": "Frozen viewBox crop, baseline silhouette alpha for presentation corners only",
+  "human_visual_acceptance": "Pending; no similarity score or tool inspection establishes acceptance"
+}
