@@ -14,7 +14,8 @@ export interface TokenLayoutFixtureOptions {
   tokenStatus: TokenStatisticsSnapshot["status"];
   quotaStatus: ProviderSnapshot["status"];
   stale: boolean;
-  mode: "overview" | "models";
+  mode: "overview" | "models" | "turns";
+  shortWindow?: boolean;
   orbState?: "healthy" | "caution" | "critical" | "stale" | "unavailable" | "signed_out";
 }
 
@@ -43,6 +44,15 @@ function stressedTokenSnapshot(status: TokenStatisticsSnapshot["status"], stale:
     thisWeek: totals("99999999", status === "partial"),
     thisMonth: totals("1300000000", status === "partial"),
     total: totals("18446744073709551615", status === "partial"),
+    turnStatistics: { weeklyResetAt: "2026-10-04T18:30:00Z", turns: Array.from({ length: 20 }, (_, index) => ({
+      model: index % 2 ? "short-model" : "synthetic-long-model-slug-for-overflow-validation",
+      effort: ["high", "xhigh", "max", "ultra", "minimal"][index % 5],
+      tokens: ["999", "1234567", "1234567890", "9223372036854775807", "999999999999999999999999999999999999999999"][index % 5],
+      isPartial: index % 2 === 0,
+      completedAt: "2026-10-01T12:00:00Z",
+      weeklyRemaining: [64, 65.12345678901234, null][index % 3],
+      quotaObservedAt: null,
+    })) },
     modelStatistics: { periods: {
       today: period,
       quotaPeriod: period,
@@ -96,6 +106,7 @@ window.__renderTokenFixture = async (options) => {
   }
 
   const snapshot = quotaSnapshot(options.quotaStatus);
+  if (options.shortWindow === false) snapshot.shortWindow = null;
   root.render(<QuotaCard key={renderKey} snapshot={snapshot}
     preferences={{ locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null,
       autoRotateSeconds: 12, language: options.language, appearance: options.theme, selectedSkin: options.skin }}
@@ -104,9 +115,9 @@ window.__renderTokenFixture = async (options) => {
     theme={options.theme} skin={options.skin} style={DESKTOP_PALETTES[options.theme][paletteName(snapshot, 74)]}
     tokens={{ snapshot: stressedTokenSnapshot(options.tokenStatus, options.stale), loading: false, failed: false, listenerFailed: false }} />);
   await settle();
-  if (options.mode === "models") {
+  if (options.mode === "models" || options.mode === "turns") {
     const buttons = document.querySelectorAll<HTMLButtonElement>(".token-heading .token-switch button");
-    buttons.item(1).click();
+    buttons.item(options.mode === "turns" ? 2 : 1).click();
     await settle();
   }
 };

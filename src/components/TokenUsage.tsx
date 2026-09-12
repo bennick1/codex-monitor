@@ -12,11 +12,11 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
   const periods: ModelTokenPeriodKey[] = ["today", "quotaPeriod", "last7Days", "last30Days", "total"];
   const zh = language === "zh-CN";
   const t = zh ? {
-    overview: "总览", models: "按模型", turns: "按对话", unknown: "未识别模型", period: "统计周期", noPeriod: "当前周期暂无用量",
+    overview: "总览", models: "按模型", turns: "额度周", unknown: "未识别模型", period: "统计周期", noPeriod: "当前周期暂无用量",
     periodLabels: ["今日", "额度周期", "近7天", "近30天", "总计"],
     title: "Token 用量", labels: ["今日", "本周", "本月", "总计"],
   } : {
-    overview: "Overview", models: "By model", turns: "By turn", unknown: "Unidentified", period: "Period", noPeriod: "No usage in this period",
+    overview: "Overview", models: "By model", turns: "Quota week", unknown: "Unidentified", period: "Period", noPeriod: "No usage in this period",
     periodLabels: ["Today", "Quota Period", "7 Days", "30 Days", "Total"],
     title: "Token usage", labels: ["Today", "This week", "This month", "Total"],
   };
