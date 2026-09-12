@@ -2414,6 +2414,13 @@ fn turn_rows_keep_repeated_models_efforts_sessions_and_completion_order() {
         ],
     );
     h.scan();
+    observation(
+        &mut h,
+        "2026-09-05T01:05:00Z",
+        65.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
     let before = accounting_dump(&h.db);
     let result = by_turn(&mut h);
     let rows = result["turns"].as_array().unwrap();
@@ -2424,7 +2431,7 @@ fn turn_rows_keep_repeated_models_efforts_sessions_and_completion_order() {
     assert!(rows[3]["effort"].is_null());
     assert_eq!(rows[4]["effort"], "ultra");
     assert_eq!(rows[0]["tokens"], "11");
-    assert!(rows.iter().all(|r| r["weeklyRemaining"].is_null()));
+    assert!(rows.iter().all(|r| r["weeklyRemaining"] == json!(65.0)));
     assert!(!result.to_string().contains("SECRET"));
     assert!(!result.to_string().contains("turn-a"));
     h.restart();
@@ -2474,6 +2481,8 @@ fn completion_requires_explicit_turn_and_timestamp_and_excludes_abort() {
         }
         write(&h.log(), &values);
         h.scan();
+        observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+
         assert!(
             by_turn(&mut h)["turns"].as_array().unwrap().is_empty(),
             "{mode}"
@@ -2496,6 +2505,8 @@ fn metadata_conflicts_are_unknown_without_losing_reliable_turn_tokens() {
         ],
     );
     h.scan();
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+
     let rows = by_turn(&mut h);
     assert_eq!(rows["turns"][0]["model"], "unknown");
     assert!(rows["turns"][0]["effort"].is_null());
@@ -2575,7 +2586,10 @@ fn turns_associate_first_same_period_post_completion_observation_with_15_minute_
         .unwrap();
         observation(&mut h, "2026-09-05T01:20:00Z", 90.0, "2026-09-10T00:00:00Z").unwrap();
         let rows = by_turn(&mut h);
-        assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            rows["turns"].as_array().unwrap().len(),
+            if expected.is_some() { 2 } else { 0 }
+        );
         for row in rows["turns"].as_array().unwrap() {
             assert_eq!(row["weeklyRemaining"], json!(expected));
         }
@@ -2648,10 +2662,12 @@ fn v3_metadata_backfill_preserves_v2_accounting_and_model_results() {
     h.scan();
     assert_eq!(accounting_dump(&h.db), before);
     assert_eq!(model_rows(&h.snapshot()), models);
+    assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
     let rows = by_turn(&mut h);
     assert_eq!(rows["turns"][0]["tokens"], "9007199254740993");
     assert_eq!(rows["turns"][0]["effort"], "max");
-    assert!(rows["turns"][0]["weeklyRemaining"].is_null());
+    assert_eq!(rows["turns"][0]["weeklyRemaining"], json!(65.0));
 }
 
 #[test]
@@ -2671,6 +2687,8 @@ fn turn_legacy_ownership_excludes_unbounded_deltas_and_reconciliation_never_doub
         ],
     );
     h.scan();
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+
     let result = by_turn(&mut h);
     assert_eq!(result["turns"].as_array().unwrap().len(), 1);
     assert_eq!(result["turns"][0]["tokens"], "300");
@@ -2687,10 +2705,12 @@ fn turn_legacy_ownership_excludes_unbounded_deltas_and_reconciliation_never_doub
         ],
     );
     reconciled.scan();
+    observation(&mut reconciled, AT, 65.0, &quota_window().resets_at).unwrap();
     assert_eq!(by_turn(&mut reconciled)["turns"][0]["tokens"], "120");
     assert_eq!(reconciled.total(), "120");
     reconciled.restart();
     reconciled.scan();
+    observation(&mut reconciled, AT, 65.0, &quota_window().resets_at).unwrap();
     assert_eq!(by_turn(&mut reconciled)["turns"][0]["tokens"], "120");
 }
 
@@ -2712,6 +2732,8 @@ fn turn_identity_conflict_excludes_precise_rows_and_invalid_period_is_unavailabl
         ],
     );
     h.scan();
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+
     assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
     assert_eq!(h.total(), "10");
     assert!(h.snapshot().turn_statistics.is_none());
@@ -2759,6 +2781,9 @@ fn turn_completion_period_uses_exact_reset_and_never_natural_week() {
     }
     write(&h.log(), &events);
     h.scan();
+    for at in ["2026-09-03T00:00:00Z", "2026-09-05T10:00:00Z"] {
+        observation(&mut h, at, 65.0, &quota_window().resets_at).unwrap();
+    }
     let rows = by_turn(&mut h);
     assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
     assert_eq!(
@@ -2785,8 +2810,16 @@ fn turn_future_facts_and_clock_rollback_observations_are_deferred() {
     h.scan();
     observation(&mut h, "2026-09-05T10:01:00Z", 77.0, "2026-09-10T00:00:00Z").unwrap();
     let result = by_turn(&mut h);
+    assert!(result["turns"].as_array().unwrap().is_empty());
+    observation(
+        &mut h,
+        "2026-09-05T10:00:00Z",
+        78.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    let result = by_turn(&mut h);
     assert_eq!(result["turns"][0]["tokens"], "10");
-    assert!(result["turns"][0]["weeklyRemaining"].is_null());
     let root = h.source.resolve().unwrap().1;
     let later = DateTime::parse_from_rfc3339("2026-09-05T10:02:00Z")
         .unwrap()
@@ -2795,7 +2828,7 @@ fn turn_future_facts_and_clock_rollback_observations_are_deferred() {
         .unwrap()
         .unwrap();
     assert_eq!(result.turns[0].tokens, "30");
-    assert_eq!(result.turns[0].weekly_remaining, Some(77.0));
+    assert_eq!(result.turns[0].weekly_remaining, Some(78.0));
 }
 
 #[test]
@@ -2867,4 +2900,162 @@ fn lifecycle_parser_distinguishes_started_completed_and_aborted_semantics() {
             aborted: true
         }
     ));
+}
+
+fn observed_turn_fixture(h: &mut Harness, completions: &[&str]) {
+    let mut events = vec![meta("main")];
+    for (i, at) in completions.iter().enumerate() {
+        let id = format!("observed-{i}");
+        let mut fact = modern(
+            "main",
+            &format!("observed-response-{i}"),
+            10,
+            10 * (i as i64 + 1),
+        );
+        fact["payload"]["turn_id"] = json!(id);
+        events.extend([
+            effort_turn(&id, "synthetic", Some("high")),
+            fact,
+            completed_turn(&id, at),
+        ]);
+    }
+    write(&h.log(), &events);
+    h.scan();
+}
+
+#[test]
+fn observed_turn_eligibility_requires_same_period_post_completion_snapshot() {
+    for (time, reset, eligible) in [
+        (None, "2026-09-10T00:00:00Z", false),
+        (Some("2026-09-05T00:59:59Z"), "2026-09-10T00:00:00Z", false),
+        (Some("2026-09-05T01:15:01Z"), "2026-09-10T00:00:00Z", false),
+        (Some(AT), "2026-09-09T00:00:00Z", false),
+        (Some(AT), "2026-09-10T00:00:00Z", true),
+        (Some("2026-09-05T01:15:00Z"), "2026-09-10T00:00:00Z", true),
+    ] {
+        let mut h = Harness::new();
+        observed_turn_fixture(&mut h, &[AT]);
+        if let Some(at) = time {
+            observation(&mut h, at, 65.0, reset).unwrap();
+        }
+        let rows = by_turn(&mut h);
+        assert_eq!(
+            rows["turns"].as_array().unwrap().len(),
+            usize::from(eligible),
+            "{time:?} / {reset}"
+        );
+        if eligible {
+            assert_eq!(rows["turns"][0]["weeklyRemaining"], json!(65.0));
+        }
+    }
+}
+
+#[test]
+fn observed_turn_query_at_is_exclusive_but_observation_at_query_is_allowed() {
+    let mut h = Harness::new();
+    observed_turn_fixture(
+        &mut h,
+        &[
+            "2026-09-05T09:59:59Z",
+            "2026-09-05T10:00:00Z",
+            "2026-09-05T10:00:01Z",
+        ],
+    );
+    observation(
+        &mut h,
+        "2026-09-05T10:00:00Z",
+        50.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    let rows = by_turn(&mut h);
+    assert_eq!(rows["turns"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        rows["turns"][0]["completedAt"],
+        "2026-09-05T09:59:59.000000000Z"
+    );
+    assert_eq!(
+        rows["turns"][0]["quotaObservedAt"],
+        "2026-09-05T10:00:00.000000000Z"
+    );
+}
+
+#[test]
+fn observed_turn_invalid_percent_never_produces_a_row() {
+    let mut h = Harness::new();
+    observed_turn_fixture(&mut h, &[AT]);
+    for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.01, 100.01] {
+        assert!(observation(&mut h, AT, invalid, &quota_window().resets_at).is_err());
+        assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+    }
+}
+
+#[test]
+fn observed_turn_provider_rollover_preserves_history_and_excludes_prior_period() {
+    let mut h = Harness::new();
+    observed_turn_fixture(&mut h, &[AT, "2026-09-10T00:00:00Z"]);
+    observation(&mut h, AT, 50.0, &quota_window().resets_at).unwrap();
+    observation(&mut h, "2026-09-10T00:00:00Z", 90.0, "2026-09-17T00:00:00Z").unwrap();
+    let first = by_turn(&mut h);
+    assert_eq!(first["turns"].as_array().unwrap().len(), 1);
+    assert_eq!(first["turns"][0]["weeklyRemaining"], json!(50.0));
+    let before = accounting_dump(&h.db);
+    let root = h.source.resolve().unwrap().1;
+    let window = aggregate::QuotaWindow {
+        resets_at: "2026-09-17T00:00:00Z".into(),
+        window_seconds: 604800,
+    };
+    for _ in 0..2 {
+        let rows = super::turns::query(
+            &h.db,
+            &root,
+            DateTime::parse_from_rfc3339("2026-09-10T00:01:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+            Some(&window),
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(rows.turns.len(), 1);
+        assert_eq!(rows.turns[0].weekly_remaining, Some(90.0));
+        assert_eq!(rows.turns[0].completed_at, "2026-09-10T00:00:00.000000000Z");
+        assert_eq!(
+            h.db.query_row("SELECT COUNT(*) FROM quota_snapshots", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            h.db.query_row("SELECT COUNT(*) FROM model_turns", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(accounting_dump(&h.db), before);
+        h.restart();
+        h.scan();
+    }
+}
+
+#[test]
+fn observed_turn_filtering_preserves_accounting_models_and_snapshot_history() {
+    let mut h = Harness::new();
+    observed_turn_fixture(&mut h, &[AT, "2026-09-05T05:00:00Z"]);
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+    let before = accounting_dump(&h.db);
+    let overview_and_models = serde_json::to_value(h.snapshot()).unwrap();
+    let snapshot_history = h.db.query_row("SELECT quote(root)||quote(weekly_reset_at)||quote(observed_at)||quote(remaining_percent) FROM quota_snapshots", [], |r| r.get::<_, String>(0)).unwrap();
+    for _ in 0..2 {
+        let rows = by_turn(&mut h);
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 1);
+        assert_eq!(rows["turns"][0]["tokens"], "10");
+        assert_eq!(h.total(), "20");
+        assert_eq!(
+            serde_json::to_value(h.snapshot()).unwrap(),
+            overview_and_models
+        );
+        assert_eq!(accounting_dump(&h.db), before);
+        assert_eq!(h.db.query_row("SELECT quote(root)||quote(weekly_reset_at)||quote(observed_at)||quote(remaining_percent) FROM quota_snapshots", [], |r| r.get::<_, String>(0)).unwrap(), snapshot_history);
+    }
 }

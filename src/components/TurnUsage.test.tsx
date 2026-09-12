@@ -49,7 +49,7 @@ it.each(["zh-CN", "en"] as const)('distinguishes unavailable and empty turns in 
   fireEvent.click(screen.getByRole('button', { name: language === 'en' ? 'Quota week' : '额度周' }));
   expect(screen.getByText(language === 'en' ? 'Current quota week unavailable' : '当前额度周不可用')).toBeTruthy();
   mounted.rerender(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot([]) }} />);
-  expect(screen.getByText(language === 'en' ? 'No completed turns in this quota week' : '当前额度周暂无已完成对话')).toBeTruthy();
+  expect(screen.getByText(language === 'en' ? 'No observed turns in this quota week' : '当前额度周暂无可用记录')).toBeTruthy();
 });
 it('normalizes known effort enums only', () => { expect(['low','medium','high','xhigh','max','ultra',null,'future'].map(displayEffort)).toEqual(['Low','Medium','High','xHigh','Max','Ultra','—','future']); });
 it('keeps many rows and exact extreme integers in the internal list', () => {
@@ -69,4 +69,11 @@ it.each(["zh-CN", "en"] as const)('retains full precision behind quota ellipsis 
   expect(quota.querySelector('[role="tooltip"]')?.textContent).toContain('65.12345678901234%');
   expect(container.querySelectorAll('.token-turn-row')).toHaveLength(1);
   quota.focus(); expect(document.activeElement).toBe(quota);
+});
+
+it.each(["zh-CN", "en"] as const)('renders an observed row with its weekly remaining in %s', language => {
+  const {container} = render(<TokenUsage language={language} view={{...INITIAL_TOKEN_VIEW,snapshot:snapshot([turn({weeklyRemaining:0})])}} />);
+  fireEvent.click(screen.getByRole('button',{name:language === 'en' ? 'Quota week' : '额度周'}));
+  expect(container.querySelectorAll('.token-turn-row')).toHaveLength(1);
+  expect(container.querySelector('.token-turn-quota-value')?.textContent).toBe('0%');
 });

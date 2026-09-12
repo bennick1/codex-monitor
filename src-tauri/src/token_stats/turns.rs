@@ -75,7 +75,7 @@ pub fn query(
         weekly_reset_at: reset.clone(),
         turns: Vec::new(),
     };
-    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<=?3 AND completed_at<?4 ORDER BY completed_at,thread,turn")?;
+    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<?3 AND completed_at<?4 ORDER BY completed_at,thread,turn")?;
     let rows = stmt.query_map(params![root, utc(start), utc(now), reset], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -110,13 +110,19 @@ pub fn query(
             .checked_add_signed(Duration::minutes(15))
             .ok_or("databaseInvalidTimestamp")?;
         let observation = db.query_row("SELECT remaining_percent,observed_at FROM quota_snapshots WHERE root=?1 AND weekly_reset_at=?2 AND observed_at>=?3 AND observed_at<=?4 AND observed_at<=?5 ORDER BY observed_at LIMIT 1", params![root,reset,completed,utc(end),utc(now)], |r| Ok((r.get::<_,f64>(0)?,r.get::<_,String>(1)?))).optional()?;
+        // Quota week is observed activity, not a complete Token history view.
+        let Some((remaining, observed_at)) = observation
+            .filter(|(remaining, _)| remaining.is_finite() && (0.0..=100.0).contains(remaining))
+        else {
+            continue;
+        };
         result.turns.push(TurnUsage {
             model: model.unwrap_or_else(|| "unknown".into()),
             effort,
             tokens: total.to_string(),
             completed_at: completed,
-            weekly_remaining: observation.as_ref().map(|v| v.0),
-            quota_observed_at: observation.map(|v| v.1),
+            weekly_remaining: Some(remaining),
+            quota_observed_at: Some(observed_at),
             is_partial: partial,
         });
     }

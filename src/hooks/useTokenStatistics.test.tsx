@@ -144,3 +144,20 @@ it.each([true, false])("clears turn rows immediately on changed or invalid quota
   expect(hook.result.current.snapshot?.modelStatistics?.periods.quotaPeriod ?? null).toBeNull();
   expect(hook.result.current.snapshot?.today).toEqual(initial.today);
 });
+
+it("rejects pending R1 observed turns after R2 arrives and publishes only R2 rows", async () => {
+  vi.setSystemTime(new Date("2026-09-07T04:00:00Z"));
+  const quota = { provider: "codex" as const, displayName: "CODEX", plan: null, shortWindow: null, resetCredits: null, status: "ok" as const, message: null, updatedAt: new Date().toISOString(), weeklyWindow: { resetsAt: "2026-09-11T00:00:00Z", windowSeconds: 604800, remainingPercent: 50 } };
+  const next = { ...quota, weeklyWindow: { ...quota.weeklyWindow, resetsAt: "2026-09-12T00:00:00Z" } };
+  const result = (reset: string, model: string) => tokenSnapshot({turnStatistics:{weeklyResetAt:reset,turns:[{model,effort:"high",tokens:"10",completedAt:"2026-09-07T03:00:00Z",weeklyRemaining:50,quotaObservedAt:"2026-09-07T03:01:00Z",isPartial:false}]}});
+  const old = deferred<TokenStatisticsSnapshot>();
+  api.get.mockReturnValueOnce(old.promise).mockResolvedValue(result(next.weeklyWindow.resetsAt, "synthetic-R2"));
+  const hook = renderHook(({value}) => useTokenStatistics(true,value), {initialProps:{value:quota}});
+  await flush();
+  hook.rerender({value:next}); await flush();
+  await act(async () => old.resolve(result(quota.weeklyWindow.resetsAt, "synthetic-R1")));
+  expect(hook.result.current.snapshot?.turnStatistics ?? null).toBeNull();
+  await tick(500); await flush();
+  expect(hook.result.current.snapshot?.turnStatistics?.weeklyResetAt).toBe(next.weeklyWindow.resetsAt);
+  expect(hook.result.current.snapshot?.turnStatistics?.turns.map(row => row.model)).toEqual(["synthetic-R2"]);
+});
