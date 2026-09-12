@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="195 183 864 864">
-  <title>CM — technical reconstruction of the approved reference</title>
+  <title>CM — 16/20px optical derivative of the approved reconstruction</title>
   <desc>C + M + segmented monitoring arc. Coordinates trace the central tile of app-icon-reference.png; the presentation canvas and exterior shadow are excluded.</desc>
   <defs>
     <linearGradient id="tile" x1="250" y1="200" x2="960" y2="1040" gradientUnits="userSpaceOnUse"><stop stop-color="#2a3745"/><stop offset=".42" stop-color="#101820"/><stop offset="1" stop-color="#080d15"/></linearGradient>
@@ -19,19 +19,16 @@
   <rect id="app-tile" x="199" y="187" width="856" height="856" rx="201" fill="url(#tile)" stroke="#111b29" stroke-width="3"/>
   <g clip-path="url(#tile-clip)">
     <ellipse cx="606" cy="393" rx="300" ry="210" fill="url(#glow)"/>
-    <use href="#c" fill="#00cbe8" opacity=".17" filter="url(#soft-glow)"/>
+
     <rect x="202" y="190" width="850" height="850" rx="199" fill="none" stroke="url(#rim)" stroke-width="4" opacity=".72"/>
     <g id="segmented-arc" fill="url(#status)" stroke="#91cfd8" stroke-opacity=".18" stroke-width="1.5" stroke-linejoin="round">
-      <path d="M665 305 Q665 298 672 300 Q696 302 718 309 Q724 311 722 317 L704 375 Q703 382 696 380 L668 375 Q662 374 663 368 Z"/>
-      <path d="M742 322 Q744 315 751 318 Q769 324 785 334 Q791 337 787 343 L756 397 Q753 403 747 400 L726 390 Q720 388 722 381 Z"/>
-      <path d="M804 354 Q808 347 814 352 L844 375 Q850 379 844 385 L804 429 Q800 435 794 430 L776 417 Q769 414 774 407 Z"/>
-      <path d="M858 400 Q863 392 869 399 Q883 414 893 429 Q898 435 891 439 L845 472 Q840 476 836 471 L818 452 Q813 448 819 442 Z"/>
-      <path d="M902 456 Q908 451 912 458 L929 493 Q932 499 925 502 L876 524 Q870 527 867 521 L853 498 Q849 492 855 488 Z"/>
-      <path d="M931 523 Q938 520 939 527 L947 570 Q949 577 942 578 L891 583 Q884 584 883 577 L876 550 Q874 544 881 542 Z"/>
+      <path d="M671.54 293.11 A320 320 0 0 1 787.00 332.87 L752.00 393.49 A250 250 0 0 0 661.79 362.43 Z"/>
+      <path d="M849.29 379.81 A320 320 0 0 1 919.33 479.84 L855.39 508.32 A250 250 0 0 0 800.66 430.17 Z"/>
+      <path d="M942.14 554.43 A320 320 0 0 1 946.81 598.83 L876.85 601.28 A250 250 0 0 0 873.20 566.59 Z"/>
     </g>
     <path id="arc-tail" d="M892 602 L942 598 Q950 598 949 606 C950 687 914 765 851 821 L851 714 C875 677 886 644 886 608 Q886 602 892 602 Z" fill="url(#tail)"/>
     <use id="letter-c" href="#c" fill="url(#c-material)" stroke="url(#c-edge)" stroke-width="2"/>
-    <use id="letter-m" href="#m" fill="url(#m-material)" stroke="#e7f6ff" stroke-opacity=".38" stroke-width="1.6"/>
+    <use id="letter-m" href="#m" fill="url(#m-material)" stroke="#e7f6ff" stroke-opacity=".75" stroke-width="5"/>
     <path d="M472 552 L544 592 L544 777 Q544 784 536 781 C515 773 491 757 477 742 Q472 737 472 728 Z" fill="url(#m-blue)"/>
   </g>
 </svg>
