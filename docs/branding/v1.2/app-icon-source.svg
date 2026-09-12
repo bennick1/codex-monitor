@@ -2,26 +2,84 @@
   <title>CM — technical reconstruction of the approved reference</title>
   <desc>C + M + segmented monitoring arc. Coordinates trace the central tile of app-icon-reference.png; the presentation canvas and exterior shadow are excluded.</desc>
   <defs>
-    <linearGradient id="tile" x1="250" y1="200" x2="960" y2="1040" gradientUnits="userSpaceOnUse"><stop stop-color="#2a3745"/><stop offset=".42" stop-color="#101820"/><stop offset="1" stop-color="#080d15"/></linearGradient>
-    <linearGradient id="rim" x1="260" y1="220" x2="970" y2="1000" gradientUnits="userSpaceOnUse"><stop stop-color="#6098cb"/><stop offset=".25" stop-color="#3b4859"/><stop offset=".65" stop-color="#141e2b"/><stop offset="1" stop-color="#3b485a"/></linearGradient>
-    <linearGradient id="c-material" x1="580" y1="298" x2="580" y2="912" gradientUnits="userSpaceOnUse"><stop stop-color="#77ffd0"/><stop offset=".20" stop-color="#13ece8"/><stop offset=".47" stop-color="#13aafa"/><stop offset=".70" stop-color="#086efa"/><stop offset="1" stop-color="#2252cd"/></linearGradient>
-    <linearGradient id="c-edge" x1="510" y1="295" x2="510" y2="910" gradientUnits="userSpaceOnUse"><stop stop-color="#b2ffe8"/><stop offset=".5" stop-color="#00d4ff"/><stop offset="1" stop-color="#3466ff"/></linearGradient>
-    <linearGradient id="m-material" x1="590" y1="480" x2="730" y2="855" gradientUnits="userSpaceOnUse"><stop stop-color="#f7fcfc"/><stop offset=".29" stop-color="#d9f1fa"/><stop offset=".63" stop-color="#a7cffd"/><stop offset="1" stop-color="#5494d5"/></linearGradient>
-    <linearGradient id="m-blue" x1="505" y1="555" x2="505" y2="782" gradientUnits="userSpaceOnUse"><stop stop-color="#c9edf7" stop-opacity="0"/><stop offset="1" stop-color="#0586e5"/></linearGradient>
-    <linearGradient id="status" x1="685" y1="300" x2="940" y2="610" gradientUnits="userSpaceOnUse"><stop stop-color="#22f2aa"/><stop offset=".24" stop-color="#1cdab4"/><stop offset=".48" stop-color="#20a5b4"/><stop offset=".70" stop-color="#42647e"/><stop offset="1" stop-color="#323d4e"/></linearGradient>
-    <linearGradient id="tail" x1="909" y1="597" x2="856" y2="827" gradientUnits="userSpaceOnUse"><stop stop-color="#25313e"/><stop offset="1" stop-color="#0e1722"/></linearGradient>
+    <linearGradient id="tile" x1="285" y1="205" x2="850" y2="1040" gradientUnits="userSpaceOnUse"><stop stop-color="#2c3948"/><stop offset=".20" stop-color="#1e2a35"/><stop offset=".48" stop-color="#101820"/><stop offset=".78" stop-color="#0c131c"/><stop offset="1" stop-color="#070c13"/></linearGradient>
+    <linearGradient id="rim" x1="270" y1="200" x2="840" y2="1040" gradientUnits="userSpaceOnUse"><stop stop-color="#79b4e8"/><stop offset=".20" stop-color="#67798d"/><stop offset=".40" stop-color="#263442"/><stop offset=".78" stop-color="#0e1724"/><stop offset="1" stop-color="#465569"/></linearGradient>
+    <linearGradient id="c-material" x1="575" y1="298" x2="620" y2="912" gradientUnits="userSpaceOnUse"><stop stop-color="#7dfcd2"/><stop offset=".12" stop-color="#35f3d8"/><stop offset=".28" stop-color="#0fdaee"/><stop offset=".48" stop-color="#16adf6"/><stop offset=".68" stop-color="#147cfc"/><stop offset=".86" stop-color="#077cea"/><stop offset="1" stop-color="#244ccb"/></linearGradient>
+    <linearGradient id="c-edge" x1="510" y1="295" x2="550" y2="910" gradientUnits="userSpaceOnUse"><stop stop-color="#bbffe5"/><stop offset=".32" stop-color="#39f7f5"/><stop offset=".62" stop-color="#168cef"/><stop offset="1" stop-color="#3c67ef"/></linearGradient>
+    <linearGradient id="m-material" x1="610" y1="480" x2="625" y2="880" gradientUnits="userSpaceOnUse"><stop stop-color="#f9fcfa"/><stop offset=".18" stop-color="#edf9fb"/><stop offset=".40" stop-color="#ccecff"/><stop offset=".66" stop-color="#aad0fb"/><stop offset=".84" stop-color="#88b8ed"/><stop offset="1" stop-color="#5597d6"/></linearGradient>
+    <linearGradient id="m-blue" x1="505" y1="555" x2="505" y2="782" gradientUnits="userSpaceOnUse"><stop stop-color="#99dcec" stop-opacity="0"/><stop offset=".28" stop-color="#5ec9f2" stop-opacity=".08"/><stop offset=".64" stop-color="#209fea" stop-opacity=".48"/><stop offset="1" stop-color="#0887dc" stop-opacity=".9"/></linearGradient>
+    <linearGradient id="status" x1="685" y1="300" x2="940" y2="610" gradientUnits="userSpaceOnUse"><stop stop-color="#25f3ae"/><stop offset=".17" stop-color="#21dcb4"/><stop offset=".39" stop-color="#1bb5b5"/><stop offset=".56" stop-color="#32899e"/><stop offset=".74" stop-color="#42617b"/><stop offset="1" stop-color="#303b4e"/></linearGradient>
+    <linearGradient id="tail" x1="909" y1="597" x2="856" y2="827" gradientUnits="userSpaceOnUse"><stop stop-color="#25313e"/><stop offset=".35" stop-color="#1e2a37"/><stop offset=".74" stop-color="#111d2a"/><stop offset="1" stop-color="#0b141e"/></linearGradient>
     <radialGradient id="glow"><stop stop-color="#00cdbb" stop-opacity=".13"/><stop offset="1" stop-color="#00cdbb" stop-opacity="0"/></radialGradient>
-    <filter id="soft-glow" x="-.2" y="-.2" width="1.4" height="1.4"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="12"/></filter>
+    <filter id="tile-depth" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="6" result="soft-alpha"/>
+      <feOffset in="soft-alpha" dx="0" dy="3" result="light-offset"/>
+      <feComposite in="SourceAlpha" in2="light-offset" operator="out" result="light-edge"/>
+      <feFlood flood-color="#7793b2" flood-opacity=".58" result="light-color"/>
+      <feComposite in="light-color" in2="light-edge" operator="in" result="light"/>
+      <feComposite in="light" in2="SourceGraphic" operator="atop" result="lit"/>
+      <feOffset in="soft-alpha" dx="0" dy="-3" result="shade-offset"/>
+      <feComposite in="SourceAlpha" in2="shade-offset" operator="out" result="shade-edge"/>
+      <feFlood flood-color="#020915" flood-opacity=".64" result="shade-color"/>
+      <feComposite in="shade-color" in2="shade-edge" operator="in" result="shade"/>
+      <feComposite in="shade" in2="lit" operator="atop"/>
+    </filter>
+    <filter id="c-depth" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="soft-alpha"/>
+      <feOffset in="soft-alpha" dx="0" dy="1.4" result="light-offset"/>
+      <feComposite in="SourceAlpha" in2="light-offset" operator="out" result="light-edge"/>
+      <feFlood flood-color="#c9fff0" flood-opacity=".36" result="light-color"/>
+      <feComposite in="light-color" in2="light-edge" operator="in" result="light"/>
+      <feComposite in="light" in2="SourceGraphic" operator="atop" result="lit"/>
+      <feOffset in="soft-alpha" dx="0" dy="-1.4" result="shade-offset"/>
+      <feComposite in="SourceAlpha" in2="shade-offset" operator="out" result="shade-edge"/>
+      <feFlood flood-color="#020915" flood-opacity=".17" result="shade-color"/>
+      <feComposite in="shade-color" in2="shade-edge" operator="in" result="shade"/>
+      <feComposite in="shade" in2="lit" operator="atop"/>
+    </filter>
+    <filter id="m-depth" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.5" result="soft-alpha"/>
+      <feOffset in="soft-alpha" dx="0" dy="1" result="light-offset"/>
+      <feComposite in="SourceAlpha" in2="light-offset" operator="out" result="light-edge"/>
+      <feFlood flood-color="#ffffff" flood-opacity=".48" result="light-color"/>
+      <feComposite in="light-color" in2="light-edge" operator="in" result="light"/>
+      <feComposite in="light" in2="SourceGraphic" operator="atop" result="lit"/>
+      <feOffset in="soft-alpha" dx="0" dy="-1" result="shade-offset"/>
+      <feComposite in="SourceAlpha" in2="shade-offset" operator="out" result="shade-edge"/>
+      <feFlood flood-color="#020915" flood-opacity=".12" result="shade-color"/>
+      <feComposite in="shade-color" in2="shade-edge" operator="in" result="shade"/>
+      <feComposite in="shade" in2="lit" operator="atop"/>
+    </filter>
+    <filter id="status-depth" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="1.6" result="soft-alpha"/>
+      <feOffset in="soft-alpha" dx="0" dy="1" result="light-offset"/>
+      <feComposite in="SourceAlpha" in2="light-offset" operator="out" result="light-edge"/>
+      <feFlood flood-color="#b6f8e8" flood-opacity=".25" result="light-color"/>
+      <feComposite in="light-color" in2="light-edge" operator="in" result="light"/>
+      <feComposite in="light" in2="SourceGraphic" operator="atop" result="lit"/>
+      <feOffset in="soft-alpha" dx="0" dy="-1" result="shade-offset"/>
+      <feComposite in="SourceAlpha" in2="shade-offset" operator="out" result="shade-edge"/>
+      <feFlood flood-color="#020915" flood-opacity=".18" result="shade-color"/>
+      <feComposite in="shade-color" in2="shade-edge" operator="in" result="shade"/>
+      <feComposite in="shade" in2="lit" operator="atop"/>
+    </filter>
+    <!-- Material-only light layers reuse the frozen C/M paths; no new geometry. -->
+    <radialGradient id="c-cyan-bloom" gradientUnits="userSpaceOnUse" cx="423" cy="780" r="235"><stop stop-color="#00dfff" stop-opacity=".38"/><stop offset=".44" stop-color="#00ccfa" stop-opacity=".24"/><stop offset="1" stop-color="#00c9ff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="c-mint-light" gradientUnits="userSpaceOnUse" cx="584" cy="319" r="150"><stop stop-color="#c4ffe4" stop-opacity=".28"/><stop offset="1" stop-color="#afffe2" stop-opacity="0"/></radialGradient>
+    <radialGradient id="m-ice-light" gradientUnits="userSpaceOnUse" cx="812" cy="535" r="200"><stop stop-color="#ffffff" stop-opacity=".62"/><stop offset=".42" stop-color="#f4fbff" stop-opacity=".34"/><stop offset="1" stop-color="#d7edff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="tile-surface" gradientUnits="userSpaceOnUse" cx="410" cy="340" r="795"><stop stop-color="#718799" stop-opacity=".045"/><stop offset=".35" stop-color="#010812" stop-opacity=".06"/><stop offset=".75" stop-color="#020611" stop-opacity=".16"/><stop offset="1" stop-color="#00030a" stop-opacity=".3"/></radialGradient>
+    <filter id="rim-softness" x="-2%" y="-2%" width="104%" height="104%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation=".65"/></filter>
     <clipPath id="tile-clip"><rect x="199" y="187" width="856" height="856" rx="201"/></clipPath>
     <path id="c" d="M631 298 C637 298 639 302 639 309 L639 370 Q639 382 627 382 C505 379 397 478 397 608 C397 725 479 819 596 820 C630 820 663 811 691 796 C710 783 728 799 728 820 L728 871 Q728 881 718 886 C681 903 643 911 607 911 C442 911 307 776 307 609 C307 439 450 298 631 298 Z"/>
     <path id="m" d="M471 728 L471 517 C471 483 509 466 533 490 L665 615 Q676 626 687 615 L783 526 C808 504 850 518 850 557 L850 822 Q850 827 846 831 Q817 859 781 880 Q775 883 775 875 L775 630 L695 701 Q676 718 658 699 L544 591 L544 777 Q544 785 536 781 C515 773 491 757 477 742 Q471 736 471 728 Z"/>
   </defs>
-  <rect id="app-tile" x="199" y="187" width="856" height="856" rx="201" fill="url(#tile)" stroke="#111b29" stroke-width="3"/>
+  <rect id="app-tile" x="199" y="187" width="856" height="856" rx="201" fill="url(#tile)" filter="url(#tile-depth)" stroke="#111b29" stroke-width="3"/>
   <g clip-path="url(#tile-clip)">
     <ellipse cx="606" cy="393" rx="300" ry="210" fill="url(#glow)"/>
-    <use href="#c" fill="#00cbe8" opacity=".17" filter="url(#soft-glow)"/>
-    <rect x="202" y="190" width="850" height="850" rx="199" fill="none" stroke="url(#rim)" stroke-width="4" opacity=".72"/>
-    <g id="segmented-arc" fill="url(#status)" stroke="#91cfd8" stroke-opacity=".18" stroke-width="1.5" stroke-linejoin="round">
+    <use href="#c" fill="url(#c-material)" opacity=".23" filter="url(#soft-glow)"/>
+    <rect x="202" y="190" width="850" height="850" rx="199" fill="url(#tile-surface)" filter="url(#rim-softness)" stroke="url(#rim)" stroke-width="4" opacity=".56"/>
+    <g id="segmented-arc" filter="url(#status-depth)" fill="url(#status)" stroke="#91cfd8" stroke-opacity=".22" stroke-width="1.5" stroke-linejoin="round">
       <path d="M665 305 Q665 298 672 300 Q696 302 718 309 Q724 311 722 317 L704 375 Q703 382 696 380 L668 375 Q662 374 663 368 Z"/>
       <path d="M742 322 Q744 315 751 318 Q769 324 785 334 Q791 337 787 343 L756 397 Q753 403 747 400 L726 390 Q720 388 722 381 Z"/>
       <path d="M804 354 Q808 347 814 352 L844 375 Q850 379 844 385 L804 429 Q800 435 794 430 L776 417 Q769 414 774 407 Z"/>
@@ -30,8 +88,11 @@
       <path d="M931 523 Q938 520 939 527 L947 570 Q949 577 942 578 L891 583 Q884 584 883 577 L876 550 Q874 544 881 542 Z"/>
     </g>
     <path id="arc-tail" d="M892 602 L942 598 Q950 598 949 606 C950 687 914 765 851 821 L851 714 C875 677 886 644 886 608 Q886 602 892 602 Z" fill="url(#tail)"/>
-    <use id="letter-c" href="#c" fill="url(#c-material)" stroke="url(#c-edge)" stroke-width="2"/>
-    <use id="letter-m" href="#m" fill="url(#m-material)" stroke="#e7f6ff" stroke-opacity=".38" stroke-width="1.6"/>
+    <use id="letter-c" filter="url(#c-depth)" href="#c" fill="url(#c-material)" stroke="url(#c-edge)" stroke-width="2"/>
+    <use id="c-cyan-light-overlay" href="#c" fill="url(#c-cyan-bloom)"/>
+    <use id="c-mint-light-overlay" href="#c" fill="url(#c-mint-light)"/>
+    <use id="letter-m" filter="url(#m-depth)" href="#m" fill="url(#m-material)" stroke="#e9f8ff" stroke-opacity=".48" stroke-width="1.6"/>
+    <use id="m-ice-light-overlay" href="#m" fill="url(#m-ice-light)"/>
     <path d="M472 552 L544 592 L544 777 Q544 784 536 781 C515 773 491 757 477 742 Q472 737 472 728 Z" fill="url(#m-blue)"/>
   </g>
 </svg>
