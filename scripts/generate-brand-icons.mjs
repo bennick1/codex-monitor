@@ -2,7 +2,7 @@
  * Set BRANDING_PYTHON to an interpreter with Pillow if python3 lacks it.
  * All raster/container/contact-sheet inputs descend from the maintained CM SVG.
  */
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, mkdtempSync, rmSync, existsSync, readdirSync, cpSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -28,6 +28,35 @@ function run(command, args) {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} failed (${result.status})`);
 }
+// Fail before changing any assets on hosts unable to create the missing ICNS.
+if (process.platform !== 'darwin' && !existsSync(`${output}/icon.icns`)) {
+  throw new Error('macOS icon.icns must be generated on macOS using iconutil');
+}
+function generateMacIcns() {
+  if (process.platform !== 'darwin') return; // Preserve the checked-in native ICNS.
+  const work = mkdtempSync(join(tmpdir(), 'cm-native-icns-'));
+  try {
+    const iconset = join(work, 'CodexMonitor.iconset');
+    mkdirSync(iconset);
+    const slots = { '16x16': 16, '16x16@2x': 32, '32x32': 32, '32x32@2x': 64,
+      '128x128': 128, '128x128@2x': 256, '256x256': 256, '256x256@2x': 512,
+      '512x512': 512, '512x512@2x': 1024 };
+    for (const [name, size] of Object.entries(slots)) {
+      copyFileSync(`${output}/app-${size}.png`, join(iconset, `icon_${name}.png`));
+    }
+    const candidate = join(work, 'icon.icns');
+    run('iconutil', ['-c', 'icns', '-o', candidate, iconset]);
+    run(python, ['scripts/validate-macos-icns.py', candidate, output]);
+    copyFileSync(candidate, `${output}/icon.icns`);
+  } finally {
+    rmSync(work, { recursive: true, force: true });
+  }
+}
+// Container-only repair/determinism checks consume existing PNGs without rendering SVG.
+if (process.argv.includes('--icns-only')) {
+  generateMacIcns();
+  process.exit(0);
+}
 // Fail before changing assets when the validation dependency is unavailable.
 run(python, ['-c', 'from PIL import Image, ImageDraw, ImageFont']);
 function tauri(input, dest, sizes = []) {
@@ -38,7 +67,12 @@ const temp = mkdtempSync(join(tmpdir(), 'cm-icons-'));
 try {
   mkdirSync(output, { recursive: true });
   // Tauri regenerates all standard desktop, Windows Store, Android and iOS outputs.
-  tauri(source, output);
+  const platform = join(temp, 'platform');
+  tauri(source, platform);
+  // Tauri also emits an ICNS; never let it overwrite the native checked-in container.
+  for (const name of readdirSync(platform)) {
+    if (name !== 'icon.icns') cpSync(join(platform, name), join(output, name), { recursive: true });
+  }
   tauri(source, temp, [16, 20, 24, 32, 48, 64, 128, 256, 512, 1024]);
   // Tiny-only optical correction: three spaced ticks, reduced glow, stronger M edge.
   tauri(`${branding}/app-icon-small-source.svg`, temp, [16, 20]);
@@ -73,20 +107,7 @@ try {
     return png;
   });
   writeFileSync(`${output}/icon.ico`, Buffer.concat([icoHeader, ...icoImages]));
-  // Standard 1x and Retina 2x logical representations (20/24 are ICO/PNG only).
-  const icnsTypes = { icp4: 16, icp5: 32, icp6: 64, ic07: 128, ic08: 256, ic09: 512, ic10: 1024,
-    ic11: 32, ic12: 64, ic13: 256, ic14: 512 };
-  const chunks = Object.entries(icnsTypes).map(([type, size]) => {
-    const png = readFileSync(`${output}/app-${size}.png`);
-    const header = Buffer.alloc(8);
-    header.write(type, 0, 'ascii');
-    header.writeUInt32BE(png.length + 8, 4);
-    return Buffer.concat([header, png]);
-  });
-  const header = Buffer.alloc(8);
-  header.write('icns', 0, 'ascii');
-  header.writeUInt32BE(8 + chunks.reduce((sum, chunk) => sum + chunk.length, 0), 4);
-  writeFileSync(`${output}/icon.icns`, Buffer.concat([header, ...chunks]));
+  generateMacIcns();
   run(python, ['scripts/validate-brand-icons.py']);
 } finally {
   rmSync(temp, { recursive: true, force: true });

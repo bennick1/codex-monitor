@@ -1,8 +1,9 @@
 """Decode generated CM assets, check container/source mapping, and build review sheets.
-Requires Pillow. Technical checks do not establish human visual/native acceptance.
+Requires Pillow. Native checks run on macOS; human acceptance is recorded only for the accepted ICNS SHA.
 """
 from pathlib import Path
 from io import BytesIO
+import importlib.util
 import hashlib
 import json
 import struct
@@ -107,27 +108,38 @@ for size in ico_entries:
 
 icns = (OUT / 'icon.icns').read_bytes()
 assert icns[:4] == b'icns' and struct.unpack_from('>I', icns, 4)[0] == len(icns)
-expected = {'icp4': (16, 1), 'icp5': (32, 1), 'icp6': (64, 1), 'ic07': (128, 1),
+# Apple-native containers use ARGB ic04/ic05 for small 1x representations.
+# PNG payload mapping remains useful, but never substitutes for macOS native decoding.
+expected = {'ic04': (16, 1), 'ic05': (32, 1), 'ic07': (128, 1),
             'ic08': (256, 1), 'ic09': (512, 1), 'ic10': (512, 2),
             'ic11': (16, 2), 'ic12': (32, 2), 'ic13': (128, 2), 'ic14': (256, 2)}
 icns_entries = []
+seen = set()
 offset = 8
 while offset < len(icns):
     kind = icns[offset:offset+4].decode('ascii')
     length = struct.unpack_from('>I', icns, offset + 4)[0]
     assert length > 8 and offset + length <= len(icns)
-    logical, scale = expected[kind]
-    size = logical * scale
+    assert kind not in seen
+    seen.add(kind)
     data = icns[offset+8:offset+length]
-    assert decode(data).size == (size, size)
-    assert data == (OUT / f'app-{size}.png').read_bytes()
-    icns_entries.append({'type': kind, 'logical': logical, 'scale': scale, 'pixels': size})
+    if kind != 'info':
+        logical, scale = expected[kind]
+        size = logical * scale
+        if kind in ('ic04', 'ic05'):
+            assert data.startswith(b'ARGB')
+        else:
+            decoded = decode(data)
+            assert decoded.size == (size, size)
+            assert decoded.tobytes() == decode((OUT / f'app-{size}.png').read_bytes()).tobytes()
+        icns_entries.append({'type': kind, 'logical': logical, 'scale': scale, 'pixels': size})
     offset += length
-assert offset == len(icns) and {entry['type'] for entry in icns_entries} == set(expected)
-container = Image.open(OUT / 'icon.icns')
-for logical, scale in expected.values():
-    decoded = container.icns.getimage((logical, logical, scale)).convert('RGBA')
-    assert decoded.tobytes() == decode((OUT / f'app-{logical*scale}.png').read_bytes()).tobytes()
+assert offset == len(icns) and seen - {'info'} == set(expected)
+sys.dont_write_bytecode = True
+spec = importlib.util.spec_from_file_location('native_icns', ROOT / 'scripts/validate-macos-icns.py')
+native_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(native_module)
+native_icns = native_module.validate(OUT / 'icon.icns', OUT)
 
 platform_pngs = []
 for path in sorted(OUT.rglob('*.png')):
@@ -174,11 +186,31 @@ for theme, background, foreground in [('light', '#eceff3', '#17202b'), ('dark', 
             draw.text((x, y + 76), f'{factor}x nearest-neighbor', font=small_font, fill=foreground)
             sheet.alpha_composite(image.resize((size*factor, size*factor), Image.Resampling.NEAREST), (x, y + 106))
     sheet.convert('RGB').save(VALIDATION / f'cm-tiny-{theme}.png')
-report = {'scope': 'Technical validation only; human visual and native acceptance outstanding',
+report = {'scope': 'Technical asset and macOS native validation; Finder acceptance transferred only by accepted ICNS identity; remaining native gates separate',
           'reference_sha256': hashlib.sha256(reference).hexdigest(), 'app_checks': app_checks,
           'tray_sizes': [16, 20, 24, 32], 'ico_entries': ico_entries,
           'icns_entries': icns_entries, 'decoded_pngs': platform_pngs,
-          'source_mapping': '16/20px app, tray and ICO, ICNS icp4, and iOS 20px use the tiny CM SVG; other representations use the main CM SVG',
+          'source_mapping': '16/20px app, tray and ICO, ICNS ic04, and iOS 20px use the tiny CM SVG; other representations use the main CM SVG',
           'runtime_mapping': 'Passed; existing tray-32 include and bundle paths unchanged'}
+evidence_path = VALIDATION / 'technical-validation.json'
+previous = json.loads(evidence_path.read_text()) if evidence_path.exists() else {}
+history = previous.get('icns_history', [])
+if not history and previous.get('icns_entries'):
+    history.append({'status': 'Superseded — Native Decode Incompatible',
+                    'generator': 'Current Custom ICNS Writer',
+                    'sha256': '7492301f162c18a2ff714147a1088aacf735ddb6a1fb64f1b05b599f17e7002a',
+                    'embedded_payload_validation': 'Passed, insufficient for native acceptance',
+                    'icns_entries': previous['icns_entries'],
+                    'native_decode': '16/32 corrupted; unexpected 48 present'})
+report['icns_history'] = history
+report['icns_generator'] = 'Apple iconutil'
+report['icns_sha256'] = hashlib.sha256(icns).hexdigest()
+report['icns_native_validation'] = native_icns
+# Human acceptance is transferred only by exact identity to the explicitly accepted asset.
+accepted_sha = '8ccc7bddb8a1f120026a2174f8b5c1dc110b14a9862c38a0cd0f5ae09b5e7f61'
+report['finder_candidate_human'] = ({'icon_view': 'Passed', 'list_view': 'Passed',
+    'provenance': 'Human acceptance transferred by exact accepted ICNS identity',
+    'accepted_sha256': accepted_sha} if report['icns_sha256'] == accepted_sha else
+    {'icon_view': 'Needs Human Check', 'list_view': 'Needs Human Check'})
 (VALIDATION / 'technical-validation.json').write_text(json.dumps(report, indent=2) + '\n')
 print(f'CM technical checks passed: {len(platform_pngs)} PNGs, {len(ico_entries)} ICO and {len(icns_entries)} ICNS entries; 4 contact sheets.')

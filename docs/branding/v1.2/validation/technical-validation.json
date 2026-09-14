@@ -1,5 +1,5 @@
 {
-  "scope": "Technical validation only; human visual and native acceptance outstanding",
+  "scope": "Technical asset and macOS native validation; Finder acceptance transferred only by accepted ICNS identity; remaining native gates separate",
   "reference_sha256": "373af7dca75b1e45310c6c8b43602d44f16629c1f5225279f0efdb8c98af45c5",
   "app_checks": [
     {
@@ -81,21 +81,9 @@
   ],
   "icns_entries": [
     {
-      "type": "icp4",
-      "logical": 16,
-      "scale": 1,
-      "pixels": 16
-    },
-    {
-      "type": "icp5",
+      "type": "ic12",
       "logical": 32,
-      "scale": 1,
-      "pixels": 32
-    },
-    {
-      "type": "icp6",
-      "logical": 64,
-      "scale": 1,
+      "scale": 2,
       "pixels": 64
     },
     {
@@ -105,16 +93,40 @@
       "pixels": 128
     },
     {
+      "type": "ic13",
+      "logical": 128,
+      "scale": 2,
+      "pixels": 256
+    },
+    {
       "type": "ic08",
       "logical": 256,
       "scale": 1,
       "pixels": 256
     },
     {
+      "type": "ic04",
+      "logical": 16,
+      "scale": 1,
+      "pixels": 16
+    },
+    {
+      "type": "ic14",
+      "logical": 256,
+      "scale": 2,
+      "pixels": 512
+    },
+    {
       "type": "ic09",
       "logical": 512,
       "scale": 1,
       "pixels": 512
+    },
+    {
+      "type": "ic05",
+      "logical": 32,
+      "scale": 1,
+      "pixels": 32
     },
     {
       "type": "ic10",
@@ -127,24 +139,6 @@
       "logical": 16,
       "scale": 2,
       "pixels": 32
-    },
-    {
-      "type": "ic12",
-      "logical": 32,
-      "scale": 2,
-      "pixels": 64
-    },
-    {
-      "type": "ic13",
-      "logical": 128,
-      "scale": 2,
-      "pixels": 256
-    },
-    {
-      "type": "ic14",
-      "logical": 256,
-      "scale": 2,
-      "pixels": 512
     }
   ],
   "decoded_pngs": [
@@ -401,6 +395,166 @@
       "size": 32
     }
   ],
-  "source_mapping": "16/20px app, tray and ICO, ICNS icp4, and iOS 20px use the tiny CM SVG; other representations use the main CM SVG",
-  "runtime_mapping": "Passed; existing tray-32 include and bundle paths unchanged"
+  "source_mapping": "16/20px app, tray and ICO, ICNS ic04, and iOS 20px use the tiny CM SVG; other representations use the main CM SVG",
+  "runtime_mapping": "Passed; existing tray-32 include and bundle paths unchanged",
+  "icns_history": [
+    {
+      "status": "Superseded \u2014 Native Decode Incompatible",
+      "generator": "Current Custom ICNS Writer",
+      "sha256": "7492301f162c18a2ff714147a1088aacf735ddb6a1fb64f1b05b599f17e7002a",
+      "embedded_payload_validation": "Passed, insufficient for native acceptance",
+      "icns_entries": [
+        {
+          "type": "icp4",
+          "logical": 16,
+          "scale": 1,
+          "pixels": 16
+        },
+        {
+          "type": "icp5",
+          "logical": 32,
+          "scale": 1,
+          "pixels": 32
+        },
+        {
+          "type": "icp6",
+          "logical": 64,
+          "scale": 1,
+          "pixels": 64
+        },
+        {
+          "type": "ic07",
+          "logical": 128,
+          "scale": 1,
+          "pixels": 128
+        },
+        {
+          "type": "ic08",
+          "logical": 256,
+          "scale": 1,
+          "pixels": 256
+        },
+        {
+          "type": "ic09",
+          "logical": 512,
+          "scale": 1,
+          "pixels": 512
+        },
+        {
+          "type": "ic10",
+          "logical": 512,
+          "scale": 2,
+          "pixels": 1024
+        },
+        {
+          "type": "ic11",
+          "logical": 16,
+          "scale": 2,
+          "pixels": 32
+        },
+        {
+          "type": "ic12",
+          "logical": 32,
+          "scale": 2,
+          "pixels": 64
+        },
+        {
+          "type": "ic13",
+          "logical": 128,
+          "scale": 2,
+          "pixels": 256
+        },
+        {
+          "type": "ic14",
+          "logical": 256,
+          "scale": 2,
+          "pixels": 512
+        }
+      ],
+      "native_decode": "16/32 corrupted; unexpected 48 present"
+    }
+  ],
+  "icns_generator": "Apple iconutil",
+  "icns_sha256": "8ccc7bddb8a1f120026a2174f8b5c1dc110b14a9862c38a0cd0f5ae09b5e7f61",
+  "icns_native_validation": {
+    "status": "Passed",
+    "canonical_slots": "10/10",
+    "unexpected_48": "Absent",
+    "raw_slots": {
+      "16x16": {
+        "rgba_exact": false,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 28
+      },
+      "16x16@2x": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "32x32": {
+        "rgba_exact": false,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 124
+      },
+      "32x32@2x": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "128x128": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "128x128@2x": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "256x256": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "256x256@2x": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "512x512": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      },
+      "512x512@2x": {
+        "rgba_exact": true,
+        "alpha_exact": true,
+        "opaque_exact": true,
+        "different_pixels": 0
+      }
+    },
+    "nsimage": {
+      "16@1x": "RGBA exact",
+      "16@2x": "RGBA exact",
+      "32@1x": "RGBA exact",
+      "32@2x": "RGBA exact",
+      "128@1x": "RGBA exact"
+    },
+    "native_render": "5/5 exact"
+  },
+  "finder_candidate_human": {
+    "icon_view": "Passed",
+    "list_view": "Passed",
+    "provenance": "Human acceptance transferred by exact accepted ICNS identity",
+    "accepted_sha256": "8ccc7bddb8a1f120026a2174f8b5c1dc110b14a9862c38a0cd0f5ae09b5e7f61"
+  }
 }
