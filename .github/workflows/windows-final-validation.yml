@@ -1,0 +1,90 @@
+name: Windows Final Validation Package
+on:
+  push:
+    branches: [codex/windows-final-validation-package]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 59ff6f6ad3983ac20dfcbafe4e02796f1a76a964
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Verify source and prepare external config
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ((git rev-parse HEAD) -ne '59ff6f6ad3983ac20dfcbafe4e02796f1a76a964') { throw 'Source mismatch' }
+          if (git status --porcelain) { throw 'Source checkout must be clean' }
+          $changes = @(git diff --name-only 5359c705b43812564956a6cd78f5c524a327e326 HEAD)
+          if ($LASTEXITCODE -ne 0 -or @($changes | Where-Object { $_ -notlike 'docs/*' }).Count) { throw 'Production equivalence failed' }
+          $config = Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json
+          if ($config.version -ne '1.1.0' -or $config.identifier -ne 'app.quotafloat.desktop') { throw 'Unexpected production metadata' }
+          $ico = [IO.File]::ReadAllBytes((Resolve-Path src-tauri/icons/icon.ico))
+          if ([BitConverter]::ToUInt16($ico, 4) -ne 8) { throw 'Expected 8 ICO representations' }
+          $external = Join-Path $env:RUNNER_TEMP 'windows-final-validation.json'
+          @{ productName = 'Codex Monitor v1.2 Windows Final Validation'; identifier = 'app.quotafloat.v120validation.winfinal' } | ConvertTo-Json | Set-Content $external -Encoding utf8
+          "VALIDATION_CONFIG=$external" >> $env:GITHUB_ENV
+          New-Item -ItemType Directory -Force output | Out-Null
+          @{
+            source = (git rev-parse HEAD)
+            productionSource = '5359c705b43812564956a6cd78f5c524a327e326'
+            version = $config.version
+            identifier = 'app.quotafloat.v120validation.winfinal'
+            profile = 'debug'
+            node = (node --version)
+            npm = (npm --version)
+            rust = (rustc --version)
+            cargo = (cargo --version)
+            iconSHA256 = (Get-FileHash src-tauri/icons/icon.ico -Algorithm SHA256).Hash
+            runURL = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            nativeHumanAcceptance = 'Pending'
+          } | ConvertTo-Json | Set-Content output/build-evidence.json -Encoding utf8
+      - run: npm ci
+      - name: Build isolated debug NSIS installer
+        shell: pwsh
+        run: |
+          npm run tauri -- build --debug --bundles nsis --config "$env:VALIDATION_CONFIG"
+          if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
+      - name: Collect installer and checksums
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (git diff --name-only) { throw 'Tracked source changed during build' }
+          $installers = @(Get-ChildItem src-tauri/target/debug/bundle/nsis/*.exe)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one installer' }
+          Copy-Item $installers[0].FullName output/
+          $install = Start-Process $installers[0].FullName -ArgumentList '/S' -PassThru -Wait
+          if ($install.ExitCode -ne 0) { throw 'NSIS installation failed' }
+          $entry = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' | ForEach-Object { Get-ItemProperty $_.PSPath } | Where-Object DisplayName -eq 'Codex Monitor v1.2 Windows Final Validation')
+          if ($entry.Count -ne 1) { throw 'Isolated uninstall registration not found' }
+          $uninstaller = $entry[0].UninstallString.Trim('"')
+          $installDir = Split-Path $uninstaller
+          if ((Split-Path $installDir -Leaf) -ne 'Codex Monitor v1.2 Windows Final Validation') { throw 'Unexpected installation directory' }
+          $exe = @(Get-ChildItem $installDir -Filter codex-monitor.exe -Recurse)
+          if ($exe.Count -ne 1) { throw 'Installed executable missing' }
+          if ((Get-FileHash $exe[0].FullName).Hash -ne (Get-FileHash src-tauri/target/debug/codex-monitor.exe).Hash) { throw 'Installed executable differs from build' }
+          @{
+            installerSmoke = 'Passed: silent installation, isolated registration and directory, executable hash match'
+            nativeHumanAcceptance = 'Pending; application was not launched on the CI runner'
+            executableSHA256 = (Get-FileHash $exe[0].FullName).Hash.ToLower()
+          } | ConvertTo-Json | Set-Content output/installer-verification.json -Encoding utf8
+          Get-ChildItem output -File | Sort-Object Name | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content output/SHA256SUMS -Encoding ascii
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-monitor-windows-x64-final-validation-59ff6f6
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
