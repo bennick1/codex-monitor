@@ -76,9 +76,15 @@ jobs:
           if ((Split-Path $installDir -Leaf) -ne 'Codex Monitor v1.2 Windows Final Validation') { throw 'Unexpected installation directory' }
           $exe = @(Get-ChildItem $installDir -Filter codex-monitor.exe -Recurse)
           if ($exe.Count -ne 1) { throw 'Installed executable missing' }
-          if ((Get-FileHash $exe[0].FullName).Hash -ne (Get-FileHash src-tauri/target/debug/codex-monitor.exe).Hash) { throw 'Installed executable differs from build' }
+          $expectedBytes = [IO.File]::ReadAllBytes((Resolve-Path src-tauri/target/debug/codex-monitor.exe))
+          $marker = '__TAURI_BUNDLE_TYPE_VAR_UNK'
+          $markerOffset = [Text.Encoding]::Latin1.GetString($expectedBytes).IndexOf($marker, [StringComparison]::Ordinal)
+          if ($markerOffset -lt 0) { throw 'Tauri bundle marker missing' }
+          [Text.Encoding]::ASCII.GetBytes('__TAURI_BUNDLE_TYPE_VAR_NSS').CopyTo($expectedBytes, $markerOffset)
+          $expectedHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($expectedBytes))
+          if ((Get-FileHash $exe[0].FullName).Hash -ne $expectedHash) { throw 'Installed executable differs beyond the standard Tauri NSIS marker' }
           @{
-            installerSmoke = 'Passed: silent installation, isolated registration and directory, executable hash match'
+            installerSmoke = 'Passed: silent installation, isolated registration and directory, executable hash matches build with standard Tauri NSIS marker'
             nativeHumanAcceptance = 'Pending; application was not launched on the CI runner'
             executableSHA256 = (Get-FileHash $exe[0].FullName).Hash.ToLower()
           } | ConvertTo-Json | Set-Content output/installer-verification.json -Encoding utf8
