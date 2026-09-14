@@ -54,13 +54,16 @@ jobs:
       - name: Build isolated debug NSIS installer
         shell: pwsh
         run: |
-          npm run tauri -- build --debug --bundles nsis --config "$env:VALIDATION_CONFIG"
+          npm run tauri -- build --debug --bundles nsis --config "$env:VALIDATION_CONFIG" -- --locked
           if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
       - name: Collect installer and checksums
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          if (git diff --name-only) { throw 'Tracked source changed during build' }
+          $changed = @(git diff --name-only)
+          $changed | Write-Output
+          git diff -- src-tauri/gen/schemas/ | Set-Content output/generated-schema.diff -Encoding utf8
+          if (@($changed | Where-Object { $_ -notlike 'src-tauri/gen/schemas/*' }).Count) { throw 'Production source or dependency lock changed during build' }
           $installers = @(Get-ChildItem src-tauri/target/debug/bundle/nsis/*.exe)
           if ($installers.Count -ne 1) { throw 'Expected exactly one installer' }
           Copy-Item $installers[0].FullName output/
