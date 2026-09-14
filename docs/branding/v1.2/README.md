@@ -1,6 +1,6 @@
 # Codex Monitor v1.2 CM branding
 
-**CM Material Fidelity Polish Complete — Awaiting Human Visual Acceptance**
+**Visual Identity: FROZEN — macOS ICNS container corrected; Finder Icon/List View accepted**
 
 ## Approved Reference
 
@@ -59,13 +59,13 @@ After `npm ci`, run:
 node scripts/generate-brand-icons.mjs
 ```
 
-Requirements: the lockfile-installed Tauri v2 CLI (validated with 2.11.4) and Python 3 with Pillow (validated with Pillow 12.3.0). If the default Python lacks Pillow, set `BRANDING_PYTHON` to an existing interpreter with Pillow. No package/version/lockfile change is required. Run from any working directory; paths resolve from the script.
+Requirements: the lockfile-installed Tauri v2 CLI (validated with 2.11.4) and Python 3 with Pillow (validated with Pillow 12.3.0). macOS ICNS generation/validation additionally requires Apple `iconutil` and Swift/AppKit. If the default Python lacks Pillow, set `BRANDING_PYTHON` to an existing interpreter with Pillow. No package/version/lockfile change is required. Run from any working directory; paths resolve from the script.
 
-The script verifies reference integrity, renders the CM SVG with Tauri, regenerates Windows Square/StoreLogo, Android and iOS assets, then creates explicit ICO/ICNS representations and review sheets. It removes alpha ≤ 1 quantization fringe and makes iOS backgrounds opaque dark blue. This postprocessing does not introduce another artwork source. Contact-sheet fonts use Pillow's bundled font.
+The script verifies reference integrity, renders the CM SVG with Tauri, regenerates Windows Square/StoreLogo, Android and iOS assets, then creates ICO entries, an Apple canonical 10-slot ICNS on macOS, and review sheets. It removes alpha ≤ 1 quantization fringe and makes iOS backgrounds opaque dark blue. This postprocessing does not introduce another artwork source. Contact-sheet fonts use Pillow's bundled font.
 
 | Output | Source |
 | --- | --- |
-| App and Tray 16/20px; ICO 16/20px; ICNS `icp4`; iOS 20px | Tiny CM SVG |
+| App and Tray 16/20px; ICO 16/20px; ICNS `ic04`; iOS 20px | Tiny CM SVG |
 | App 24/32/48/64/128/256/512/1024px; Tray 24/32px | Main CM SVG |
 | ICO 24/32/48/64/128/256px | Main CM SVG |
 | ICNS other 1x / 2x representations | Main CM SVG at actual pixel dimensions |
@@ -73,13 +73,24 @@ The script verifies reference integrity, renders the CM SVG with Tauri, regenera
 
 ICO entries: **16, 20, 24, 32, 48, 64, 128, 256**.
 
-ICNS entries: `icp4` 16@1x, `icp5` 32@1x, `icp6` 64@1x, `ic07` 128@1x, `ic08` 256@1x, `ic09` 512@1x, `ic10` 512@2x, `ic11` 16@2x, `ic12` 32@2x, `ic13` 128@2x, `ic14` 256@2x. Retina representations are rendered at their actual pixel dimensions, so 16@2x retains the full 32px source.
+ICNS entries: `ic04` 16@1x (ARGB), `ic05` 32@1x (ARGB), `ic07` 128@1x, `ic08` 256@1x, `ic09` 512@1x, `ic10` 512@2x, `ic11` 16@2x, `ic12` 32@2x, `ic13` 128@2x, `ic14` 256@2x. There is no 48px canonical slot. Retina slots copy the existing PNG at actual pixel dimensions.
+
+Use `node scripts/generate-brand-icons.mjs --icns-only` to rebuild only the container from existing PNGs. The macOS path validates a temporary candidate before replacing `icon.icns`. Non-macOS generation preserves the existing checked-in ICNS byte-for-byte; if missing, it fails with `macOS icon.icns must be generated on macOS using iconutil`. No custom writer fallback remains.
+
+### Accepted native container
+
+The old custom container (`7492301f162c18a2ff714147a1088aacf735ddb6a1fb64f1b05b599f17e7002a`) is **Superseded — Native Decode Incompatible**: its embedded PNGs passed, but macOS decoded small representations incorrectly. Historical evidence remains below and in the technical JSON history.
+
+The Apple iconutil container (`8ccc7bddb8a1f120026a2174f8b5c1dc110b14a9862c38a0cd0f5ae09b5e7f61`) passed explicit human Finder Icon View and List View acceptance. Production regeneration matches those exact accepted bytes. Geometry, colour, material, reference, SVGs, App PNGs and Tray PNGs remain frozen and unchanged.
+
+16/32 1x may be native ARGB canonicalized: raw export remains 8/10 straight-RGBA exact, with 28/124 non-opaque RGB differences respectively, zero alpha and opaque differences. **Raw representation difference is accepted only because native rendering was proven exact.** The validator requires all eight Retina/larger slots to be raw-exact, small-slot alpha/opaque integrity, and five source-versus-ICNS NSImage renders to be RGBA-exact (16pt @1x/@2x, 32pt @1x/@2x, 128pt @1x). Finder human acceptance is transferred only by exact accepted ICNS identity; different bytes require new human validation.
+
 
 Native code still includes `icons/tray-32.png`. Tray behavior and bundle configuration are unchanged.
 
 ## Technical evidence and human review
 
-[technical-validation.json](validation/technical-validation.json) records decoded sizes and container mappings. Validation checks SVG component structure, PNG alpha/corner/fringe and component colour regions, platform decode, all ICO/ICNS PNG payloads, independent Pillow container decode, and exact container-to-generated-source mapping. These are technical presence signals, not an automatic judgment of CM recognition or visual similarity.
+[technical-validation.json](validation/technical-validation.json) records decoded sizes and container mappings. Validation checks SVG component structure, PNG alpha/corner/fringe and component colour regions, platform decode, ICO payloads and independent Pillow ICO decode, larger/Retina ICNS payload mapping, canonical iconutil extraction, and the native NSImage gates above. Non-macOS reports the native gate as not run. These are technical presence signals, not an automatic judgment of CM recognition or visual similarity.
 
 - [All sizes — light](validation/cm-all-sizes-light.png)
 - [All sizes — dark](validation/cm-all-sizes-dark.png)
