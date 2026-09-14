@@ -2586,12 +2586,10 @@ fn turns_associate_first_same_period_post_completion_observation_with_15_minute_
         .unwrap();
         observation(&mut h, "2026-09-05T01:20:00Z", 90.0, "2026-09-10T00:00:00Z").unwrap();
         let rows = by_turn(&mut h);
-        assert_eq!(
-            rows["turns"].as_array().unwrap().len(),
-            if expected.is_some() { 2 } else { 0 }
-        );
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
         for row in rows["turns"].as_array().unwrap() {
             assert_eq!(row["weeklyRemaining"], json!(expected));
+            assert_eq!(row["quotaObservedAt"].is_null(), expected.is_none());
         }
     }
 }
@@ -2662,7 +2660,11 @@ fn v3_metadata_backfill_preserves_v2_accounting_and_model_results() {
     h.scan();
     assert_eq!(accounting_dump(&h.db), before);
     assert_eq!(model_rows(&h.snapshot()), models);
-    assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+    let restored = by_turn(&mut h);
+    assert_eq!(restored["turns"].as_array().unwrap().len(), 1);
+    assert_eq!(restored["turns"][0]["tokens"], "9007199254740993");
+    assert!(restored["turns"][0]["weeklyRemaining"].is_null());
+    assert!(restored["turns"][0]["quotaObservedAt"].is_null());
     observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
     let rows = by_turn(&mut h);
     assert_eq!(rows["turns"][0]["tokens"], "9007199254740993");
@@ -2810,7 +2812,10 @@ fn turn_future_facts_and_clock_rollback_observations_are_deferred() {
     h.scan();
     observation(&mut h, "2026-09-05T10:01:00Z", 77.0, "2026-09-10T00:00:00Z").unwrap();
     let result = by_turn(&mut h);
-    assert!(result["turns"].as_array().unwrap().is_empty());
+    assert_eq!(result["turns"].as_array().unwrap().len(), 1);
+    assert_eq!(result["turns"][0]["tokens"], "10");
+    assert!(result["turns"][0]["weeklyRemaining"].is_null());
+    assert!(result["turns"][0]["quotaObservedAt"].is_null());
     observation(
         &mut h,
         "2026-09-05T10:00:00Z",
@@ -2924,7 +2929,7 @@ fn observed_turn_fixture(h: &mut Harness, completions: &[&str]) {
 }
 
 #[test]
-fn observed_turn_eligibility_requires_same_period_post_completion_snapshot() {
+fn turn_rows_preserve_current_period_history_without_quota_observation() {
     for (time, reset, eligible) in [
         (None, "2026-09-10T00:00:00Z", false),
         (Some("2026-09-05T00:59:59Z"), "2026-09-10T00:00:00Z", false),
@@ -2941,12 +2946,21 @@ fn observed_turn_eligibility_requires_same_period_post_completion_snapshot() {
         let rows = by_turn(&mut h);
         assert_eq!(
             rows["turns"].as_array().unwrap().len(),
-            usize::from(eligible),
+            1,
             "{time:?} / {reset}"
         );
-        if eligible {
-            assert_eq!(rows["turns"][0]["weeklyRemaining"], json!(65.0));
-        }
+        assert_eq!(
+            rows["turns"][0]["weeklyRemaining"],
+            json!(eligible.then_some(65.0))
+        );
+        assert_eq!(
+            rows["turns"][0]["quotaObservedAt"],
+            json!(if eligible {
+                time.and_then(|t| parser::timestamp(Some(t)))
+            } else {
+                None
+            })
+        );
     }
 }
 
@@ -2981,12 +2995,15 @@ fn observed_turn_query_at_is_exclusive_but_observation_at_query_is_allowed() {
 }
 
 #[test]
-fn observed_turn_invalid_percent_never_produces_a_row() {
+fn invalid_quota_observation_never_populates_weekly_remaining() {
     let mut h = Harness::new();
     observed_turn_fixture(&mut h, &[AT]);
     for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -0.01, 100.01] {
         assert!(observation(&mut h, AT, invalid, &quota_window().resets_at).is_err());
-        assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+        let rows = by_turn(&mut h);
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 1);
+        assert!(rows["turns"][0]["weeklyRemaining"].is_null());
+        assert!(rows["turns"][0]["quotaObservedAt"].is_null());
     }
 }
 
@@ -3039,7 +3056,7 @@ fn observed_turn_provider_rollover_preserves_history_and_excludes_prior_period()
 }
 
 #[test]
-fn observed_turn_filtering_preserves_accounting_models_and_snapshot_history() {
+fn optional_quota_observation_preserves_accounting_models_and_snapshot_history() {
     let mut h = Harness::new();
     observed_turn_fixture(&mut h, &[AT, "2026-09-05T05:00:00Z"]);
     observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
@@ -3048,8 +3065,12 @@ fn observed_turn_filtering_preserves_accounting_models_and_snapshot_history() {
     let snapshot_history = h.db.query_row("SELECT quote(root)||quote(weekly_reset_at)||quote(observed_at)||quote(remaining_percent) FROM quota_snapshots", [], |r| r.get::<_, String>(0)).unwrap();
     for _ in 0..2 {
         let rows = by_turn(&mut h);
-        assert_eq!(rows["turns"].as_array().unwrap().len(), 1);
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
         assert_eq!(rows["turns"][0]["tokens"], "10");
+        assert_eq!(rows["turns"][0]["weeklyRemaining"], json!(65.0));
+        assert_eq!(rows["turns"][1]["tokens"], "10");
+        assert!(rows["turns"][1]["weeklyRemaining"].is_null());
+        assert!(rows["turns"][1]["quotaObservedAt"].is_null());
         assert_eq!(h.total(), "20");
         assert_eq!(
             serde_json::to_value(h.snapshot()).unwrap(),
@@ -3269,4 +3290,203 @@ fn quota_week_auto_review_conflict_and_unknown_remain_visible() {
         .unwrap()
         .iter()
         .all(|r| r["model"] == "unknown"));
+}
+
+#[test]
+fn fresh_quota_week_history_survives_restart_without_snapshots() {
+    let mut h = Harness::new();
+    observed_turn_fixture(
+        &mut h,
+        &[AT, "2026-09-05T02:00:00Z", "2026-09-05T03:00:00Z"],
+    );
+    let facts = accounting_dump(&h.db);
+    let metadata = quota_metadata_dump(&h.db);
+    let accounting = quota_accounting_view(&serde_json::to_value(h.snapshot()).unwrap());
+    let first = by_turn(&mut h);
+    for _ in 0..2 {
+        let current = by_turn(&mut h);
+        assert_eq!(current, first);
+        let rows = current["turns"].as_array().unwrap();
+        assert_eq!(rows.len(), 3);
+        for (i, row) in rows.iter().enumerate() {
+            assert_eq!(row["model"], "synthetic");
+            assert_eq!(row["effort"], "high");
+            assert_eq!(row["tokens"], "10");
+            assert_eq!(
+                row["completedAt"],
+                format!("2026-09-05T0{}:00:00.000000000Z", i + 1)
+            );
+            assert!(row["weeklyRemaining"].is_null());
+            assert!(row["quotaObservedAt"].is_null());
+        }
+        assert_eq!(
+            h.db.query_row("SELECT COUNT(*) FROM quota_snapshots", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        assert_eq!(accounting_dump(&h.db), facts);
+        assert_eq!(quota_metadata_dump(&h.db), metadata);
+        assert_eq!(
+            quota_accounting_view(&serde_json::to_value(h.snapshot()).unwrap()),
+            accounting
+        );
+        h.restart();
+        h.scan();
+    }
+}
+
+#[test]
+fn mixed_observed_and_unobserved_history_keeps_order_and_percentages_after_restart() {
+    let mut h = Harness::new();
+    observed_turn_fixture(
+        &mut h,
+        &[AT, "2026-09-05T02:00:00Z", "2026-09-05T03:00:00Z"],
+    );
+    observation(
+        &mut h,
+        "2026-09-05T01:05:00Z",
+        80.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    observation(
+        &mut h,
+        "2026-09-05T03:10:00Z",
+        75.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    let metadata = quota_metadata_dump(&h.db);
+    let first = by_turn(&mut h);
+    for _ in 0..2 {
+        let current = by_turn(&mut h);
+        assert_eq!(current, first);
+        let rows = current["turns"].as_array().unwrap();
+        assert_eq!(rows.len(), 3);
+        for (i, expected) in [Some(80.0), None, Some(75.0)].into_iter().enumerate() {
+            assert_eq!(rows[i]["weeklyRemaining"], json!(expected));
+            assert_eq!(rows[i]["quotaObservedAt"].is_null(), expected.is_none());
+            assert_eq!(
+                rows[i]["completedAt"],
+                format!("2026-09-05T0{}:00:00.000000000Z", i + 1)
+            );
+        }
+        assert_eq!(quota_metadata_dump(&h.db), metadata);
+        h.restart();
+        h.scan();
+    }
+}
+
+#[test]
+fn current_snapshot_never_backfills_yesterdays_unobserved_turn() {
+    let mut h = Harness::new();
+    observed_turn_fixture(&mut h, &["2026-09-04T01:00:00Z"]);
+    let first = by_turn(&mut h);
+    assert_eq!(first["turns"].as_array().unwrap().len(), 1);
+    observation(
+        &mut h,
+        "2026-09-05T09:00:00Z",
+        82.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    assert_eq!(by_turn(&mut h), first);
+    assert!(first["turns"][0]["weeklyRemaining"].is_null());
+    assert!(first["turns"][0]["quotaObservedAt"].is_null());
+}
+
+#[test]
+fn unobserved_history_rollover_keeps_only_current_provider_period() {
+    let mut h = Harness::new();
+    observed_turn_fixture(&mut h, &[AT, "2026-09-10T00:00:00Z"]);
+    let first = by_turn(&mut h);
+    assert_eq!(first["turns"].as_array().unwrap().len(), 1);
+    assert!(first["turns"][0]["weeklyRemaining"].is_null());
+    let root = h.source.resolve().unwrap().1;
+    let window = aggregate::QuotaWindow {
+        resets_at: "2026-09-17T00:00:00Z".into(),
+        window_seconds: 604800,
+    };
+    let now = DateTime::parse_from_rfc3339("2026-09-10T00:01:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    for observed in [false, true] {
+        if observed {
+            observation(&mut h, "2026-09-10T00:00:30Z", 82.0, &window.resets_at).unwrap();
+        }
+        let metadata = quota_metadata_dump(&h.db);
+        let rows = super::turns::query(&h.db, &root, now, Some(&window), false)
+            .unwrap()
+            .unwrap();
+        assert_eq!(rows.turns.len(), 1);
+        assert_eq!(rows.turns[0].completed_at, "2026-09-10T00:00:00.000000000Z");
+        assert_eq!(rows.turns[0].weekly_remaining, observed.then_some(82.0));
+        assert_eq!(rows.turns[0].quota_observed_at.is_some(), observed);
+        assert_eq!(
+            h.db.query_row("SELECT COUNT(*) FROM model_turns", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            2
+        );
+        assert_eq!(quota_metadata_dump(&h.db), metadata);
+    }
+}
+
+#[test]
+fn quota_week_auto_review_without_observation_stays_hidden_but_by_model_keeps_it() {
+    let mut h = Harness::new();
+    let mut events = vec![meta("main")];
+    for (i, model) in ["gpt-6-astra", "codex-auto-review", "gpt-6-astra"]
+        .into_iter()
+        .enumerate()
+    {
+        let id = format!("history-{i}");
+        let mut fact = modern("main", &format!("response-{i}"), 10, 10 * (i as i64 + 1));
+        fact["payload"]["turn_id"] = json!(id);
+        events.extend([
+            effort_turn(&id, model, Some("high")),
+            fact,
+            completed_turn(&id, &format!("2026-09-05T0{}:00:00Z", i + 1)),
+        ]);
+    }
+    write(&h.log(), &events);
+    h.scan();
+    observation(
+        &mut h,
+        "2026-09-05T03:05:00Z",
+        82.0,
+        &quota_window().resets_at,
+    )
+    .unwrap();
+    let facts = accounting_dump(&h.db);
+    let metadata = quota_metadata_dump(&h.db);
+    let accounting = quota_accounting_view(&serde_json::to_value(h.snapshot()).unwrap());
+    for _ in 0..2 {
+        let current = by_turn(&mut h);
+        let rows = current["turns"].as_array().unwrap();
+        assert_eq!(rows.len(), 2);
+        assert!(rows
+            .iter()
+            .all(|r| r["model"] == "gpt-6-astra" && r["tokens"] == "10"));
+        assert!(rows[0]["weeklyRemaining"].is_null());
+        assert!(rows[0]["quotaObservedAt"].is_null());
+        assert_eq!(rows[1]["weeklyRemaining"], json!(82.0));
+        let snapshot = serde_json::to_value(h.snapshot()).unwrap();
+        assert!(snapshot["modelStatistics"]["periods"]["total"]["models"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|r| r["model"] == "codex-auto-review" && r["tokens"] == "10"));
+        assert_eq!(quota_accounting_view(&snapshot), accounting);
+        assert_eq!(accounting_dump(&h.db), facts);
+        assert_eq!(quota_metadata_dump(&h.db), metadata);
+        h.restart();
+        h.scan();
+    }
 }

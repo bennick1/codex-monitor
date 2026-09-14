@@ -13,7 +13,7 @@ export function TurnUsage({ statistics, language, loading }: { statistics: TurnT
   const zh = language === "zh-CN";
   if (loading) return <p className="token-model-placeholder">…</p>;
   if (!statistics) return <p className="token-model-placeholder">{zh ? "当前额度周不可用" : "Current quota week unavailable"}</p>;
-  if (!statistics.turns.length) return <p className="token-model-placeholder">{zh ? "当前额度周暂无可用记录" : "No observed turns in this quota week"}</p>;
+  if (!statistics.turns.length) return <p className="token-model-placeholder">{zh ? "当前额度周暂无已完成记录" : "No completed turns in this quota week"}</p>;
   const rows = [...statistics.turns].sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
   return <div className="token-turn-view" role="table" aria-label={zh ? "额度周 · 当前额度周逐轮明细" : "Quota week · Turn details in current quota week"}>
     <div className="token-turn-header" role="row">
@@ -26,6 +26,12 @@ export function TurnUsage({ statistics, language, loading }: { statistics: TurnT
         const text = formatTokenCount(row.tokens);
         const remaining = row.weeklyRemaining !== null && Number.isFinite(row.weeklyRemaining) && row.weeklyRemaining >= 0 && row.weeklyRemaining <= 100 ? `${row.weeklyRemaining}%` : "—";
         const observation = row.quotaObservedAt ? formatDateTime(row.quotaObservedAt, language) : "—";
+        const quotaLabel = remaining === "—"
+          ? (zh ? "周额度剩余：无历史观测" : "Weekly remaining: no historical observation")
+          : `${zh ? "周额度剩余" : "Weekly remaining"}: ${remaining}`;
+        const quotaTooltip = remaining === "—"
+          ? (zh ? "该轮完成后无可用的历史周额度观测" : "No historical weekly quota observation is available after this turn")
+          : `${zh ? "完成后观测的周额度剩余" : "Weekly remaining observed after completion"}: ${remaining} · ${zh ? "观测" : "Observed"}: ${observation}`;
         return <div className="token-turn-row" role="row" key={index}>
           <span role="cell" className="token-model-name" title={model} tabIndex={0}>{model}</span>
           <span role="cell" className="token-turn-effort" title={displayEffort(row.effort)}>{displayEffort(row.effort)}</span>
@@ -33,8 +39,8 @@ export function TurnUsage({ statistics, language, loading }: { statistics: TurnT
             {text}{row.isPartial ? <small aria-hidden="true">*</small> : null}
             <span className="token-exact" role="tooltip">{model}: {exact} · {zh ? "完成" : "Completed"}: {formatDateTime(row.completedAt, language)}</span>
           </span>
-          <span role="cell" className="token-turn-quota" tabIndex={0} aria-label={`${zh ? "周额度剩余" : "Weekly remaining"}: ${remaining}`}>
-            <span className="token-turn-quota-value">{remaining}</span><span className="token-exact" role="tooltip">{zh ? "完成后观测的周额度剩余" : "Weekly remaining observed after completion"}: {remaining} · {zh ? "观测" : "Observed"}: {observation}</span>
+          <span role="cell" className="token-turn-quota" tabIndex={0} aria-label={quotaLabel}>
+            <span className="token-turn-quota-value">{remaining}</span><span className="token-exact" role="tooltip">{quotaTooltip}</span>
           </span>
         </div>;
       })}

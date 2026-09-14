@@ -49,7 +49,7 @@ it.each(["zh-CN", "en"] as const)('distinguishes unavailable and empty turns in 
   fireEvent.click(screen.getByRole('button', { name: language === 'en' ? 'Quota week' : '额度周' }));
   expect(screen.getByText(language === 'en' ? 'Current quota week unavailable' : '当前额度周不可用')).toBeTruthy();
   mounted.rerender(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot([]) }} />);
-  expect(screen.getByText(language === 'en' ? 'No observed turns in this quota week' : '当前额度周暂无可用记录')).toBeTruthy();
+  expect(screen.getByText(language === 'en' ? 'No completed turns in this quota week' : '当前额度周暂无已完成记录')).toBeTruthy();
 });
 it('normalizes known effort enums only', () => { expect(['low','medium','high','xhigh','max','ultra',null,'future'].map(displayEffort)).toEqual(['Low','Medium','High','xHigh','Max','Ultra','—','future']); });
 it('keeps many rows and exact extreme integers in the internal list', () => {
@@ -76,4 +76,17 @@ it.each(["zh-CN", "en"] as const)('renders an observed row with its weekly remai
   fireEvent.click(screen.getByRole('button',{name:language === 'en' ? 'Quota week' : '额度周'}));
   expect(container.querySelectorAll('.token-turn-row')).toHaveLength(1);
   expect(container.querySelector('.token-turn-quota-value')?.textContent).toBe('0%');
+});
+
+
+it.each(["zh-CN", "en"] as const)('preserves unobserved history without adding accounting partial marks in %s', language => {
+  const rows = [turn({weeklyRemaining:null, quotaObservedAt:null, isPartial:false}), turn({completedAt:'2026-09-10T02:00:00Z', weeklyRemaining:82, isPartial:false})];
+  const {container} = render(<TokenUsage language={language} view={{...INITIAL_TOKEN_VIEW,snapshot:snapshot(rows)}} />);
+  fireEvent.click(screen.getByRole('button',{name:language === 'en' ? 'Quota week' : '额度周'}));
+  const quota = screen.getByLabelText(language === 'en' ? 'Weekly remaining: no historical observation' : '周额度剩余：无历史观测');
+  expect(quota.querySelector('.token-turn-quota-value')?.textContent).toBe('—');
+  expect(quota.querySelector('[role="tooltip"]')?.textContent).toBe(language === 'en' ? 'No historical weekly quota observation is available after this turn' : '该轮完成后无可用的历史周额度观测');
+  expect(container.querySelectorAll('.token-turn-row')).toHaveLength(2);
+  expect(container.querySelector('.token-value small')).toBeNull();
+  expect([...container.querySelectorAll('.token-turn-quota-value')].map(el => el.textContent)).toEqual(['—','82%']);
 });
