@@ -3059,3 +3059,214 @@ fn observed_turn_filtering_preserves_accounting_models_and_snapshot_history() {
         assert_eq!(h.db.query_row("SELECT quote(root)||quote(weekly_reset_at)||quote(observed_at)||quote(remaining_percent) FROM quota_snapshots", [], |r| r.get::<_, String>(0)).unwrap(), snapshot_history);
     }
 }
+
+fn auto_review_fixture(models: &[&str]) -> Harness {
+    let mut h = Harness::new();
+    let mut events = vec![meta("main")];
+    for (i, model) in models.iter().enumerate() {
+        let id = format!("review-{i}");
+        let at = format!("2026-09-05T01:0{i}:00Z");
+        let mut fact = modern(
+            "main",
+            &format!("review-response-{i}"),
+            10,
+            10 * (i as i64 + 1),
+        );
+        fact["payload"]["turn_id"] = json!(id);
+        events.extend([
+            effort_turn(&id, model, Some("high")),
+            fact,
+            completed_turn(&id, &at),
+        ]);
+    }
+    write(&h.log(), &events);
+    h.scan();
+    for i in 0..models.len() {
+        observation(
+            &mut h,
+            &format!("2026-09-05T01:0{i}:00Z"),
+            80.0 - i as f64,
+            &quota_window().resets_at,
+        )
+        .unwrap();
+    }
+    h
+}
+
+fn quota_accounting_view(snapshot: &Value) -> Value {
+    let keys = [
+        "today",
+        "thisWeek",
+        "thisMonth",
+        "total",
+        "datedTotals",
+        "timeUncertainTotals",
+        "futureDeferredTotals",
+        "modelStatistics",
+        "schemaVersion",
+    ];
+    Value::Object(
+        keys.into_iter()
+            .map(|key| (key.into(), snapshot[key].clone()))
+            .collect(),
+    )
+}
+
+fn quota_metadata_dump(db: &rusqlite::Connection) -> Vec<String> {
+    let mut dump = Vec::new();
+    for table in ["model_turns", "model_identities", "quota_snapshots"] {
+        let mut stmt = db
+            .prepare(&format!("SELECT * FROM {table} ORDER BY rowid"))
+            .unwrap();
+        let columns = stmt.column_count();
+        dump.extend(
+            stmt.query_map([], |r| {
+                Ok(format!(
+                    "{table}:{:?}",
+                    (0..columns)
+                        .map(|i| format!("{:?}", r.get_ref(i).unwrap()))
+                        .collect::<Vec<_>>()
+                ))
+            })
+            .unwrap()
+            .map(|r| r.unwrap()),
+        );
+    }
+    dump
+}
+
+#[test]
+fn quota_week_auto_review_filter_preserves_accounting_and_observations_after_restart() {
+    let mut h = auto_review_fixture(&["gpt-6-astra", "codex-auto-review", "gpt-6-astra"]);
+    let facts = accounting_dump(&h.db);
+    let metadata = quota_metadata_dump(&h.db);
+    let snapshot = serde_json::to_value(h.snapshot()).unwrap();
+    assert_eq!(snapshot["total"]["totalTokens"], "30");
+    for key in ["today", "thisWeek", "thisMonth", "total"] {
+        assert_eq!(snapshot[key]["totalTokens"], "30");
+    }
+    for key in ["today", "last7Days", "last30Days", "total"] {
+        let models = snapshot["modelStatistics"]["periods"][key]["models"]
+            .as_array()
+            .unwrap();
+        assert_eq!(
+            models
+                .iter()
+                .find(|r| r["model"] == "codex-auto-review")
+                .unwrap()["tokens"],
+            "10"
+        );
+        assert_eq!(
+            models.iter().find(|r| r["model"] == "gpt-6-astra").unwrap()["tokens"],
+            "20"
+        );
+    }
+    let root = h.source.resolve().unwrap().1;
+    let now = DateTime::parse_from_rfc3339("2026-09-05T10:00:00Z")
+        .unwrap()
+        .with_timezone(&Utc);
+    let mut baseline = serde_json::to_value(
+        aggregate::query_with_quota(&mut h.db, &root, now, chrono_tz::UTC, Some(&quota_window()))
+            .unwrap(),
+    )
+    .unwrap();
+    baseline.as_object_mut().unwrap().remove("turnStatistics");
+    for _ in 0..2 {
+        let mut current = serde_json::to_value(
+            aggregate::query_with_quota(
+                &mut h.db,
+                &root,
+                now,
+                chrono_tz::UTC,
+                Some(&quota_window()),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let rows = current
+            .as_object_mut()
+            .unwrap()
+            .remove("turnStatistics")
+            .unwrap();
+        // Restart/rescan timestamps and scan coverage counters are operational metadata.
+        assert_eq!(
+            quota_accounting_view(&current),
+            quota_accounting_view(&baseline)
+        );
+        assert_eq!(
+            quota_accounting_view(&serde_json::to_value(h.snapshot()).unwrap()),
+            quota_accounting_view(&snapshot)
+        );
+        assert_eq!(accounting_dump(&h.db), facts);
+        assert_eq!(quota_metadata_dump(&h.db), metadata);
+        assert_eq!(
+            h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
+        for (i, remaining) in [80.0, 78.0].into_iter().enumerate() {
+            assert_eq!(rows["turns"][i]["model"], "gpt-6-astra");
+            assert_eq!(rows["turns"][i]["tokens"], "10");
+            assert_eq!(rows["turns"][i]["weeklyRemaining"], json!(remaining));
+        }
+        h.restart();
+        h.scan();
+    }
+}
+
+#[test]
+fn quota_week_auto_review_only_returns_existing_empty_result() {
+    let mut h = auto_review_fixture(&["codex-auto-review"]);
+    assert_eq!(h.total(), "10");
+    assert!(by_turn(&mut h)["turns"].as_array().unwrap().is_empty());
+}
+
+#[test]
+fn quota_week_auto_review_exact_match_preserves_similar_ids() {
+    let models = [
+        "codex-auto-review-preview",
+        "Codex-auto-review",
+        "other-auto-review",
+        "codex-auto",
+        "codex-auto-review",
+    ];
+    let mut h = auto_review_fixture(&models);
+    let result = by_turn(&mut h);
+    let rows = result["turns"].as_array().unwrap();
+    assert_eq!(
+        rows.iter()
+            .map(|r| r["model"].as_str().unwrap())
+            .collect::<Vec<_>>(),
+        models[..4]
+    );
+}
+
+#[test]
+fn quota_week_auto_review_conflict_and_unknown_remain_visible() {
+    let mut h = Harness::new();
+    let mut unknown_fact = modern("main", "unknown-response", 10, 20);
+    unknown_fact["payload"]["turn_id"] = json!("unknown-turn");
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            effort_turn("turn-a", "codex-auto-review", Some("high")),
+            effort_turn("turn-a", "gpt-6-astra", Some("high")),
+            modern("main", "conflict-response", 10, 10),
+            completed_turn("turn-a", AT),
+            turn("unknown-turn"),
+            unknown_fact,
+            completed_turn("unknown-turn", AT),
+        ],
+    );
+    h.scan();
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+    let rows = by_turn(&mut h);
+    assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
+    assert!(rows["turns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|r| r["model"] == "unknown"));
+}

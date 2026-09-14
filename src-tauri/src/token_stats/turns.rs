@@ -4,6 +4,8 @@ use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 
+const QUOTA_WEEK_HIDDEN_MODEL: &str = "codex-auto-review";
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TurnStatistics {
@@ -87,6 +89,10 @@ pub fn query(
     })?;
     for row in rows {
         let (thread, turn, model, effort, completed) = row?;
+        // Quota Week intentionally omits Codex internal automatic-review turns.
+        if model.as_deref() == Some(QUOTA_WEEK_HIDDEN_MODEL) {
+            continue;
+        }
         // Exactly one proven identity, matching the existing By Model ownership rule.
         let mut facts = db.prepare("SELECT f.input,f.output FROM model_identities mi JOIN fact_identities fi ON fi.root=mi.root AND fi.kind=mi.kind AND fi.identity=mi.identity JOIN token_facts f ON f.id=fi.fact AND f.root=fi.root WHERE mi.root=?1 AND mi.thread=?2 AND mi.turn=?3 AND mi.conflict=0 AND f.thread=mi.thread AND f.active=1 AND fi.kind=CASE WHEN f.format='response' THEN 'response' ELSE 'legacy' END AND (f.at IS NULL OR f.at<?4) AND (f.end_at IS NULL OR f.end_at<?4) AND (SELECT COUNT(*) FROM fact_identities ownership WHERE ownership.root=f.root AND ownership.fact=f.id AND ownership.kind=fi.kind)=1")?;
         let mut total = 0i64;
