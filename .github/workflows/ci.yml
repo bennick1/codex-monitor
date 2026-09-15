@@ -54,6 +54,52 @@ jobs:
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
       - run: ${{ matrix.build-command }}
+      - name: Verify Windows GUI subsystem
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $exe = 'src-tauri/target/release/codex-monitor.exe'
+          if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+            throw "Release EXE missing: $exe"
+          }
+          $stream = [System.IO.File]::OpenRead($exe)
+          $reader = $null
+          try {
+            $reader = [System.IO.BinaryReader]::new($stream)
+            if ($stream.Length -lt 64 -or $reader.ReadUInt16() -ne 0x5A4D) {
+              throw 'Invalid DOS header'
+            }
+            $stream.Position = 0x3C
+            $peOffset = $reader.ReadUInt32()
+            if ($peOffset -lt 64 -or ([long]$peOffset + 24) -gt $stream.Length) {
+              throw 'Invalid PE header offset'
+            }
+            $stream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x00004550) {
+              throw 'Invalid PE signature'
+            }
+            $stream.Position = [long]$peOffset + 20
+            $optionalSize = $reader.ReadUInt16()
+            $optionalOffset = [long]$peOffset + 24
+            if ($optionalSize -lt 70 -or ($optionalOffset + $optionalSize) -gt $stream.Length) {
+              throw 'Invalid PE Optional Header size'
+            }
+            $stream.Position = $optionalOffset
+            $magic = $reader.ReadUInt16()
+            if ($magic -notin @(0x10B, 0x20B)) {
+              throw 'Unsupported PE Optional Header magic'
+            }
+            # Subsystem is at offset 68 in both PE32 and PE32+ Optional Headers.
+            $stream.Position = $optionalOffset + 68
+            $subsystem = $reader.ReadUInt16()
+            if ($subsystem -ne 2) {
+              throw "PE Subsystem: $subsystem; expected 2 (Windows GUI)"
+            }
+            Write-Output 'PE Subsystem: 2 (Windows GUI)'
+          } finally {
+            if ($null -ne $reader) { $reader.Dispose() }
+            $stream.Dispose()
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact-name }}
