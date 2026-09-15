@@ -152,8 +152,10 @@ assert len(list(OUT.glob('Square*.png'))) == 9
 assert (OUT / 'StoreLogo.png').is_file()
 assert len(list((OUT / 'android').rglob('*.png'))) == 15
 assert len(list((OUT / 'ios').glob('*.png'))) == 18
+package = json.loads((ROOT / 'package.json').read_text())
 config = json.loads((ROOT / 'src-tauri/tauri.conf.json').read_text())
-assert config['version'] == '1.1.0' and config['identifier'] == 'app.quotafloat.desktop'
+assert config['version'] == package['version']
+assert config['identifier'] == 'app.quotafloat.desktop'
 for path in config['bundle']['icon']:
     assert (ROOT / 'src-tauri' / path).is_file()
 assert 'tauri::include_image!("icons/tray-32.png")' in (ROOT / 'src-tauri/src/lib.rs').read_text()
