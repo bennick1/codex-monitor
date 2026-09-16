@@ -2,14 +2,15 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-V1.1.0 release candidates are being prepared. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Use only [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases) after the maintainer publishes a version. See the [release validation report](docs/v1.1.0-release-validation-report.md) for the current status.
+Current release: **v1.2.0**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.2.0-feature-validation-report.md) for the current status.
 
 ## Features
 
 - **Lightweight floating widget:** collapses into an orb, expands on hover, with pinning and tray controls.
 - **Codex quota monitoring:** remaining 5-hour and weekly quota, reset times, and explicit unavailable/stale states.
-- **Token usage statistics:** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
-- **Per-model Token Statistics:** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
+- **Token usage statistics (Overview):** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
+- **Per-model Token Statistics (By Model):** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
+- **Quota Week (额度周):** completed Turns in the current valid quota week, showing Model, Effort, Token, and Weekly Remaining. Without a reliable historical quota observation, Weekly Remaining shows `—`; historical quota is not estimated or backfilled.
 - **Three free built-in skins:** Default (Follow system, Dark, or Light), Blur, and Computer. Skin selection is local, persists across restarts, and has no activation step.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
 - **Windows/macOS support:** a shared interface with Light, Dark, and Follow system appearances and Chinese/English labels. Platform acceptance is tracked separately in the release report.
@@ -26,16 +27,16 @@ Rendered from the current components with synthetic `CODEX · TEST` data. No per
 
 Download only from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). Do not use the upstream project's installers for this fork.
 
-| Platform | V1.1.0 candidate installer | Install |
+| Platform | v1.2.0 installer | Install |
 | --- | --- | --- |
-| macOS | `Codex-Monitor-1.1.0.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
-| Windows | `Codex-Monitor-1.1.0.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
+| macOS | `Codex-Monitor-1.2.0.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
+| Windows | `Codex-Monitor-1.2.0.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
 
-V1.1.0 candidates are distributed as **Unsigned / Not Notarized**. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. It is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
+The v1.2.0 macOS installer is **Unsigned / Not Notarized**; the Windows installer is **Unsigned**. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. The macOS app is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
 
 For an existing Quota Float installation, quit the old app and preserve its application data before installing. V1 retains the old application identifier to keep settings and token history accessible. After upgrading, verify that the renamed installer and login/startup entry point to Codex Monitor; see the [migration inventory](docs/v1.0.0-name-migration-inventory.md). Do not run both copies together.
 
-v1.1.0 upgrades Token Statistics to SQLite schema 2. v1.0.0 cannot read the upgraded Token database and its Token Statistics become unavailable; the verified refusal path preserves the database, which v1.1.0 can reopen. This is not supported downgrade compatibility.
+v1.2.0 uses Token Statistics SQLite **schema 3**, adding the turn and observation metadata needed for Quota Week while preserving existing accounting data through migration. Downgrading the upgraded Token database is not supported.
 
 ## Usage
 
@@ -87,6 +88,8 @@ npm run tauri -- build --bundles nsis --config '{"bundle":{"createUpdaterArtifac
 ```
 
 These commands produce release-mode installers with application updater artifacts disabled. Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
+
+The frozen Branding sources are in [docs/branding/v1.2](docs/branding/v1.2/); production icons generated from them are in [src-tauri/icons](src-tauri/icons/).
 
 The [release preparation guide](docs/RELEASE.md) covers naming, SHA256, build provenance, and validation. CI compilation and artifact creation do not replace installation and use on real Windows/macOS machines. No GitHub Release should be created until the maintainer approves the completed report.
 
