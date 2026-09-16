@@ -88,7 +88,7 @@ describe("token status and field presentation", () => {
 
 
 describe("model token presentation", () => {
-  it("defaults to the unchanged two-by-two overview, then opens this week and switches all periods", () => {
+  it("defaults to the unchanged two-by-two overview, then opens quota week and switches all periods", () => {
     const { container } = show(tokenSnapshot());
     expect(screen.getByRole("button", { name: "总览" }).getAttribute("aria-pressed")).toBe("true");
     expect(container.querySelectorAll(".token-grid > div")).toHaveLength(4);
@@ -179,4 +179,28 @@ it("quota unavailable never reuses overview week and leaves the other model peri
   fireEvent.click(screen.getByRole("button", { name: "按模型" }));
   expect(screen.getByText("—")).toBeTruthy(); expect(screen.queryByRole("button", { name: "本周" })).toBeNull();
   for (const label of ["今日", "本月", "总计"]) { fireEvent.click(screen.getByRole("button", { name: label })); expect(screen.queryByText("—")).toBeNull(); }
+});
+
+
+it.each(["zh-CN", "en"] as const)("keeps quota-week model values distinct from overview calendar week in %s", (language) => {
+  const snapshot = tokenSnapshot({ thisWeek: totals("44000000") });
+  snapshot.modelStatistics!.periods.quotaWeek = {
+    totalTokens: "240000000",
+    models: [{ model: "synthetic-quota-model", tokens: "240000000", share: 100 }],
+  };
+  const { container } = render(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot }} />);
+  const zh = language === "zh-CN";
+  const week = zh ? "本周" : "This week";
+  expect(screen.getByLabelText(`${week}: 44,000,000`)).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: zh ? "按模型" : "By model" }));
+  const group = screen.getByRole("group", { name: zh ? "统计周期" : "Period" });
+  expect(within(group).getAllByRole("button").map((button) => button.textContent)).toEqual(
+    zh ? ["今日", "按额度周", "本月", "总计"] : ["Today", "Quota Week", "Month", "Total"],
+  );
+  expect(within(group).getAllByRole("button")[1].getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByLabelText("synthetic-quota-model: 240,000,000").childNodes[0].textContent).toBe("2.40亿");
+  expect(screen.queryByText("4400.00万")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: zh ? "总览" : "Overview" }));
+  expect(container.querySelector('[data-period="thisWeek"] dt')?.textContent).toBe(week);
+  expect(screen.getByLabelText(`${week}: 44,000,000`).childNodes[0].textContent).toBe("4400.00万");
 });
