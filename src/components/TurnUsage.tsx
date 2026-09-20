@@ -14,7 +14,7 @@ export function TurnUsage({ statistics, language, loading }: { statistics: TurnT
   if (loading) return <p className="token-model-placeholder">…</p>;
   if (!statistics) return <p className="token-model-placeholder">{zh ? "当前额度周不可用" : "Current quota week unavailable"}</p>;
   if (!statistics.turns.length) return <p className="token-model-placeholder">{zh ? "当前额度周暂无已完成记录" : "No completed turns in this quota week"}</p>;
-  const rows = [...statistics.turns].sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
+  const rows = [...statistics.turns].sort((a, b) => Date.parse(b.completedAt) - Date.parse(a.completedAt));
   return <div className="token-turn-view" role="table" aria-label={zh ? "额度周 · 当前额度周逐轮明细" : "Quota week · Turn details in current quota week"}>
     <div className="token-turn-header" role="row">
       {(zh ? ["模型", "档位", "Token", "周额度"] : ["Model", "Effort", "Token", "Weekly"]).map(label => <span role="columnheader" key={label}>{label}</span>)}

@@ -6,6 +6,7 @@ import { TokenUsage } from "./TokenUsage";
 import { displayEffort } from "./TurnUsage";
 import { tokenSnapshot } from "../test/tokenFixtures";
 import { INITIAL_TOKEN_VIEW } from "../lib/tokenStatisticsController";
+import { formatDateTime } from "../lib/format";
 import type { TurnTokenUsage } from "../lib/tokenStatistics";
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 afterEach(cleanup);
@@ -35,14 +36,43 @@ for (const skin of ["default", "blur", "computer"] as const) for (const language
     fireEvent.mouseDown(screen.getByRole('main'), { button: 0 }); expect(drag).toHaveBeenCalledOnce();
   });
 }
-it('preserves repeated turns, chronological ordering, future effort, null and increasing quota', () => {
-  const rows = [turn({ completedAt: '2026-09-10T03:00:00Z', effort: 'future-effort', weeklyRemaining: 80 }), turn({ completedAt: '2026-09-10T02:00:00Z', effort: null, weeklyRemaining: null }), turn()];
+it('preserves repeated turns and newest-first ordering with complete row metadata', () => {
+  const oldest = turn({ tokens: '1001' });
+  const newest = turn({ model: 'synthetic-newest-model', completedAt: '2026-09-10T03:00:00Z', effort: 'future-effort', tokens: '3003', weeklyRemaining: 80, quotaObservedAt: '2026-09-10T03:12:00Z', isPartial: false });
+  const middle = turn({ completedAt: '2026-09-10T02:00:00Z', effort: null, tokens: '2002', weeklyRemaining: null, quotaObservedAt: null, isPartial: false });
+  const rows = [oldest, newest, middle];
+  const originalRows = rows.map(row => ({ ...row }));
   const { container } = render(<TokenUsage language="en" view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot(rows) }} />);
   fireEvent.click(screen.getByRole('button', { name: 'Quota week' }));
-  expect(container.querySelectorAll('.token-turn-row')).toHaveLength(3);
-  expect([...container.querySelectorAll('.token-turn-effort')].map(el => el.textContent)).toEqual(['xHigh', '—', 'future-effort']);
-  expect([...container.querySelectorAll('.token-turn-quota')].map(el => el.childNodes[0].textContent)).toEqual(['65.125%', '—', '80%']);
-  expect(rows[0].effort).toBe('future-effort');
+  const renderedRows = [...container.querySelectorAll('.token-turn-row')];
+  expect(renderedRows).toHaveLength(3);
+  expect(renderedRows.map(row => row.querySelector('.token-turn-effort')?.textContent)).toEqual(['future-effort', '—', 'xHigh']);
+  expect(renderedRows.map(row => row.querySelector('.token-turn-quota-value')?.textContent)).toEqual(['80%', '—', '65.125%']);
+  for (const [index, expected] of [newest, middle, oldest].entries()) {
+    const row = renderedRows[index];
+    const exactTokens = ['3,003', '2,002', '1,001'][index];
+    expect(row.querySelector('.token-model-name')?.textContent).toBe(expected.model);
+    expect(row.querySelector('.token-value')?.getAttribute('aria-label')).toBe(`${expected.model}: ${exactTokens}`);
+    expect(row.querySelector('.token-value')?.firstChild?.textContent).toBe(expected.tokens);
+    expect(row.querySelector('.token-value [role="tooltip"]')?.textContent).toBe(`${expected.model}: ${exactTokens} · Completed: ${formatDateTime(expected.completedAt, 'en')}`);
+    expect(row.querySelector('.token-value small')?.textContent ?? null).toBe(expected.isPartial ? '*' : null);
+    expect(row.querySelector('.token-turn-quota [role="tooltip"]')?.textContent).toBe(expected.quotaObservedAt
+      ? `Weekly remaining observed after completion: ${expected.weeklyRemaining}% · Observed: ${formatDateTime(expected.quotaObservedAt, 'en')}`
+      : 'No historical weekly quota observation is available after this turn');
+  }
+  expect(rows).toEqual(originalRows);
+});
+it('preserves backend tie order without secondary UI sorting', () => {
+  const first = turn({ model: 'z-model', effort: 'ultra', tokens: '9000', weeklyRemaining: 90 });
+  const second = turn({ model: 'a-model', effort: 'low', tokens: '1000', weeklyRemaining: 10 });
+  const rows = [first, second];
+  const mounted = render(<TokenUsage language="en" view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot(rows) }} />);
+  fireEvent.click(screen.getByRole('button', { name: 'Quota week' }));
+  const renderedModels = () => [...mounted.container.querySelectorAll('.token-turn-row .token-model-name')].map(row => row.textContent);
+  expect(renderedModels()).toEqual(['z-model', 'a-model']);
+  mounted.rerender(<TokenUsage language="en" view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot([second, first]) }} />);
+  expect(renderedModels()).toEqual(['a-model', 'z-model']);
+  expect(rows).toEqual([first, second]);
 });
 it.each(["zh-CN", "en"] as const)('distinguishes unavailable and empty turns in %s', language => {
   const mounted = render(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot({ turnStatistics: null }) }} />);
@@ -88,5 +118,5 @@ it.each(["zh-CN", "en"] as const)('preserves unobserved history without adding a
   expect(quota.querySelector('[role="tooltip"]')?.textContent).toBe(language === 'en' ? 'No historical weekly quota observation is available after this turn' : '该轮完成后无可用的历史周额度观测');
   expect(container.querySelectorAll('.token-turn-row')).toHaveLength(2);
   expect(container.querySelector('.token-value small')).toBeNull();
-  expect([...container.querySelectorAll('.token-turn-quota-value')].map(el => el.textContent)).toEqual(['—','82%']);
+  expect([...container.querySelectorAll('.token-turn-quota-value')].map(el => el.textContent)).toEqual(['82%','—']);
 });

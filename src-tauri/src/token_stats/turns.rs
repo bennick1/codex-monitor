@@ -77,7 +77,7 @@ pub fn query(
         weekly_reset_at: reset.clone(),
         turns: Vec::new(),
     };
-    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<?3 AND completed_at<?4 ORDER BY completed_at,thread,turn")?;
+    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<?3 AND completed_at<?4 ORDER BY completed_at DESC,thread ASC,turn ASC")?;
     let rows = stmt.query_map(params![root, utc(start), utc(now), reset], |r| {
         Ok((
             r.get::<_, String>(0)?,

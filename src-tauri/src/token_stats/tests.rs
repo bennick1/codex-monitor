@@ -2387,7 +2387,115 @@ fn observation(h: &mut Harness, time: &str, percent: f64, reset: &str) -> super:
 }
 
 #[test]
-fn turn_rows_keep_repeated_models_efforts_sessions_and_completion_order() {
+fn quota_week_newest_first_keeps_each_turn_metadata_together() {
+    let mut h = Harness::new();
+    let mut values = vec![meta("main")];
+    let mut total = 0;
+    for (id, model, effort, tokens, completed) in [
+        ("turn-01", "synthetic-oldest", Some("xhigh"), 11, "01:00"),
+        ("turn-03", "synthetic-newest", Some("high"), 33, "03:00"),
+        ("turn-02", "synthetic-middle", None, 22, "02:00"),
+    ] {
+        total += tokens;
+        let mut fact = modern("main", &format!("response-{id}"), tokens, total);
+        fact["payload"]["turn_id"] = json!(id);
+        values.extend([
+            effort_turn(id, model, effort),
+            fact,
+            completed_turn(id, &format!("2026-09-05T{completed}:00Z")),
+        ]);
+    }
+    write(&h.log(), &values);
+    h.scan();
+    for (at, remaining) in [
+        ("2026-09-05T01:05:00Z", 65.125),
+        ("2026-09-05T03:05:00Z", 80.0),
+    ] {
+        observation(&mut h, at, remaining, &quota_window().resets_at).unwrap();
+    }
+    assert_eq!(
+        by_turn(&mut h)["turns"],
+        json!([
+            {
+                "model": "synthetic-newest", "effort": "high", "tokens": "33",
+                "completedAt": "2026-09-05T03:00:00.000000000Z",
+                "weeklyRemaining": 80.0,
+                "quotaObservedAt": "2026-09-05T03:05:00.000000000Z",
+                "isPartial": false
+            },
+            {
+                "model": "synthetic-middle", "effort": null, "tokens": "22",
+                "completedAt": "2026-09-05T02:00:00.000000000Z",
+                "weeklyRemaining": null, "quotaObservedAt": null, "isPartial": false
+            },
+            {
+                "model": "synthetic-oldest", "effort": "xhigh", "tokens": "11",
+                "completedAt": "2026-09-05T01:00:00.000000000Z",
+                "weeklyRemaining": 65.125,
+                "quotaObservedAt": "2026-09-05T01:05:00.000000000Z",
+                "isPartial": false
+            }
+        ])
+    );
+}
+
+#[test]
+fn quota_week_newest_first_ties_keep_thread_then_turn_ascending_after_restart() {
+    let mut h = Harness::new();
+    for (thread, turns) in [
+        (
+            "thread-z",
+            [("turn-z", "model-a", 4), ("turn-a", "model-b", 3)],
+        ),
+        (
+            "thread-a",
+            [("turn-z", "model-c", 2), ("turn-a", "model-d", 1)],
+        ),
+    ] {
+        let mut values = vec![meta(thread)];
+        let mut total = 0;
+        for (turn, model, tokens) in turns {
+            total += tokens;
+            let mut fact = modern(thread, &format!("{thread}-{turn}"), tokens, total);
+            fact["payload"]["turn_id"] = json!(turn);
+            values.extend([
+                effort_turn(turn, model, Some("high")),
+                fact,
+                completed_turn(turn, AT),
+            ]);
+        }
+        write(&h.home.join(format!("sessions/{thread}.jsonl")), &values);
+    }
+    h.scan();
+    let expected = [
+        ("model-d", "1"),
+        ("model-c", "2"),
+        ("model-b", "3"),
+        ("model-a", "4"),
+    ];
+    let initial = by_turn(&mut h);
+    for restart in [false, true] {
+        if restart {
+            h.restart();
+            h.scan();
+        }
+        for _ in 0..3 {
+            let result = by_turn(&mut h);
+            assert_eq!(result, initial);
+            let rows = result["turns"].as_array().unwrap();
+            assert_eq!(rows.len(), expected.len());
+            for (row, (model, tokens)) in rows.iter().zip(expected) {
+                assert_eq!(row["model"], model);
+                assert_eq!(row["effort"], "high");
+                assert_eq!(row["tokens"], tokens);
+                assert_eq!(row["completedAt"], "2026-09-05T01:00:00.000000000Z");
+            }
+        }
+    }
+}
+
+#[test]
+fn turn_rows_keep_repeated_models_efforts_sessions_and_newest_first_order() {
     let mut h = Harness::new();
     let mut values = vec![meta("main")];
     for (i, effort) in [Some("high"), Some("high"), Some("xhigh"), None]
@@ -2425,12 +2533,13 @@ fn turn_rows_keep_repeated_models_efforts_sessions_and_completion_order() {
     let result = by_turn(&mut h);
     let rows = result["turns"].as_array().unwrap();
     assert_eq!(rows.len(), 5);
-    assert_eq!(rows[0]["effort"], "high");
-    assert_eq!(rows[1]["effort"], "high");
+    assert_eq!(rows[0]["effort"], "ultra");
+    assert!(rows[1]["effort"].is_null());
     assert_eq!(rows[2]["effort"], "xhigh");
-    assert!(rows[3]["effort"].is_null());
-    assert_eq!(rows[4]["effort"], "ultra");
-    assert_eq!(rows[0]["tokens"], "11");
+    assert_eq!(rows[3]["effort"], "high");
+    assert_eq!(rows[4]["effort"], "high");
+    assert_eq!(rows[0]["tokens"], "7");
+    assert_eq!(rows[4]["tokens"], "11");
     assert!(rows.iter().all(|r| r["weeklyRemaining"] == json!(65.0)));
     assert!(!result.to_string().contains("SECRET"));
     assert!(!result.to_string().contains("turn-a"));
@@ -2790,6 +2899,10 @@ fn turn_completion_period_uses_exact_reset_and_never_natural_week() {
     assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
     assert_eq!(
         rows["turns"][0]["completedAt"],
+        "2026-09-05T09:59:59.000000000Z"
+    );
+    assert_eq!(
+        rows["turns"][1]["completedAt"],
         "2026-09-03T00:00:00.000000000Z"
     );
 }
@@ -3067,10 +3180,10 @@ fn optional_quota_observation_preserves_accounting_models_and_snapshot_history()
         let rows = by_turn(&mut h);
         assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
         assert_eq!(rows["turns"][0]["tokens"], "10");
-        assert_eq!(rows["turns"][0]["weeklyRemaining"], json!(65.0));
+        assert!(rows["turns"][0]["weeklyRemaining"].is_null());
+        assert!(rows["turns"][0]["quotaObservedAt"].is_null());
         assert_eq!(rows["turns"][1]["tokens"], "10");
-        assert!(rows["turns"][1]["weeklyRemaining"].is_null());
-        assert!(rows["turns"][1]["quotaObservedAt"].is_null());
+        assert_eq!(rows["turns"][1]["weeklyRemaining"], json!(65.0));
         assert_eq!(h.total(), "20");
         assert_eq!(
             serde_json::to_value(h.snapshot()).unwrap(),
@@ -3226,7 +3339,7 @@ fn quota_week_auto_review_filter_preserves_accounting_and_observations_after_res
             3
         );
         assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
-        for (i, remaining) in [80.0, 78.0].into_iter().enumerate() {
+        for (i, remaining) in [78.0, 80.0].into_iter().enumerate() {
             assert_eq!(rows["turns"][i]["model"], "gpt-6-astra");
             assert_eq!(rows["turns"][i]["tokens"], "10");
             assert_eq!(rows["turns"][i]["weeklyRemaining"], json!(remaining));
@@ -3259,7 +3372,7 @@ fn quota_week_auto_review_exact_match_preserves_similar_ids() {
         rows.iter()
             .map(|r| r["model"].as_str().unwrap())
             .collect::<Vec<_>>(),
-        models[..4]
+        models[..4].iter().rev().copied().collect::<Vec<_>>()
     );
 }
 
@@ -3314,7 +3427,7 @@ fn fresh_quota_week_history_survives_restart_without_snapshots() {
             assert_eq!(row["tokens"], "10");
             assert_eq!(
                 row["completedAt"],
-                format!("2026-09-05T0{}:00:00.000000000Z", i + 1)
+                format!("2026-09-05T0{}:00:00.000000000Z", 3 - i)
             );
             assert!(row["weeklyRemaining"].is_null());
             assert!(row["quotaObservedAt"].is_null());
@@ -3369,12 +3482,12 @@ fn mixed_observed_and_unobserved_history_keeps_order_and_percentages_after_resta
         assert_eq!(current, first);
         let rows = current["turns"].as_array().unwrap();
         assert_eq!(rows.len(), 3);
-        for (i, expected) in [Some(80.0), None, Some(75.0)].into_iter().enumerate() {
+        for (i, expected) in [Some(75.0), None, Some(80.0)].into_iter().enumerate() {
             assert_eq!(rows[i]["weeklyRemaining"], json!(expected));
             assert_eq!(rows[i]["quotaObservedAt"].is_null(), expected.is_none());
             assert_eq!(
                 rows[i]["completedAt"],
-                format!("2026-09-05T0{}:00:00.000000000Z", i + 1)
+                format!("2026-09-05T0{}:00:00.000000000Z", 3 - i)
             );
         }
         assert_eq!(quota_metadata_dump(&h.db), metadata);
@@ -3474,9 +3587,9 @@ fn quota_week_auto_review_without_observation_stays_hidden_but_by_model_keeps_it
         assert!(rows
             .iter()
             .all(|r| r["model"] == "gpt-6-astra" && r["tokens"] == "10"));
-        assert!(rows[0]["weeklyRemaining"].is_null());
-        assert!(rows[0]["quotaObservedAt"].is_null());
-        assert_eq!(rows[1]["weeklyRemaining"], json!(82.0));
+        assert_eq!(rows[0]["weeklyRemaining"], json!(82.0));
+        assert!(rows[1]["weeklyRemaining"].is_null());
+        assert!(rows[1]["quotaObservedAt"].is_null());
         let snapshot = serde_json::to_value(h.snapshot()).unwrap();
         assert!(snapshot["modelStatistics"]["periods"]["total"]["models"]
             .as_array()
