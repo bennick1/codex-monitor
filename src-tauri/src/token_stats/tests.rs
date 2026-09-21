@@ -1702,7 +1702,7 @@ fn v1_migration_and_metadata_backfill_preserve_all_accounting_and_deleted_source
     assert_eq!(
         h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3
+        super::SCHEMA_VERSION
     );
     assert_eq!(
         model_rows(&h.snapshot()),
@@ -1820,7 +1820,7 @@ fn late_model_metadata_initialization_failure_rolls_back_all_ddl() {
             repaired
                 .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            3
+            super::SCHEMA_VERSION
         );
         assert_eq!(accounting_dump(&repaired), before);
     }
@@ -2388,55 +2388,67 @@ fn observation(h: &mut Harness, time: &str, percent: f64, reset: &str) -> super:
 
 #[test]
 fn quota_week_newest_first_keeps_each_turn_metadata_together() {
-    let mut h = Harness::new();
-    let mut values = vec![meta("main")];
-    let mut total = 0;
-    for (id, model, effort, tokens, completed) in [
-        ("turn-01", "synthetic-oldest", Some("xhigh"), 11, "01:00"),
-        ("turn-03", "synthetic-newest", Some("high"), 33, "03:00"),
-        ("turn-02", "synthetic-middle", None, 22, "02:00"),
-    ] {
-        total += tokens;
-        let mut fact = modern("main", &format!("response-{id}"), tokens, total);
-        fact["payload"]["turn_id"] = json!(id);
-        values.extend([
-            effort_turn(id, model, effort),
-            fact,
-            completed_turn(id, &format!("2026-09-05T{completed}:00Z")),
-        ]);
-    }
-    write(&h.log(), &values);
-    h.scan();
-    for (at, remaining) in [
-        ("2026-09-05T01:05:00Z", 65.125),
-        ("2026-09-05T03:05:00Z", 80.0),
-    ] {
-        observation(&mut h, at, remaining, &quota_window().resets_at).unwrap();
-    }
-    assert_eq!(
-        by_turn(&mut h)["turns"],
-        json!([
-            {
-                "model": "synthetic-newest", "effort": "high", "tokens": "33",
-                "completedAt": "2026-09-05T03:00:00.000000000Z",
-                "weeklyRemaining": 80.0,
-                "quotaObservedAt": "2026-09-05T03:05:00.000000000Z",
-                "isPartial": false
-            },
-            {
-                "model": "synthetic-middle", "effort": null, "tokens": "22",
-                "completedAt": "2026-09-05T02:00:00.000000000Z",
-                "weeklyRemaining": null, "quotaObservedAt": null, "isPartial": false
-            },
-            {
-                "model": "synthetic-oldest", "effort": "xhigh", "tokens": "11",
-                "completedAt": "2026-09-05T01:00:00.000000000Z",
-                "weeklyRemaining": 65.125,
-                "quotaObservedAt": "2026-09-05T01:05:00.000000000Z",
-                "isPartial": false
+    for with_fast in [false, true] {
+        let mut h = Harness::new();
+        let mut values = vec![meta("main")];
+        let mut total = 0;
+        for (id, model, effort, tokens, completed) in [
+            ("turn-01", "synthetic-oldest", Some("xhigh"), 11, "01:00"),
+            ("turn-03", "synthetic-newest", Some("high"), 33, "03:00"),
+            ("turn-02", "synthetic-middle", None, 22, "02:00"),
+        ] {
+            total += tokens;
+            let mut fact = modern("main", &format!("response-{id}"), tokens, total);
+            fact["payload"]["turn_id"] = json!(id);
+            if with_fast {
+                values.push(fast_settings(
+                    "main",
+                    Some(if id == "turn-02" {
+                        "default"
+                    } else {
+                        "priority"
+                    }),
+                ));
             }
-        ])
-    );
+            values.extend([
+                effort_turn(id, model, effort),
+                fact,
+                completed_turn(id, &format!("2026-09-05T{completed}:00Z")),
+            ]);
+        }
+        write(&h.log(), &values);
+        h.scan();
+        for (at, remaining) in [
+            ("2026-09-05T01:05:00Z", 65.125),
+            ("2026-09-05T03:05:00Z", 80.0),
+        ] {
+            observation(&mut h, at, remaining, &quota_window().resets_at).unwrap();
+        }
+        assert_eq!(
+            by_turn(&mut h)["turns"],
+            json!([
+                {
+                    "model": "synthetic-newest", "effort": "high", "tokens": "33",
+                    "completedAt": "2026-09-05T03:00:00.000000000Z",
+                    "weeklyRemaining": 80.0,
+                    "quotaObservedAt": "2026-09-05T03:05:00.000000000Z",
+                    "isPartial": false, "fastMode": if with_fast { Some(true) } else { None }
+                },
+                {
+                    "model": "synthetic-middle", "effort": null, "tokens": "22",
+                    "completedAt": "2026-09-05T02:00:00.000000000Z",
+                    "weeklyRemaining": null, "quotaObservedAt": null, "isPartial": false, "fastMode": if with_fast { Some(false) } else { None }
+                },
+                {
+                    "model": "synthetic-oldest", "effort": "xhigh", "tokens": "11",
+                    "completedAt": "2026-09-05T01:00:00.000000000Z",
+                    "weeklyRemaining": 65.125,
+                    "quotaObservedAt": "2026-09-05T01:05:00.000000000Z",
+                    "isPartial": false, "fastMode": if with_fast { Some(true) } else { None }
+                }
+            ])
+        );
+    }
 }
 
 #[test]
@@ -2738,7 +2750,7 @@ fn v2_to_v3_migration_rolls_back_early_and_final_ddl_and_restarts() {
                 migrated
                     .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                     .unwrap(),
-                3
+                super::SCHEMA_VERSION
             );
             assert_eq!(accounting_dump(&migrated), before);
         }
@@ -2761,7 +2773,7 @@ fn v3_metadata_backfill_preserves_v2_accounting_and_model_results() {
     let before = accounting_dump(&h.db);
     let overview = h.total();
     let models = model_rows(&h.snapshot());
-    h.db.execute_batch("DROP TABLE quota_snapshots; DROP INDEX turn_completion_lookup; DROP INDEX turn_identity_lookup; ALTER TABLE model_turns DROP COLUMN effort; ALTER TABLE model_turns DROP COLUMN effort_conflict; ALTER TABLE model_turns DROP COLUMN completed_at; ALTER TABLE model_turns DROP COLUMN completion_status; PRAGMA user_version=2").unwrap();
+    h.db.execute_batch("ALTER TABLE model_turns DROP COLUMN fast_mode; ALTER TABLE model_turns DROP COLUMN fast_conflict; DROP TABLE quota_snapshots; DROP INDEX turn_completion_lookup; DROP INDEX turn_identity_lookup; ALTER TABLE model_turns DROP COLUMN effort; ALTER TABLE model_turns DROP COLUMN effort_conflict; ALTER TABLE model_turns DROP COLUMN completed_at; ALTER TABLE model_turns DROP COLUMN completion_status; PRAGMA user_version=2").unwrap();
     h.restart();
     assert_eq!(accounting_dump(&h.db), before);
     assert_eq!(h.total(), overview);
@@ -2985,7 +2997,7 @@ fn v3_first_statement_failure_leaves_v2_and_all_metadata_untouched() {
         migrated
             .query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
             .unwrap(),
-        3
+        super::SCHEMA_VERSION
     );
 }
 
@@ -3336,7 +3348,7 @@ fn quota_week_auto_review_filter_preserves_accounting_and_observations_after_res
         assert_eq!(
             h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            3
+            super::SCHEMA_VERSION
         );
         assert_eq!(rows["turns"].as_array().unwrap().len(), 2);
         for (i, remaining) in [78.0, 80.0].into_iter().enumerate() {
@@ -3441,7 +3453,7 @@ fn fresh_quota_week_history_survives_restart_without_snapshots() {
         assert_eq!(
             h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
                 .unwrap(),
-            3
+            super::SCHEMA_VERSION
         );
         assert_eq!(accounting_dump(&h.db), facts);
         assert_eq!(quota_metadata_dump(&h.db), metadata);
@@ -3602,4 +3614,456 @@ fn quota_week_auto_review_without_observation_stays_hidden_but_by_model_keeps_it
         h.restart();
         h.scan();
     }
+}
+
+fn fast_settings(thread: &str, tier: Option<&str>) -> Value {
+    let mut value = json!({"type":"event_msg","payload":{"type":"thread_settings_applied","thread_id":thread,"thread_settings":{}}});
+    if let Some(tier) = tier {
+        value["payload"]["thread_settings"]["service_tier"] = json!(tier);
+    }
+    value
+}
+
+fn fast_turn(id: &str) -> Value {
+    effort_turn(id, "synthetic", Some("high"))
+}
+
+fn fast_fact(thread: &str, id: &str, total: i64) -> Value {
+    let mut value = modern(thread, id, 10, total);
+    value["payload"]["turn_id"] = json!(id);
+    value
+}
+
+#[test]
+fn fast_settings_service_tier_mapping_is_tristate() {
+    for (tier, expected) in [
+        (Some("priority"), json!(true)),
+        (Some("default"), json!(false)),
+        (None, Value::Null),
+        (Some("future-tier"), Value::Null),
+    ] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", tier),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        let rows = by_turn(&mut h);
+        assert_eq!(rows["turns"].as_array().unwrap().len(), 1);
+        assert!(
+            rows["turns"][0].get("fastMode").is_some(),
+            "fastMode must always be serialized"
+        );
+        assert_eq!(rows["turns"][0]["fastMode"], expected, "tier {tier:?}");
+    }
+}
+
+fn fast_rows(h: &mut Harness) -> Vec<Value> {
+    by_turn(h)["turns"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["fastMode"].clone())
+        .collect()
+}
+
+#[test]
+fn fast_settings_carry_across_turns_and_restart_until_changed() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![json!(true)]);
+    h.restart();
+    append(
+        &h.log(),
+        &[
+            fast_turn("b"),
+            fast_fact("main", "b", 20),
+            completed_turn("b", "2026-09-05T01:01:00Z"),
+            fast_settings("main", Some("default")),
+            fast_turn("c"),
+            fast_fact("main", "c", 30),
+            completed_turn("c", "2026-09-05T01:02:00Z"),
+        ],
+    );
+    h.scan();
+    assert_eq!(
+        fast_rows(&mut h),
+        vec![json!(false), json!(true), json!(true)]
+    );
+    let before = accounting_dump(&h.db);
+    let rows = by_turn(&mut h);
+    h.restart();
+    h.scan();
+    assert_eq!(by_turn(&mut h), rows);
+    assert_eq!(accounting_dump(&h.db), before);
+}
+
+#[test]
+fn fast_unknown_or_missing_settings_reset_fallback() {
+    for reset in [None, Some("future")] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_settings("main", reset),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+    }
+}
+
+#[test]
+fn fast_repeated_context_agreement_and_conflict_remain_sticky() {
+    for (second, expected) in [("priority", json!(true)), ("default", Value::Null)] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_settings("main", Some(second)),
+                fast_turn("a"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        assert_eq!(fast_rows(&mut h), vec![expected.clone()]);
+        h.restart();
+        append(
+            &h.log(),
+            &[fast_settings("main", Some("priority")), fast_turn("a")],
+        );
+        h.scan();
+        assert_eq!(fast_rows(&mut h), vec![expected]);
+        assert_eq!(h.total(), "10");
+    }
+}
+
+#[test]
+fn fast_copied_parent_settings_never_inherit_but_child_settings_work() {
+    for own in [false, true] {
+        let mut h = Harness::new();
+        let mut values = vec![meta("child"), fast_settings("parent", Some("priority"))];
+        if own {
+            values.push(fast_settings("child", Some("default")));
+        }
+        values.extend([
+            fast_turn("a"),
+            fast_fact("child", "a", 10),
+            completed_turn("a", AT),
+        ]);
+        write(&h.log(), &values);
+        h.scan();
+        assert_eq!(
+            fast_rows(&mut h),
+            vec![if own { json!(false) } else { Value::Null }]
+        );
+    }
+}
+
+#[test]
+fn fast_timeline_resets_and_thread_conflicts_clear_fallback() {
+    for reset in [
+        meta("main"),
+        meta("other"),
+        json!({"type":"compacted","payload":{}}),
+        json!({"type":"event_msg","payload":{"type":"thread_rolled_back"}}),
+    ] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                reset,
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        let rows = fast_rows(&mut h);
+        assert!(rows.iter().all(Value::is_null));
+    }
+}
+
+#[test]
+fn fast_decreasing_envelope_timestamp_invalidates_carried_setting() {
+    let mut h = Harness::new();
+    let mut setting = fast_settings("main", Some("priority"));
+    setting["timestamp"] = json!("2026-09-05T00:59:00Z");
+    let rewind = json!({"type":"event_msg","timestamp":"2026-09-05T00:58:59Z","payload":{"type":"task_started"}});
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            setting,
+            rewind,
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+}
+
+fn metadata_table_dump(db: &rusqlite::Connection, table: &str) -> Vec<String> {
+    let mut stmt = db
+        .prepare(&format!("SELECT * FROM {table} ORDER BY rowid"))
+        .unwrap();
+    let count = stmt.column_count();
+    stmt.query_map([], |row| {
+        Ok((0..count)
+            .map(|i| format!("{:?}", row.get_ref(i).unwrap()))
+            .collect::<Vec<_>>()
+            .join("|"))
+    })
+    .unwrap()
+    .map(Result::unwrap)
+    .collect()
+}
+
+fn downgrade_fast_v3(db: &rusqlite::Connection) {
+    db.execute_batch("ALTER TABLE model_turns DROP COLUMN fast_mode; ALTER TABLE model_turns DROP COLUMN fast_conflict; PRAGMA user_version=3;").unwrap();
+}
+
+#[test]
+fn fast_v4_backfill_preserves_accounting_models_quota_and_every_token_field() {
+    let mut h = Harness::new();
+    let mut fact = fast_fact("main", "a", 10);
+    let detailed = json!({"input_tokens":9007199254740993i64,"cached_input_tokens":31,"output_tokens":97,"reasoning_output_tokens":43,"total_tokens":9007199254741090i64});
+    fact["payload"]["usage"] = detailed.clone();
+    fact["payload"]["thread_token_usage"] = detailed;
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fact,
+            completed_turn("a", AT),
+        ],
+    );
+    h.scan();
+    observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+    let accounting = accounting_dump(&h.db);
+    let snapshots = metadata_table_dump(&h.db, "quota_snapshots");
+    let snapshot = serde_json::to_value(h.snapshot()).unwrap();
+    let rows = by_turn(&mut h);
+    downgrade_fast_v3(&h.db);
+    h.restart();
+    assert_eq!(
+        h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        4
+    );
+    assert_eq!(
+        h.db.query_row("SELECT COUNT(*) FROM model_checkpoints", [], |r| r
+            .get::<_, i64>(0))
+            .unwrap(),
+        0
+    );
+    assert_eq!(accounting_dump(&h.db), accounting);
+    assert_eq!(metadata_table_dump(&h.db, "quota_snapshots"), snapshots);
+    h.scan();
+    assert_eq!(accounting_dump(&h.db), accounting);
+    assert_eq!(metadata_table_dump(&h.db, "quota_snapshots"), snapshots);
+    let after = serde_json::to_value(h.snapshot()).unwrap();
+    for field in [
+        "today",
+        "thisWeek",
+        "thisMonth",
+        "total",
+        "datedTotals",
+        "futureDeferredTotals",
+        "timeUncertainTotals",
+        "undatedTotals",
+        "modelStatistics",
+        "quality",
+    ] {
+        assert_eq!(after[field], snapshot[field], "{field}");
+    }
+    assert_eq!(by_turn(&mut h), rows);
+    assert_eq!(fast_rows(&mut h), vec![json!(true)]);
+}
+
+#[test]
+fn fast_v4_migration_rolls_back_both_alters_and_checkpoint_deletion() {
+    for blocker in ["fast_mode", "fast_conflict", "checkpoint-delete"] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        downgrade_fast_v3(&h.db);
+        match blocker {
+            "checkpoint-delete" => h.db.execute_batch("CREATE TRIGGER fail_checkpoint_delete BEFORE DELETE ON model_checkpoints BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END;").unwrap(),
+            column => h.db.execute_batch(&format!("ALTER TABLE model_turns ADD COLUMN {column} INTEGER")).unwrap(),
+        }
+        let accounting = accounting_dump(&h.db);
+        let checkpoints = metadata_table_dump(&h.db, "model_checkpoints");
+        let columns = metadata_table_dump(&h.db, "model_turns");
+        assert!(store::open(&h.path).is_err(), "{blocker}");
+        assert_eq!(
+            h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            3
+        );
+        assert_eq!(accounting_dump(&h.db), accounting);
+        assert_eq!(metadata_table_dump(&h.db, "model_checkpoints"), checkpoints);
+        assert_eq!(metadata_table_dump(&h.db, "model_turns"), columns);
+        match blocker {
+            "checkpoint-delete" => {
+                h.db.execute_batch("DROP TRIGGER fail_checkpoint_delete")
+                    .unwrap()
+            }
+            column => {
+                h.db.execute_batch(&format!("ALTER TABLE model_turns DROP COLUMN {column}"))
+                    .unwrap()
+            }
+        }
+        h.restart();
+        assert_eq!(
+            h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                .unwrap(),
+            4
+        );
+        assert_eq!(accounting_dump(&h.db), accounting);
+    }
+}
+
+#[test]
+fn fast_v4_fresh_database_and_future_schema_boundary() {
+    let h = Harness::new();
+    assert_eq!(
+        h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        4
+    );
+    h.db.execute_batch("PRAGMA user_version=5").unwrap();
+    assert!(store::open(&h.path).is_err());
+    assert_eq!(
+        h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+            .unwrap(),
+        5
+    );
+}
+
+#[test]
+fn fast_unproven_turn_fields_and_malformed_settings_never_infer_fast() {
+    let mut malformed = fast_settings("main", Some("priority"));
+    malformed["payload"]["thread_settings"] = json!("not-an-object");
+    let mut missing_owner = fast_settings("main", Some("priority"));
+    missing_owner["payload"]
+        .as_object_mut()
+        .unwrap()
+        .remove("thread_id");
+    for reset in [malformed, missing_owner] {
+        let mut h = Harness::new();
+        let mut context = fast_turn("a");
+        context["payload"]["service_tier"] = json!("priority");
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                reset,
+                context,
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+    }
+}
+
+#[test]
+fn fast_unknown_settings_only_reset_new_turns_and_never_rewrite_old_turns() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+            fast_settings("main", Some("future")),
+            fast_turn("b"),
+            fast_fact("main", "b", 20),
+            completed_turn("b", "2026-09-05T01:01:00Z"),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null, json!(true)]);
+    append(&h.log(), &[fast_turn("a")]);
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null, json!(true)]);
+}
+
+#[test]
+fn fast_changed_session_identity_cannot_regain_settings_trust() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            meta("other"),
+            fast_settings("other", Some("priority")),
+            fast_turn("a"),
+            fast_fact("other", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    h.scan();
+    let rows = fast_rows(&mut h);
+    assert!(
+        rows.is_empty(),
+        "conflicted source cannot establish precise Turn ownership"
+    );
+    assert_eq!(
+        h.db.query_row(
+            "SELECT COUNT(*) FROM model_turns WHERE fast_mode IS NOT NULL",
+            [],
+            |r| r.get::<_, i64>(0)
+        )
+        .unwrap(),
+        0
+    );
 }

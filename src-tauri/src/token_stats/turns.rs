@@ -17,6 +17,7 @@ pub struct TurnStatistics {
 pub struct TurnUsage {
     pub model: String,
     pub effort: Option<String>,
+    pub fast_mode: Option<bool>,
     pub tokens: String,
     pub completed_at: String,
     pub weekly_remaining: Option<f64>,
@@ -77,7 +78,7 @@ pub fn query(
         weekly_reset_at: reset.clone(),
         turns: Vec::new(),
     };
-    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<?3 AND completed_at<?4 ORDER BY completed_at DESC,thread ASC,turn ASC")?;
+    let mut stmt = db.prepare("SELECT thread,turn,CASE WHEN conflict=0 THEN model ELSE NULL END,CASE WHEN effort_conflict=0 THEN effort ELSE NULL END,completed_at,CASE WHEN fast_conflict=0 THEN fast_mode ELSE NULL END FROM model_turns WHERE root=?1 AND completion_status='completed' AND completed_at>=?2 AND completed_at<?3 AND completed_at<?4 ORDER BY completed_at DESC,thread ASC,turn ASC")?;
     let rows = stmt.query_map(params![root, utc(start), utc(now), reset], |r| {
         Ok((
             r.get::<_, String>(0)?,
@@ -85,10 +86,11 @@ pub fn query(
             r.get::<_, Option<String>>(2)?,
             r.get::<_, Option<String>>(3)?,
             r.get::<_, String>(4)?,
+            r.get::<_, Option<bool>>(5)?,
         ))
     })?;
     for row in rows {
-        let (thread, turn, model, effort, completed) = row?;
+        let (thread, turn, model, effort, completed, fast_mode) = row?;
         // Quota Week intentionally omits Codex internal automatic-review turns.
         if model.as_deref() == Some(QUOTA_WEEK_HIDDEN_MODEL) {
             continue;
@@ -124,6 +126,7 @@ pub fn query(
         result.turns.push(TurnUsage {
             model: model.unwrap_or_else(|| "unknown".into()),
             effort,
+            fast_mode,
             tokens: total.to_string(),
             completed_at: completed,
             weekly_remaining,

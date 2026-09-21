@@ -11,6 +11,7 @@ pub struct Context {
     conflict: bool,
     previous_turn: Option<String>,
     previous_usage: Option<Usage>,
+    fast: super::fast::Context,
 }
 
 fn bind(
@@ -29,7 +30,13 @@ fn bind(
     Ok(())
 }
 
-pub fn observe(db: &Connection, p: &Position<'_>, c: &mut Context, event: &Event) -> Result<()> {
+pub fn observe(
+    db: &Connection,
+    p: &Position<'_>,
+    c: &mut Context,
+    event: &Event,
+    fast: &super::fast::Evidence,
+) -> Result<()> {
     match event {
         Event::Meta { thread, .. } => {
             if c.thread.as_ref().is_some_and(|old| old != thread) {
@@ -107,5 +114,6 @@ pub fn observe(db: &Connection, p: &Position<'_>, c: &mut Context, event: &Event
         }
         Event::Ignore => {}
     }
+    super::fast::observe(db, p, &mut c.fast, event, fast)?;
     Ok(())
 }

@@ -285,6 +285,7 @@ struct Line {
     start: u64,
     end: u64,
     event: Event,
+    fast: super::fast::Evidence,
 }
 struct Batch {
     lines: Vec<Line>,
@@ -331,13 +332,14 @@ fn read_batch(file: &mut File, start: u64, limit: u64, cancel: &AtomicBool) -> R
             } else {
                 parser::parse(&bytes)
             };
-            if !matches!(&event, Event::Ignore) {
-                lines.push(Line {
-                    start: line_start,
-                    end: position,
-                    event,
-                });
-            }
+            // Keep supplementary settings even when accounting intentionally ignores them.
+            let fast = super::fast::parse(&bytes);
+            lines.push(Line {
+                start: line_start,
+                end: position,
+                event,
+                fast,
+            });
             committed = position;
             committed_hash = hash.clone();
             bytes.clear();
@@ -405,6 +407,7 @@ fn backfill_models(
                 },
                 &mut context,
                 &line.event,
+                &line.fast,
             )?;
         }
         tx.execute("INSERT INTO model_checkpoints VALUES(?1,?2,?3) ON CONFLICT(file) DO UPDATE SET offset=excluded.offset,cursor=excluded.cursor",
@@ -522,6 +525,7 @@ pub(super) fn repair_models(
                     },
                     &mut context,
                     &line.event,
+                    &line.fast,
                 )?;
             }
             offset = batch.end;

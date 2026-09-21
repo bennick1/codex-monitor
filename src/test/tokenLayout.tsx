@@ -46,7 +46,8 @@ function stressedTokenSnapshot(status: TokenStatisticsSnapshot["status"], stale:
     total: totals("18446744073709551615", status === "partial"),
     turnStatistics: { weeklyResetAt: "2026-10-04T18:30:00Z", turns: Array.from({ length: 20 }, (_, index) => ({
       model: index % 2 ? "short-model" : "synthetic-long-model-slug-for-overflow-validation",
-      effort: ["high", "xhigh", "max", "ultra", "minimal"][index % 5],
+      effort: ["ultra", "xhigh", null, "future-effort-with-a-very-long-name", "minimal"][index % 5],
+      fastMode: [true, false, null][index % 3],
       tokens: ["999", "1234567", "1234567890", "9223372036854775807", "999999999999999999999999999999999999999999"][index % 5],
       isPartial: index % 2 === 0,
       completedAt: "2026-10-01T12:00:00Z",

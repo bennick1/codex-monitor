@@ -32,8 +32,28 @@ try {
       card.scrollTop = 80;
       if (card.scrollTop !== 0 || document.documentElement.scrollWidth > innerWidth) errors.push('outer overflow');
       if (['auto', 'scroll'].includes(getComputedStyle(card).overflowY) && card.scrollHeight > card.clientHeight + 1) errors.push('outer scrollbar');
-      for (const row of rows) {
+      for (const [rowIndex, row] of rows.entries()) {
         const cells = [...row.children];
+        if (cells.length !== 4 || heads.length !== 4) errors.push('four-column contract changed');
+        const effort = cells[1];
+        const effortText = effort.querySelector('.token-turn-effort-text');
+        const icon = effort.querySelector('.token-turn-fast');
+        if (Boolean(icon) !== (rowIndex % 3 === 0)) errors.push('Fast icon row binding');
+        if (getComputedStyle(effortText).textOverflow !== 'ellipsis' || getComputedStyle(effortText).whiteSpace !== 'nowrap') errors.push('effort truncation contract');
+        if (effortText.textContent.startsWith('future-') && effortText.scrollWidth <= effortText.clientWidth) errors.push('long effort did not exercise ellipsis');
+        if (icon) {
+          const box = rect(icon);
+          const style = getComputedStyle(icon);
+          const fastHeight = rect(row).height;
+          icon.style.display = 'none';
+          const plainHeight = rect(row).height;
+          icon.style.removeProperty('display');
+          if (Math.abs(fastHeight - plainHeight) > 0.1) errors.push('Fast icon increased row height');
+          if (Math.abs(box.width - 12) > 0.1 || Math.abs(box.height - 12) > 0.1 || style.flexShrink !== '0') errors.push('Lightning shrank');
+          if (box.left < rect(effort).left - 0.1 || box.right > rect(effort).right + 0.1 || box.right > rect(effortText).left) errors.push('Lightning clipped or overlapped');
+          if (style.color !== getComputedStyle(effortText).color || style.fill !== style.color || style.visibility !== 'visible' || Number(style.opacity) !== 1) errors.push('Lightning theme visibility');
+          if (!effort.getAttribute('aria-label')?.match(/Fast mode|极速模式/) || icon.getAttribute('aria-hidden') !== 'true') errors.push('Lightning accessibility');
+        }
         for (let i = 0; i < cells.length; i++) {
           const box = rect(cells[i]);
           if (Math.abs(box.x - rect(heads[i]).x) > 1 || Math.abs(box.width - rect(heads[i]).width) > 1) errors.push('header/row column mismatch');
@@ -49,6 +69,7 @@ try {
       const cardTop = rect(card).top;
       list.scrollTop = 90;
       if (!list.scrollTop || rect(card).top !== cardTop) errors.push('internal scroll failed');
+      list.scrollTop = 0;
       return { errors: [...new Set(errors)], columns: getComputedStyle(header).gridTemplateColumns, gap: getComputedStyle(header).columnGap };
     });
     await page.screenshot({ path: `${output}/${name}.png` });

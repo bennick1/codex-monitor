@@ -37,6 +37,8 @@ export interface ModelTokenStatistics {
 export interface TurnTokenUsage {
   model: string;
   effort: string | null;
+  /** Persisted local Fast selection evidence; null means unknown. */
+  fastMode: boolean | null;
   tokens: TokenInteger;
   completedAt: string;
   weeklyRemaining: number | null;

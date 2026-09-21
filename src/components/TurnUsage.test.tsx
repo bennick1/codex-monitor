@@ -12,7 +12,7 @@ import type { ProviderSnapshot, WidgetPreferences } from "../types";
 afterEach(cleanup);
 const provider: ProviderSnapshot = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 }, resetCredits: 1, updatedAt: new Date().toISOString(), status: "ok", message: null };
 const preferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "en", appearance: "light", selectedSkin: "default" };
-const turn = (overrides: Partial<TurnTokenUsage> = {}): TurnTokenUsage => ({ model: "synthetic-model-very-long-name", effort: "xhigh", tokens: "9223372036854775807", completedAt: "2026-09-10T01:00:00Z", weeklyRemaining: 65.125, quotaObservedAt: "2026-09-10T01:10:00Z", isPartial: true, ...overrides });
+const turn = (overrides: Partial<TurnTokenUsage> = {}): TurnTokenUsage => ({ model: "synthetic-model-very-long-name", effort: "xhigh", fastMode: null, tokens: "9223372036854775807", completedAt: "2026-09-10T01:00:00Z", weeklyRemaining: 65.125, quotaObservedAt: "2026-09-10T01:10:00Z", isPartial: true, ...overrides });
 function snapshot(rows = [turn()]) { return tokenSnapshot({ turnStatistics: { weeklyResetAt: "2026-09-13T00:00:00Z", turns: rows } }); }
 for (const skin of ["default", "blur", "computer"] as const) for (const language of ["zh-CN", "en"] as const) for (const short of [true, false]) for (const mode of ["overview", "models", "turns"] as const) {
   it(`matrix ${skin}/${language}/${short ? "full" : "compact"}/${mode}`, () => {
@@ -37,15 +37,16 @@ for (const skin of ["default", "blur", "computer"] as const) for (const language
   });
 }
 it('preserves repeated turns and newest-first ordering with complete row metadata', () => {
-  const oldest = turn({ tokens: '1001' });
-  const newest = turn({ model: 'synthetic-newest-model', completedAt: '2026-09-10T03:00:00Z', effort: 'future-effort', tokens: '3003', weeklyRemaining: 80, quotaObservedAt: '2026-09-10T03:12:00Z', isPartial: false });
-  const middle = turn({ completedAt: '2026-09-10T02:00:00Z', effort: null, tokens: '2002', weeklyRemaining: null, quotaObservedAt: null, isPartial: false });
+  const oldest = turn({ tokens: '1001', fastMode: true });
+  const newest = turn({ model: 'synthetic-newest-model', completedAt: '2026-09-10T03:00:00Z', effort: 'future-effort', fastMode: true, tokens: '3003', weeklyRemaining: 80, quotaObservedAt: '2026-09-10T03:12:00Z', isPartial: false });
+  const middle = turn({ completedAt: '2026-09-10T02:00:00Z', effort: null, fastMode: false, tokens: '2002', weeklyRemaining: null, quotaObservedAt: null, isPartial: false });
   const rows = [oldest, newest, middle];
   const originalRows = rows.map(row => ({ ...row }));
   const { container } = render(<TokenUsage language="en" view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot(rows) }} />);
   fireEvent.click(screen.getByRole('button', { name: 'Quota week' }));
   const renderedRows = [...container.querySelectorAll('.token-turn-row')];
   expect(renderedRows).toHaveLength(3);
+  expect(renderedRows.map(row => Boolean(row.querySelector('.token-turn-fast')))).toEqual([true, false, true]);
   expect(renderedRows.map(row => row.querySelector('.token-turn-effort')?.textContent)).toEqual(['future-effort', '—', 'xHigh']);
   expect(renderedRows.map(row => row.querySelector('.token-turn-quota-value')?.textContent)).toEqual(['80%', '—', '65.125%']);
   for (const [index, expected] of [newest, middle, oldest].entries()) {
@@ -120,3 +121,26 @@ it.each(["zh-CN", "en"] as const)('preserves unobserved history without adding a
   expect(container.querySelector('.token-value small')).toBeNull();
   expect([...container.querySelectorAll('.token-turn-quota-value')].map(el => el.textContent)).toEqual(['82%','—']);
 });
+
+for (const language of ["zh-CN", "en"] as const) for (const fastMode of [true, false, null]) for (const effort of ["ultra", "xhigh", null, "future-effort-with-a-very-long-name"]) {
+  it(`Fast cell ${language}/${fastMode}/${effort}`, () => {
+    const { container } = render(<TokenUsage language={language} view={{ ...INITIAL_TOKEN_VIEW, snapshot: snapshot([turn({ effort, fastMode })]) }} />);
+    fireEvent.click(screen.getByRole("button", { name: language === "en" ? "Quota week" : "额度周" }));
+    const cell = container.querySelector(".token-turn-effort")!;
+    expect(cell.querySelector(".token-turn-effort-text")?.textContent).toBe(displayEffort(effort));
+    const icon = cell.querySelector("svg.token-turn-fast");
+    expect(Boolean(icon)).toBe(fastMode === true);
+    expect(screen.getAllByRole("columnheader")).toHaveLength(4);
+    expect(screen.getAllByRole("cell")).toHaveLength(4);
+    if (fastMode === true) {
+      const label = language === "en" ? `Effort ${effort ? displayEffort(effort) : "unknown"}, Fast mode` : `档位${effort ? ` ${displayEffort(effort)}` : "未知"}，极速模式`;
+      expect(screen.getByRole("cell", { name: label })).toBe(cell);
+      expect(icon?.getAttribute("aria-hidden")).toBe("true");
+      expect(icon?.getAttribute("width")).toBe("12");
+      expect(cell.getAttribute("title")).toBe(label);
+    } else {
+      expect(cell.getAttribute("aria-label")).toBeNull();
+      expect(cell.textContent).not.toMatch(/Normal|Standard|Default|极速模式|Fast mode/);
+    }
+  });
+}
