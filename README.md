@@ -2,7 +2,7 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-Current release: **v1.2.0**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.2.0-feature-validation-report.md) for the current status.
+Current release: **v1.2.1**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.2.1-feature-validation-report.md) for the current status.
 
 ## Features
 
@@ -10,7 +10,8 @@ Current release: **v1.2.0**, officially released. Updates are manual: Codex Moni
 - **Codex quota monitoring:** remaining 5-hour and weekly quota, reset times, and explicit unavailable/stale states.
 - **Token usage statistics (Overview):** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
 - **Per-model Token Statistics (By Model):** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
-- **Quota Week (额度周):** completed Turns in the current valid quota week, showing Model, Effort, Token, and Weekly Remaining. Without a reliable historical quota observation, Weekly Remaining shows `—`; historical quota is not estimated or backfilled.
+- **Quota Week (额度周):** completed Turns in the current valid quota week, newest first, showing Model, Effort, Token, and Weekly Remaining. Without a reliable historical quota observation, Weekly Remaining shows `—`; historical quota is not estimated or backfilled.
+- **Fast lightning indicator:** appears beside Effort when persisted local metadata indicates Fast selection/request (`priority`); explicit `default` means Standard. Selection evidence persists across restarts and does not independently confirm the backend processing tier.
 - **Three free built-in skins:** Default (Follow system, Dark, or Light), Blur, and Computer. Skin selection is local, persists across restarts, and has no activation step.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
 - **Windows/macOS support:** a shared interface with Light, Dark, and Follow system appearances and Chinese/English labels. Platform acceptance is tracked separately in the release report.
@@ -27,16 +28,16 @@ Rendered from the current components with synthetic `CODEX · TEST` data. No per
 
 Download only from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). Do not use the upstream project's installers for this fork.
 
-| Platform | v1.2.0 installer | Install |
+| Platform | v1.2.1 installer | Install |
 | --- | --- | --- |
-| macOS | `Codex-Monitor-1.2.0.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
-| Windows | `Codex-Monitor-1.2.0.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
+| macOS | `Codex-Monitor-1.2.1.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
+| Windows | `Codex-Monitor-1.2.1.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
 
-The v1.2.0 macOS installer is **Unsigned / Not Notarized**; the Windows installer is **Unsigned**. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. The macOS app is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
+The v1.2.1 macOS installer is **Unsigned / Not Notarized**; the Windows installer is **Unsigned**. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. The macOS app is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
 
 For an existing Quota Float installation, quit the old app and preserve its application data before installing. V1 retains the old application identifier to keep settings and token history accessible. After upgrading, verify that the renamed installer and login/startup entry point to Codex Monitor; see the [migration inventory](docs/v1.0.0-name-migration-inventory.md). Do not run both copies together.
 
-v1.2.0 uses Token Statistics SQLite **schema 3**, adding the turn and observation metadata needed for Quota Week while preserving existing accounting data through migration. Downgrading the upgraded Token database is not supported.
+v1.2.1 uses Token Statistics SQLite **schema 4**, adding persisted Fast selection metadata while preserving existing accounting data through migration. Downgrading the upgraded Token database is not supported.
 
 ## Usage
 
