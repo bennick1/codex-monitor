@@ -1,0 +1,85 @@
+@font-face { font-family: "Mecha Exo 2"; src: url("../assets/mecha-light/Exo2-Variable.ttf") format("truetype"); font-weight: 100 900; font-style: normal; font-display: swap; }
+
+.quota-card.quota-card--skin-mecha-light,
+.quota-orb.quota-orb--skin-mecha-light {
+  --mecha-display-font: "Mecha Exo 2", "Quota Sans", system-ui, sans-serif;
+  color: #314157; border: 0; border-radius: 0; background: transparent;
+  box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.quota-card--skin-mecha-light > .aurora,
+.quota-orb--skin-mecha-light > .aurora { display: none; }
+.mecha-shell { position: absolute; z-index: -1; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.mecha-light-strip { color: var(--mecha-accent); filter: drop-shadow(0 0 2px currentColor); }
+
+.quota-card.quota-card--skin-mecha-light .eyebrow {
+  font-family: var(--mecha-display-font); font-weight: 650; letter-spacing: .045em;
+  color: #4c5e76; text-shadow: 0 1px #fff;
+}
+.quota-card.quota-card--skin-mecha-light .updated,
+.quota-card.quota-card--skin-mecha-light .reset-time,
+.quota-card.quota-card--skin-mecha-light .weekly-metric,
+.quota-card.quota-card--skin-mecha-light .weekly-metric span,
+.quota-card.quota-card--skin-mecha-light .weekly-metric p { color: #42546d; text-shadow: 0 1px #fff; }
+.quota-card.quota-card--skin-mecha-light .updated { font-size: 12px; letter-spacing: .02em; }
+.quota-card.quota-card--skin-mecha-light .primary-metric,
+.quota-orb.quota-orb--skin-mecha-light .orb-metric {
+  font-family: var(--mecha-display-font); font-weight: 650; color: var(--mecha-accent);
+  font-variant-numeric: tabular-nums; letter-spacing: -.035em;
+  text-shadow: 0 1px 0 #fff;
+}
+.quota-card.quota-card--skin-mecha-light .primary-metric span { font-family: inherit; font-size: 65px; font-weight: 650; }
+.quota-card.quota-card--skin-mecha-light .primary-metric small { font-family: inherit; font-weight: 650; font-size: 23px; color: inherit; }
+.quota-card.quota-card--skin-mecha-light .weekly-metric strong { font-family: var(--mecha-display-font); font-weight: 600; font-size: 29px; }
+.quota-card.quota-card--skin-mecha-light .card-actions button,
+.quota-card.quota-card--skin-mecha-light .usage-indicator {
+  color: #44556a; background: linear-gradient(145deg, #f8fbff, #dfe5ee);
+  border: 1px solid #fff; box-shadow: 0 1px 2px #6e7c8d66, inset 0 1px 2px #fff;
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+}
+.quota-card.quota-card--skin-mecha-light .card-actions button:hover { background: #fff; }
+.quota-card.quota-card--skin-mecha-light .card-actions button[aria-pressed="true"] { color: var(--mecha-accent); box-shadow: inset 0 0 0 1px var(--mecha-accent), 0 1px 2px #6e7c8d55; }
+.quota-card.quota-card--skin-mecha-light .usage-indicator i { background: var(--mecha-accent); box-shadow: 0 0 3px color-mix(in srgb, var(--mecha-accent) 40%, transparent); animation: none; }
+.quota-card.quota-card--skin-mecha-light button:focus-visible { outline: 2px solid var(--mecha-accent); outline-offset: 2px; }
+
+.mecha-progress { height: 11px; margin: 16px 2px 0; display: flex; gap: 3px; padding: 1px 3px; border: 1px solid #fafcff; border-radius: 3px; background: #b4becb55; box-shadow: 0 1px #78869950; }
+.mecha-progress i { position: relative; flex: 1; min-width: 0; overflow: hidden; border-radius: 1px; transform: skewX(-22deg); background: #96a3b655; box-shadow: inset 0 1px 1px #52647c33; }
+.mecha-progress i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--mecha-fill); background: var(--mecha-accent); box-shadow: inset 0 1px #ffffff88; }
+.quota-card.quota-card--skin-mecha-light .reset-time { font-size: 11px; line-height: 16px; letter-spacing: .005em; }
+.quota-card.quota-card--skin-mecha-light .reset-credit-button { color: #075fad; }
+
+.quota-card.quota-card--skin-mecha-light .token-usage { color: #293d58; border-top: 1px solid #96a4b5; box-shadow: 0 -1px #fcfeff; }
+.quota-card.quota-card--skin-mecha-light .token-heading h2 { color: #273e5c; font-weight: 650; letter-spacing: .02em; }
+.quota-card.quota-card--skin-mecha-light .token-heading .token-switch { gap: 2px; padding: 1px; border-radius: 0; background: #a9b5c566; }
+.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button {
+  position: relative; color: #3e516a; border: 1px solid #9fabb9; border-radius: 0;
+  clip-path: polygon(7px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 7px);
+  background: linear-gradient(#f6f9fe, #ccd5df); box-shadow: inset 0 1px #fff;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button[aria-pressed="true"] {
+  color: #213b5c; border-color: var(--mecha-accent); background: linear-gradient(#fff, #dae5f0);
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--mecha-accent) 60%, white), inset 0 -1px #8096ad;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button:focus-visible { outline-color: var(--mecha-accent); outline-offset: -3px; }
+.quota-card.quota-card--skin-mecha-light .token-turn-row { border-bottom: 1px solid #9eafc144; }
+.quota-card.quota-card--skin-mecha-light .token-turn-fast { color: var(--mecha-accent); }
+.quota-card.quota-card--skin-mecha-light .token-turn-effort-text { color: var(--mecha-accent); }
+.quota-card.quota-card--skin-mecha-light .token-value,
+.quota-card.quota-card--skin-mecha-light .token-model-name,
+.quota-card.quota-card--skin-mecha-light .token-label { color: #273e5c; }
+.quota-card.quota-card--skin-mecha-light .token-exact { color: #24354d; background: #f6f9fc; border: 1px solid #8d9eb3; }
+.quota-card.quota-card--skin-mecha-light .error-state strong,
+.quota-card.quota-card--skin-mecha-light .error-state p,
+.quota-card.quota-card--skin-mecha-light .status-icon { color: #50627b; text-shadow: none; }
+.quota-card.quota-card--skin-mecha-light .error-refresh-button { color: #244c7c; background: #f5f8fc; border-color: #8b9db2; box-shadow: 0 2px 3px #66758a22; }
+.quota-card.quota-card--skin-mecha-light .reset-credit-tip { background: #f5f8fc; color: #263b57; border-color: #94a6bc; }
+
+.quota-orb.quota-orb--skin-mecha-light,
+.quota-orb.quota-orb--skin-mecha-light.quota-orb--idle { opacity: 1; transition: none; }
+.quota-orb.quota-orb--skin-mecha-light .orb-metric { position: absolute; left: 9px; right: 9px; top: 24px; display: flex; align-items: baseline; justify-content: center; gap: 1px; line-height: 1; }
+.quota-orb.quota-orb--skin-mecha-light .orb-metric span { font-family: inherit; font-size: 27px; font-weight: 650; letter-spacing: -.035em; }
+.quota-orb.quota-orb--skin-mecha-light .orb-metric small { font-family: inherit; font-size: 11px; font-weight: 650; margin: 0; color: inherit; }
+.quota-orb.quota-orb--skin-mecha-light .mecha-progress--orb { position: absolute; left: 11px; right: 11px; top: 52px; margin: 0; height: 4px; gap: 1px; padding: 0 1px; border-width: .5px; border-radius: 1px; }
+.quota-orb.quota-orb--skin-mecha-light .orb-weekly-badge { top: 10px; left: 28px; width: 16px; height: 10px; color: #4c607b; background: transparent; box-shadow: none; }
+.quota-orb.quota-orb--skin-mecha-light .orb-weekly-badge svg { display: none; }
+.quota-orb.quota-orb--skin-mecha-light .orb-weekly-badge b { position: static; font-size: 8px; line-height: 10px; }
+.quota-orb.quota-orb--skin-mecha-light .orb-unavailable { color: #61758e; background: transparent; border: 0; box-shadow: none; backdrop-filter: none; }

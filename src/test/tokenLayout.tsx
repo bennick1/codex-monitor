@@ -16,6 +16,8 @@ export interface TokenLayoutFixtureOptions {
   stale: boolean;
   mode: "overview" | "models" | "turns";
   shortWindow?: boolean;
+  percent?: number;
+  opacityPercent?: number;
   orbState?: "healthy" | "caution" | "critical" | "stale" | "unavailable" | "signed_out";
 }
 
@@ -94,11 +96,16 @@ const settle = () => new Promise<void>((resolve) => requestAnimationFrame(() => 
 
 window.__renderTokenFixture = async (options) => {
   renderKey += 1;
+  const opacity = options.opacityPercent ?? 100;
+  rootNode.style.opacity = opacity < 100 ? `${opacity / 100}` : "";
+  rootNode.style.transform = opacity < 100 ? "translateZ(0)" : "";
   if (options.view === "orb") {
     const state = options.orbState ?? "healthy";
-    const percent = state === "critical" ? 8 : state === "caution" ? 35 : 74;
-    const status = state === "healthy" || state === "caution" || state === "critical" ? "ok" : state;
+    const percent = options.percent ?? (state === "critical" ? 8 : state === "caution" ? 35 : 74);
+    const status = options.percent !== undefined ? options.quotaStatus : state === "healthy" || state === "caution" || state === "critical" ? "ok" : state;
     const snapshot = quotaSnapshot(status, percent);
+    if (options.shortWindow === false) { snapshot.shortWindow = null; snapshot.weeklyWindow!.remainingPercent = percent; }
+    if (options.stale) snapshot.updatedAt = new Date(Date.now() - 31 * 60_000).toISOString();
     root.render(<QuotaOrb key={renderKey} snapshot={snapshot} language={options.language} theme={options.theme}
       skin={options.skin} style={DESKTOP_PALETTES[options.theme][paletteName(snapshot, percent)]}
       onDrag={() => {}} onHover={() => {}} />);
@@ -106,11 +113,12 @@ window.__renderTokenFixture = async (options) => {
     return;
   }
 
-  const snapshot = quotaSnapshot(options.quotaStatus);
-  if (options.shortWindow === false) snapshot.shortWindow = null;
+  const snapshot = quotaSnapshot(options.quotaStatus, options.percent ?? 74);
+  if (options.shortWindow === false) { snapshot.shortWindow = null; snapshot.weeklyWindow!.remainingPercent = options.percent ?? 42; }
+  if (options.stale) snapshot.updatedAt = new Date(Date.now() - 31 * 60_000).toISOString();
   root.render(<QuotaCard key={renderKey} snapshot={snapshot}
     preferences={{ locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null,
-      autoRotateSeconds: 12, language: options.language, appearance: options.theme, selectedSkin: options.skin }}
+      autoRotateSeconds: 12, language: options.language, appearance: options.theme, selectedSkin: options.skin, opacityPercent: 100 }}
     providerCount={1} onPrevious={() => {}} onNext={() => {}} onTogglePin={() => {}}
     onLock={() => {}} onToggleStayExpanded={() => {}} onDrag={() => {}} onHover={() => {}} onRefresh={() => {}}
     theme={options.theme} skin={options.skin} style={DESKTOP_PALETTES[options.theme][paletteName(snapshot, 74)]}

@@ -1,6 +1,15 @@
 import type { CSSProperties } from "react";
 import type { WidgetTheme } from "../types";
 
+// Mecha Light is one approved light material, also when the OS is dark.
+// Every number, progress segment and shell light derives from this same accent.
+export const MECHA_PALETTES = {
+  healthy: { "--mecha-accent": "#0867c8" },
+  caution: { "--mecha-accent": "#a96b08" },
+  critical: { "--mecha-accent": "#bc2438" },
+  unknown: { "--mecha-accent": "#66758a" },
+} satisfies Record<string, CSSProperties & { "--mecha-accent": string }>;
+
 export type DesktopPaletteName = "healthy" | "caution" | "critical" | "unavailable" | "stale" | "signed_out";
 export type DesktopPaletteStyle = CSSProperties & {
   "--cool": string;

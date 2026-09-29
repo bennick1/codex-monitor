@@ -16,6 +16,9 @@ import computerErrorStaleUrl from "../../assets/computer-error-stale.svg";
 import computerErrorSignedOutUrl from "../../assets/computer-error-signedout.svg";
 import computerOrbErrorScreenUrl from "../../assets/computer-orb-screen-error.svg";
 import computerOrbGptUrl from "../../assets/computer-orb-gpt.svg";
+import { MechaShell, MechaProgress } from "./MechaArtwork";
+import { mechaPalette, mechaPercent, mechaTier } from "../lib/mecha";
+import "../mecha.css";
 
 interface Props {
   tokens?: TokenStatisticsView;
@@ -114,15 +117,17 @@ export const QuotaCard = memo(function QuotaCard({
   const [showCreditTip, setShowCreditTip] = useState(initialShowCreditTip);
   const language = normalizeLanguage(preferences.language);
   const t = copy[language];
-  const primary = snapshot.shortWindow ? clampPercent(snapshot.shortWindow.remainingPercent) : null;
-  const weekly = snapshot.weeklyWindow ? clampPercent(snapshot.weeklyWindow.remainingPercent) : null;
+  const rawPrimary = mechaPercent(snapshot.shortWindow?.remainingPercent);
+  const rawWeekly = mechaPercent(snapshot.weeklyWindow?.remainingPercent);
+  const primary = skin === "mecha-light" ? (rawPrimary === null ? null : clampPercent(rawPrimary)) : snapshot.shortWindow ? clampPercent(snapshot.shortWindow.remainingPercent) : null;
+  const weekly = skin === "mecha-light" ? (rawWeekly === null ? null : clampPercent(rawWeekly)) : snapshot.weeklyWindow ? clampPercent(snapshot.weeklyWindow.remainingPercent) : null;
   const displayPercent = primary ?? weekly;
-  const displayWindow = snapshot.shortWindow ?? snapshot.weeklyWindow;
+  const displayWindow = skin === "mecha-light" && rawPrimary === null ? snapshot.weeklyWindow : snapshot.shortWindow ?? snapshot.weeklyWindow;
   const displayingWeeklyAsPrimary = primary === null && weekly !== null;
   const staleAge = Date.now() - new Date(snapshot.updatedAt).getTime();
   const staleExpired = snapshot.status === "stale" && staleAge > 30 * 60_000;
   const available = quotaAvailable(snapshot);
-  const tier = quotaTier(displayPercent);
+  const tier = skin === "mecha-light" ? mechaTier(snapshot) : quotaTier(displayPercent);
   const indicatorState = isConsuming ? "active" : snapshot.status === "ok" ? "ok" : snapshot.status === "stale" ? "stale" : "error";
   const indicatorLabel = isConsuming
     ? t.active
@@ -140,13 +145,14 @@ export const QuotaCard = memo(function QuotaCard({
 
   return (
     <main
-      className={`quota-card quota-card--height-${expandedHeightMode(snapshot)} quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}`}
-      style={style}
+      className={`quota-card quota-card--height-${expandedHeightMode(snapshot)} quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}${skin === "mecha-light" ? " quota-card--skin-mecha-light" : ""}`}
+      style={skin === "mecha-light" ? { ...style, ...mechaPalette(snapshot) } : style}
       onMouseEnter={() => onHover(true)}
       onMouseLeave={() => onHover(false)}
       onMouseDown={(event) => { if (event.button === 0) void onDrag(); }}
     >
       <div className="aurora" aria-hidden="true" />
+      {skin === "mecha-light" ? <MechaShell height={tokens ? (expandedHeightMode(snapshot) === "compact" ? 452 : 506) : 306} /> : null}
       <span className="sr-only" aria-live="polite">{available && displayPercent !== null ? (displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)) : message}</span>
       {notice ? <div className="operation-notice" role="status">{notice}</div> : null}
       <header className="card-header">
@@ -174,7 +180,9 @@ export const QuotaCard = memo(function QuotaCard({
           <section className="primary-metric" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)}>
             <span>{displayPercent}</span><small>%</small>
           </section>
-          {skin === "blur"
+          {skin === "mecha-light"
+            ? <MechaProgress percent={rawPrimary ?? rawWeekly ?? 0} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
+            : skin === "blur"
             ? <BlurProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
             : skin === "computer"
               ? <ComputerProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
@@ -225,11 +233,13 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
   const idleTimer = useRef<number | null>(null);
   const activeLanguage = normalizeLanguage(language);
   const t = copy[activeLanguage];
-  const primary = snapshot.shortWindow ? clampPercent(snapshot.shortWindow.remainingPercent) : null;
-  const weekly = snapshot.weeklyWindow ? clampPercent(snapshot.weeklyWindow.remainingPercent) : null;
+  const rawPrimary = mechaPercent(snapshot.shortWindow?.remainingPercent);
+  const rawWeekly = mechaPercent(snapshot.weeklyWindow?.remainingPercent);
+  const primary = skin === "mecha-light" ? (rawPrimary === null ? null : clampPercent(rawPrimary)) : snapshot.shortWindow ? clampPercent(snapshot.shortWindow.remainingPercent) : null;
+  const weekly = skin === "mecha-light" ? (rawWeekly === null ? null : clampPercent(rawWeekly)) : snapshot.weeklyWindow ? clampPercent(snapshot.weeklyWindow.remainingPercent) : null;
   const displayPercent = primary ?? weekly;
   const displayingWeeklyAsPrimary = primary === null && weekly !== null;
-  const tier = quotaTier(displayPercent);
+  const tier = skin === "mecha-light" ? mechaTier(snapshot) : quotaTier(displayPercent);
   const available = snapshot.status === "ok" && displayPercent !== null;
   const computerScreen = tier === "caution"
     ? computerOrbCautionUrl
@@ -256,14 +266,15 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
 
   return (
     <main
-      className={`quota-orb quota-card--${snapshot.status} quota-card--${tier}${theme ? ` quota-orb--theme-${theme}` : ""}${skin === "blur" ? " quota-orb--skin-blur" : ""}${skin === "computer" ? " quota-orb--skin-computer" : ""}${displayingWeeklyAsPrimary ? " quota-orb--weekly" : ""}${idle ? " quota-orb--idle" : ""}`}
-      style={style}
+      className={`quota-orb quota-card--${snapshot.status} quota-card--${tier}${theme ? ` quota-orb--theme-${theme}` : ""}${skin === "blur" ? " quota-orb--skin-blur" : ""}${skin === "computer" ? " quota-orb--skin-computer" : ""}${skin === "mecha-light" ? " quota-orb--skin-mecha-light" : ""}${displayingWeeklyAsPrimary ? " quota-orb--weekly" : ""}${idle ? " quota-orb--idle" : ""}`}
+      style={skin === "mecha-light" ? { ...style, ...mechaPalette(snapshot) } : style}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => onHover(false)}
       onMouseDown={(event) => { if (event.button === 0) void onDrag(); }}
       aria-label={available ? (displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent!) : t.availableLabel(displayPercent!)) : localizedBackendMessage(snapshot.message, activeLanguage) ?? t.unavailableStatus}
     >
       <div className="aurora" aria-hidden="true" />
+      {skin === "mecha-light" ? <MechaShell height={72} orb /> : null}
       {skin === "computer" ? <img className="computer-orb-base" src={computerOrbBaseUrl} alt="" aria-hidden="true" /> : null}
       {skin === "computer" ? <img className="computer-orb-screen" src={available ? computerScreen : computerOrbErrorScreenUrl} alt="" aria-hidden="true" /> : null}
       {available && displayingWeeklyAsPrimary && skin !== "computer" ? (
@@ -286,6 +297,7 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
             : <StatusIcon status={snapshot.status} />}
         </section>
       )}
+      {skin === "mecha-light" && available ? <MechaProgress percent={rawPrimary ?? rawWeekly ?? 0} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent!) : t.availableLabel(displayPercent!)} orb /> : null}
     </main>
   );
 });
