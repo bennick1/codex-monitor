@@ -3,7 +3,7 @@
 Reference set: `CM-v1.3.0-Mecha-Light-Approved-v1`
 
 - 用户视觉方向确认：**APPROVED**。
-- 四张完整 PNG 的仓库导入：**PENDING**。本说明及校验清单先行入库；不能据此声称图片已经入库。
+- 四张完整 PNG 的仓库导入：**IMPORTED — VERIFIED**。独立导入提交 `6e60626dd148ebbc1361e86ef45ac4ccc08c4866`；四图本地完整解码、尺寸、字节数、SHA-256 和 Git blob SHA-1 均匹配冻结清单，远端按该提交读回四图并再次解码及逐字节比对通过。详见 [导入证据](reference-import-verification.json)。
 - 生产皮肤实现与人工视觉验收：**PENDING**。
 
 本文件是 v1.3.0 主任务书的视觉补充，不重开设计，不改变 Fast 修复、全皮肤整体不透明度和既有构建流程。用户已要求按已确认图片实现，不能仅根据“机甲风”文字描述自由发挥。

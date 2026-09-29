@@ -1,0 +1,38 @@
+{
+  "referenceImportCommit": "6e60626dd148ebbc1361e86ef45ac4ccc08c4866",
+  "referenceSet": "CM-v1.3.0-Mecha-Light-Approved-v1",
+  "files": [
+    {
+      "path": "references/expanded-three-states.png",
+      "bytes": 2564146,
+      "blobSha": "1b2d573da2ee88b1b450a894146ef8dcd809954f",
+      "sha256": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+      "remoteDecode": "passed",
+      "byteIdentity": "passed"
+    },
+    {
+      "path": "references/collapsed-blue.png",
+      "bytes": 1379625,
+      "blobSha": "d4dce93b0fa755cf40dd9847e15cb07c327aebc8",
+      "sha256": "b4cfc24bef227b7d911ebc98aac4493dddfd71c69f9a0ac9268650bf0e26cc1a",
+      "remoteDecode": "passed",
+      "byteIdentity": "passed"
+    },
+    {
+      "path": "references/collapsed-amber.png",
+      "bytes": 1360654,
+      "blobSha": "4bf3086d1c0c5735547dfb004960dd0d1bca095d",
+      "sha256": "e0cee4c46cfa2f0f3bc08eb00cb0bde9308968594a403d1d4df8cddb4fa4cc15",
+      "remoteDecode": "passed",
+      "byteIdentity": "passed"
+    },
+    {
+      "path": "references/collapsed-red.png",
+      "bytes": 1365003,
+      "blobSha": "326acba38509e96cac909b266d052b99f5003ccc",
+      "sha256": "e8aafebb45f7e1416ba0af9ce215d25e13f9be08d95cf5818a3828442f2ce73a",
+      "remoteDecode": "passed",
+      "byteIdentity": "passed"
+    }
+  ]
+}
