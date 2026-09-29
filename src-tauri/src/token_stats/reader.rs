@@ -419,9 +419,10 @@ fn backfill_models(
     Ok(())
 }
 
-/// Rebuild old source-conflict contamination only when ALL previously observed
-/// sources can be verified. Otherwise add available evidence conservatively:
-/// absence is never permission to erase persisted conflict evidence.
+/// Revision 1 repaired model attribution; revision 2 replays Fast metadata.
+/// Clear Fast results only when every observed source for the affected thread
+/// can be verified. An unowned/conflicted missing source blocks clearing, because
+/// its historical contribution cannot be safely localized to a thread.
 /// This entry point performs metadata work only; it never ingests new Token facts.
 pub(super) fn repair_models(
     db: &mut Connection,
@@ -430,12 +431,13 @@ pub(super) fn repair_models(
     coverage: &mut Coverage,
 ) -> Result<bool> {
     let (path, root) = source.resolve()?;
-    let done: bool = db.query_row(
-        "SELECT EXISTS(SELECT 1 FROM model_repairs WHERE root=?1 AND revision=1)",
+    const REVISION: i64 = 2;
+    let revision: i64 = db.query_row(
+        "SELECT COALESCE(MAX(revision),0) FROM model_repairs WHERE root=?1",
         [&root],
         |r| r.get(0),
     )?;
-    if done {
+    if revision >= REVISION {
         return Ok(false);
     }
     // Freeze accounting checkpoints for the one-time metadata repair. Concurrent
@@ -451,6 +453,8 @@ pub(super) fn repair_models(
     // Verify before replacing metadata. Keep the verified handles for replay.
     let mut files = Vec::new();
     let mut complete = true;
+    let mut unavailable_threads = HashSet::new();
+    let mut unavailable_owner = false;
     for (cp, relative) in checkpoints {
         let candidate = path.join(relative);
         let checked = (|| -> Result<File> {
@@ -485,7 +489,21 @@ pub(super) fn repair_models(
         match checked {
             Ok(file) => files.push((cp, file)),
             Err(e) if e.0 == "scanCancelled" || e.0.starts_with("database") => return Err(e),
-            Err(_) => complete = false,
+            Err(_) => {
+                complete = false;
+                // Empty/partial-only sources have contributed no committed
+                // metadata. Missing them cannot hide contrary Fast evidence.
+                // A committed but unparsed line still retains the unknown-owner
+                // guard below; only the accounting checkpoint proves emptiness.
+                if cp.offset == 0 {
+                    continue;
+                }
+                if cp.cursor.identity_conflict || cp.cursor.thread.is_none() {
+                    unavailable_owner = true;
+                } else if let Some(thread) = &cp.cursor.thread {
+                    unavailable_threads.insert(thread.clone());
+                }
+            }
         }
     }
     if files.is_empty() {
@@ -501,9 +519,29 @@ pub(super) fn repair_models(
             return Err("checkpointConflict".into());
         }
     }
-    if complete {
+    if complete && revision < 1 {
         tx.execute("DELETE FROM model_identities WHERE root=?1", [&root])?;
         tx.execute("DELETE FROM model_turns WHERE root=?1", [&root])?;
+    } else if complete {
+        // The repair is supplementary: retain model/effort/completion metadata,
+        // identities, accounting facts/cursors, and quota observations exactly.
+        tx.execute(
+            "UPDATE model_turns SET fast_mode=NULL,fast_conflict=0 WHERE root=?1",
+            [&root],
+        )?;
+    } else if !unavailable_owner {
+        let verified_threads: HashSet<_> = files
+            .iter()
+            .filter(|(cp, _)| !cp.cursor.identity_conflict)
+            .filter_map(|(cp, _)| cp.cursor.thread.as_ref())
+            .filter(|thread| !unavailable_threads.contains(*thread))
+            .collect();
+        for thread in verified_threads {
+            tx.execute(
+                "UPDATE model_turns SET fast_mode=NULL,fast_conflict=0 WHERE root=?1 AND thread=?2",
+                params![root, thread],
+            )?;
+        }
     }
     for (cp, mut file) in files {
         let mut context = super::attribution::Context::default();
@@ -545,8 +583,8 @@ pub(super) fn repair_models(
     }
     if complete {
         tx.execute(
-            "INSERT INTO model_repairs VALUES(?1,1) ON CONFLICT(root) DO UPDATE SET revision=1",
-            [&root],
+            "INSERT INTO model_repairs VALUES(?1,?2) ON CONFLICT(root) DO UPDATE SET revision=excluded.revision",
+            params![root, REVISION],
         )?;
     }
     store::bump(&tx)?;

@@ -3638,9 +3638,12 @@ fn fast_fact(thread: &str, id: &str, total: i64) -> Value {
 fn fast_settings_service_tier_mapping_is_tristate() {
     for (tier, expected) in [
         (Some("priority"), json!(true)),
+        (Some("fast"), json!(true)),
         (Some("default"), json!(false)),
         (None, Value::Null),
         (Some("future-tier"), Value::Null),
+        (Some("fastest"), Value::Null),
+        (Some("FAST"), Value::Null),
     ] {
         let mut h = Harness::new();
         write(
@@ -3735,8 +3738,8 @@ fn fast_unknown_or_missing_settings_reset_fallback() {
 }
 
 #[test]
-fn fast_repeated_context_agreement_and_conflict_remain_sticky() {
-    for (second, expected) in [("priority", json!(true)), ("default", Value::Null)] {
+fn fast_continuous_repeated_context_keeps_the_turns_initial_setting() {
+    for second in ["priority", "default"] {
         let mut h = Harness::new();
         write(
             &h.log(),
@@ -3753,14 +3756,14 @@ fn fast_repeated_context_agreement_and_conflict_remain_sticky() {
             ],
         );
         h.scan();
-        assert_eq!(fast_rows(&mut h), vec![expected.clone()]);
+        assert_eq!(fast_rows(&mut h), vec![json!(true)]);
         h.restart();
         append(
             &h.log(),
             &[fast_settings("main", Some("priority")), fast_turn("a")],
         );
         h.scan();
-        assert_eq!(fast_rows(&mut h), vec![expected]);
+        assert_eq!(fast_rows(&mut h), vec![json!(true)]);
         assert_eq!(h.total(), "10");
     }
 }
@@ -3792,8 +3795,8 @@ fn fast_timeline_resets_and_thread_conflicts_clear_fallback() {
     for reset in [
         meta("main"),
         meta("other"),
-        json!({"type":"compacted","payload":{}}),
         json!({"type":"event_msg","payload":{"type":"thread_rolled_back"}}),
+        json!({"type":"event_msg","payload":{"type":"thread_forked"}}),
     ] {
         let mut h = Harness::new();
         write(
@@ -4066,4 +4069,419 @@ fn fast_changed_session_identity_cannot_regain_settings_trust() {
         .unwrap(),
         0
     );
+}
+
+#[test]
+fn fast_compaction_carries_settings_and_preserves_active_turn_across_restart() {
+    for compacted in [
+        json!({"type":"compacted","payload":{}}),
+        json!({"type":"event_msg","payload":{"type":"context_compacted"}}),
+    ] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                compacted.clone(),
+            ],
+        );
+        h.scan();
+        h.restart();
+        append(
+            &h.log(),
+            &[
+                fast_settings("main", Some("default")),
+                fast_turn("a"),
+                completed_turn("a", AT),
+                fast_turn("b"),
+                fast_fact("main", "b", 20),
+                completed_turn("b", "2026-09-05T01:01:00Z"),
+                fast_settings("main", Some("priority")),
+                compacted,
+                fast_turn("c"),
+                fast_fact("main", "c", 30),
+                completed_turn("c", "2026-09-05T01:02:00Z"),
+            ],
+        );
+        h.scan();
+        assert_eq!(
+            fast_rows(&mut h),
+            vec![json!(true), json!(false), json!(true)]
+        );
+        let accounting = accounting_dump(&h.db);
+        let rows = by_turn(&mut h);
+        h.restart();
+        h.scan();
+        assert_eq!(by_turn(&mut h), rows);
+        assert_eq!(accounting_dump(&h.db), accounting);
+    }
+}
+
+#[test]
+fn fast_repeated_context_cannot_retroactively_fill_an_unknown_turn() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_turn("a"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+            fast_turn("b"),
+            fast_fact("main", "b", 20),
+            completed_turn("b", "2026-09-05T01:01:00Z"),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![json!(true), Value::Null]);
+}
+
+#[test]
+fn fast_setting_after_completion_never_backdates_an_unobserved_initial_selection() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+            fast_settings("main", Some("priority")),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+    request_fast_v2_repair(&h);
+    h.restart();
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+}
+
+#[test]
+fn fast_active_turn_checkpoint_survives_internal_reader_batch_boundary() {
+    let mut h = Harness::new();
+    let padding = json!({"type":"response_item","payload":{"ignored":"x".repeat(4 * 1024 * 1024)}});
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            padding.clone(),
+            padding,
+            fast_settings("main", Some("default")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![json!(true)]);
+    let accounting = accounting_dump(&h.db);
+    h.restart();
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![json!(true)]);
+    assert_eq!(accounting_dump(&h.db), accounting);
+}
+
+#[test]
+fn fast_independent_sources_and_noncontinuous_turn_reuse_keep_real_conflicts() {
+    for boundary in [
+        vec![fast_turn("b")],
+        vec![completed_turn("a", AT)],
+        vec![json!({"type":"event_msg","payload":{"type":"task_started"}})],
+    ] {
+        let mut h = Harness::new();
+        let mut values = vec![
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+        ];
+        values.extend(boundary);
+        values.extend([
+            fast_settings("main", Some("default")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ]);
+        write(&h.log(), &values);
+        h.scan();
+        assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+        assert_eq!(
+            h.db.query_row(
+                "SELECT fast_conflict FROM model_turns WHERE fast_mode IS NOT NULL",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            1
+        );
+    }
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    write(
+        &h.home.join("sessions/independent.jsonl"),
+        &[
+            meta("main"),
+            fast_settings("main", Some("default")),
+            fast_turn("a"),
+        ],
+    );
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+    h.restart();
+    h.scan();
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+}
+
+fn request_fast_v2_repair(h: &Harness) {
+    h.db.execute("UPDATE model_repairs SET revision=1", [])
+        .unwrap();
+}
+
+#[test]
+fn fast_v2_replay_repairs_false_null_and_obsolete_conflict_without_touching_accounting() {
+    for previous in [
+        "fast_mode=0,fast_conflict=0",
+        "fast_mode=NULL,fast_conflict=0",
+        "fast_mode=1,fast_conflict=1",
+    ] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("fast")),
+                json!({"type":"compacted","payload":{}}),
+                fast_turn("a"),
+                fast_settings("main", Some("default")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        h.scan();
+        observation(&mut h, AT, 65.0, &quota_window().resets_at).unwrap();
+        let correct = by_turn(&mut h);
+        assert_eq!(fast_rows(&mut h), vec![json!(true)]);
+        h.db.execute(&format!("UPDATE model_turns SET {previous}"), [])
+            .unwrap();
+        request_fast_v2_repair(&h);
+        let accounting = accounting_dump(&h.db);
+        let quota = metadata_table_dump(&h.db, "quota_snapshots");
+        let identities = metadata_table_dump(&h.db, "model_identities");
+        for expected_repair in [true, false] {
+            assert_eq!(
+                super::reader::repair_models(
+                    &mut h.db,
+                    &h.source,
+                    &AtomicBool::new(false),
+                    &mut Default::default()
+                )
+                .unwrap(),
+                expected_repair
+            );
+            assert_eq!(by_turn(&mut h), correct);
+            assert_eq!(accounting_dump(&h.db), accounting);
+            assert_eq!(metadata_table_dump(&h.db, "quota_snapshots"), quota);
+            assert_eq!(metadata_table_dump(&h.db, "model_identities"), identities);
+            assert_eq!(
+                h.db.query_row("PRAGMA user_version", [], |r| r.get::<_, i64>(0))
+                    .unwrap(),
+                4
+            );
+        }
+        h.restart();
+        h.scan();
+        assert_eq!(by_turn(&mut h), correct);
+        assert_eq!(accounting_dump(&h.db), accounting);
+    }
+}
+
+#[test]
+fn fast_v2_replay_preserves_genuine_conflict_and_missing_source_unknown() {
+    for missing in [false, true] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        let other = h.home.join("sessions/independent.jsonl");
+        write(
+            &other,
+            &[
+                meta("main"),
+                fast_settings("main", Some("default")),
+                fast_turn("a"),
+            ],
+        );
+        h.scan();
+        request_fast_v2_repair(&h);
+        if missing {
+            fs::remove_file(other).unwrap();
+        }
+        let before = accounting_dump(&h.db);
+        assert!(super::reader::repair_models(
+            &mut h.db,
+            &h.source,
+            &AtomicBool::new(false),
+            &mut Default::default()
+        )
+        .unwrap());
+        assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+        assert_eq!(
+            h.db.query_row("SELECT fast_conflict FROM model_turns", [], |r| r
+                .get::<_, i64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(accounting_dump(&h.db), before);
+    }
+}
+
+#[test]
+fn fast_v2_replay_can_repair_verified_thread_when_unrelated_clean_source_is_missing() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    let missing = h.home.join("sessions/missing.jsonl");
+    write(
+        &missing,
+        &[
+            meta("missing"),
+            fast_turn("b"),
+            fast_fact("missing", "b", 10),
+            completed_turn("b", "2026-09-05T01:01:00Z"),
+        ],
+    );
+    h.scan();
+    h.db.execute(
+        "UPDATE model_turns SET fast_mode=NULL,fast_conflict=1 WHERE fast_mode=1",
+        [],
+    )
+    .unwrap();
+    request_fast_v2_repair(&h);
+    fs::remove_file(missing).unwrap();
+    let before = accounting_dump(&h.db);
+    for _ in 0..2 {
+        assert!(super::reader::repair_models(
+            &mut h.db,
+            &h.source,
+            &AtomicBool::new(false),
+            &mut Default::default()
+        )
+        .unwrap());
+        assert_eq!(fast_rows(&mut h), vec![Value::Null, json!(true)]);
+        assert_eq!(accounting_dump(&h.db), before);
+    }
+}
+
+#[test]
+fn fast_v2_replay_with_unlocalized_missing_source_never_clears_conflicts() {
+    let mut h = Harness::new();
+    write(
+        &h.log(),
+        &[
+            meta("main"),
+            fast_settings("main", Some("priority")),
+            fast_turn("a"),
+            fast_fact("main", "a", 10),
+            completed_turn("a", AT),
+        ],
+    );
+    let missing = h.home.join("sessions/missing.jsonl");
+    write(&missing, &[meta("another"), meta("main"), fast_turn("a")]);
+    h.scan();
+    h.db.execute("UPDATE model_turns SET fast_conflict=1", [])
+        .unwrap();
+    request_fast_v2_repair(&h);
+    fs::remove_file(missing).unwrap();
+    assert!(super::reader::repair_models(
+        &mut h.db,
+        &h.source,
+        &AtomicBool::new(false),
+        &mut Default::default()
+    )
+    .unwrap());
+    assert_eq!(fast_rows(&mut h), vec![Value::Null]);
+}
+
+#[test]
+fn fast_v2_replay_missing_uncommitted_source_does_not_block_verified_thread() {
+    for (contents, expected_offset, repaired) in [
+        ("", 0, true),
+        ("{\"type\":", 0, true),
+        ("not-json\n", 9, false),
+    ] {
+        let mut h = Harness::new();
+        write(
+            &h.log(),
+            &[
+                meta("main"),
+                fast_settings("main", Some("priority")),
+                fast_turn("a"),
+                fast_fact("main", "a", 10),
+                completed_turn("a", AT),
+            ],
+        );
+        let missing = h.home.join("sessions/missing.jsonl");
+        fs::write(&missing, contents).unwrap();
+        h.scan();
+        assert_eq!(
+            h.db.query_row(
+                "SELECT offset FROM source_files WHERE relative_path='sessions/missing.jsonl'",
+                [],
+                |r| r.get::<_, i64>(0)
+            )
+            .unwrap(),
+            expected_offset
+        );
+        h.db.execute("UPDATE model_turns SET fast_conflict=1", [])
+            .unwrap();
+        request_fast_v2_repair(&h);
+        fs::remove_file(missing).unwrap();
+        let before = accounting_dump(&h.db);
+        for _ in 0..2 {
+            assert!(super::reader::repair_models(
+                &mut h.db,
+                &h.source,
+                &AtomicBool::new(false),
+                &mut Default::default()
+            )
+            .unwrap());
+            assert_eq!(
+                fast_rows(&mut h),
+                vec![if repaired { json!(true) } else { Value::Null }]
+            );
+            assert_eq!(accounting_dump(&h.db), before);
+        }
+    }
 }
