@@ -1,6 +1,6 @@
 [package]
 name = "codex-monitor"
-version = "1.2.1"
+version = "1.3.0"
 description = "A lightweight, local-first Codex quota and token usage monitor"
 authors = ["Quota Float contributors"]
 license = "MIT"
