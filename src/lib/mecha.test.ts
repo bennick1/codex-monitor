@@ -3,7 +3,7 @@ import { mechaPalette, mechaPercent, mechaTier } from "./mecha";
 import type { ProviderSnapshot } from "../types";
 
 const snapshot = (percent: number): ProviderSnapshot => ({ provider: "codex", displayName: "CODEX", plan: null,
-  shortWindow: { remainingPercent: percent, resetsAt: null }, weeklyWindow: { remainingPercent: 70, resetsAt: null },
+  shortWindow: { remainingPercent: percent, resetsAt: null, windowSeconds: 18_000 }, weeklyWindow: { remainingPercent: 70, resetsAt: null, windowSeconds: 604_800 },
   resetCredits: null, resetCreditExpiresAt: [], updatedAt: new Date().toISOString(), status: "ok", message: null });
 
 describe("Mecha raw primary quota", () => {
