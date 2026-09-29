@@ -1,5 +1,5 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
 import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
@@ -8,16 +8,9 @@ import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
 import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
+import { DEFAULT_PREFERENCES as DEFAULT_PREFS, normalizePreferences } from "./lib/widgetPreferences";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
-const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
-const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
-  ...DEFAULT_PREFS,
-  ...value,
-  language: normalizeLanguage(value.language),
-  selectedSkin: normalizeSkin(value.selectedSkin),
-});
 const INITIAL_SNAPSHOT: ProviderSnapshot = {
   provider: "codex",
   displayName: "CODEX",
@@ -34,6 +27,26 @@ const INITIAL_SNAPSHOT: ProviderSnapshot = {
 export default function App() {
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
+  useLayoutEffect(() => {
+    // Keep the existing host/main composition intact. Applying the single
+    // opacity factor to the host also leaves each skin's child animation alone.
+    const root = document.getElementById("root");
+    if (!root) return;
+    const previousOpacity = root.style.opacity;
+    const previousTransform = root.style.transform;
+    const hadVisualRootClass = root.classList.contains("widget-visual-root");
+    root.classList.add("widget-visual-root");
+    root.style.opacity = String(preferences.opacityPercent / 100);
+    // Rasterize the existing host as one surface before applying opacity.
+    // This keeps fractional rounded edges on the same antialiasing path as
+    // the undimmed widget; the identity transform leaves layout unchanged.
+    if (preferences.opacityPercent < 100) root.style.transform = "translateZ(0)";
+    return () => {
+      root.style.opacity = previousOpacity;
+      root.style.transform = previousTransform;
+      if (!hadVisualRootClass) root.classList.remove("widget-visual-root");
+    };
+  }, [preferences.opacityPercent]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [compact, setCompact] = useState(true);

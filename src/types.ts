@@ -3,7 +3,7 @@ export type SnapshotStatus = "ok" | "stale" | "loading" | "unavailable" | "signe
 export type Language = "zh-CN" | "en";
 export type WidgetTheme = "light" | "dark";
 export type AppearancePreference = "system" | WidgetTheme;
-export type WidgetSkin = "default" | "blur" | "computer";
+export type WidgetSkin = "default" | "blur" | "computer" | "mecha-light";
 export interface UsageWindow {
   remainingPercent: number;
   resetsAt: string | null;
@@ -32,4 +32,5 @@ export interface WidgetPreferences {
   language: Language;
   appearance: AppearancePreference;
   selectedSkin: WidgetSkin;
+  opacityPercent: number;
 }

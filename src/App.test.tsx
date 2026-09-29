@@ -1,24 +1,108 @@
 // @vitest-environment jsdom
-import { StrictMode } from "react";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { StrictMode, type ReactElement } from "react";
+import { act, cleanup, fireEvent, render as renderInto, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { tokenSnapshot, totals } from "./test/tokenFixtures";
 
-const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn(), save: vi.fn(), drag: vi.fn() }));
 vi.mock("./lib/bridge", () => ({
   getTokenStatistics: api.get, listenTokenStatisticsUpdated: api.tokenListen, refreshTokenStatistics: api.refreshTokens,
   fetchSnapshots: api.quota, getPreferences: api.preferences, listenDesktopEvents: api.desktopListen,
-  setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: vi.fn(), setAlwaysOnTop: vi.fn(),
+  setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: api.drag, updatePreferences: api.save, setAlwaysOnTop: vi.fn(),
 }));
 vi.mock("./lib/releasePage", () => ({ openReleasePage: vi.fn() }));
 const prefs = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const quota = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 }, resetCredits: null, updatedAt: new Date().toISOString(), status: "ok", message: null };
 async function flush() { await act(async () => { await Promise.resolve(); }); }
+function render(node: ReactElement) {
+  // App mounts into this existing host in production; it never creates a new
+  // wrapper or moves the semantic main element when opacity changes.
+  const container = document.createElement("div");
+  container.id = "root";
+  document.body.append(container);
+  const view = renderInto(node, { container });
+  return { ...view, unmount() { view.unmount(); container.remove(); } };
+}
 beforeEach(() => {
   vi.useFakeTimers(); vi.resetAllMocks();
   api.get.mockResolvedValue(tokenSnapshot()); api.tokenListen.mockResolvedValue(() => {}); api.desktopListen.mockResolvedValue(() => {});
   api.expand.mockResolvedValue(undefined); api.quota.mockResolvedValue([quota]); api.preferences.mockResolvedValue(prefs); api.refreshTokens.mockResolvedValue({ queued: true });
+  api.save.mockResolvedValue(undefined);
+});
+
+describe("whole widget opacity with the production card and orb", () => {
+  it("uses only the existing host and cleans up its opacity on unmount", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, opacityPercent: 60 });
+    const view = render(<StrictMode><App /></StrictMode>); await flush();
+    expect(view.container.children).toHaveLength(1);
+    expect(view.container.firstElementChild).toBe(screen.getByRole("main"));
+    expect(view.container.style.opacity).toBe("0.6");
+    expect(view.container.style.transform).toBe("translateZ(0)");
+    expect(view.container.classList.contains("widget-visual-root")).toBe(true);
+    view.unmount();
+    expect(view.container.style.opacity).toBe("");
+    expect(view.container.style.transform).toBe("");
+    expect(view.container.classList.contains("widget-visual-root")).toBe(false);
+  });
+
+  it.each(["default", "blur", "computer"])("keeps %s skin opacity across full/compact expansion, collapse and preference events", async (skin) => {
+    api.preferences.mockResolvedValue({ ...prefs, selectedSkin: skin, opacityPercent: 80 });
+    const view = render(<App />); await flush();
+    const root = view.container;
+    expect(root.style.opacity).toBe("0.8");
+    expect(screen.getByRole("main").parentElement).toBe(root);
+    expect(screen.getByRole("main").style.opacity).toBe("");
+    fireEvent.mouseDown(screen.getByRole("main"), { button: 0 });
+    expect(api.drag).toHaveBeenCalledOnce();
+    fireEvent.mouseEnter(screen.getByRole("main")); await flush();
+    expect(screen.getByRole("main").className).toContain("quota-card--height-full");
+    expect(root.style.opacity).toBe("0.8");
+    expect(root.contains(screen.getByRole("region", { name: "Token 用量" }))).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "保持常态展开" }));
+    expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ selectedSkin: skin, opacityPercent: 80, stayExpanded: true }));
+    expect(api.drag).toHaveBeenCalledOnce();
+
+    act(() => api.desktopListen.mock.calls.at(-1)![0].onPreferences({ ...prefs, selectedSkin: skin, opacityPercent: 60 }));
+    expect(root.style.opacity).toBe("0.6");
+    api.quota.mockResolvedValue([{ ...quota, shortWindow: null }]);
+    act(() => api.desktopListen.mock.calls.at(-1)![0].onRefresh()); await flush();
+    expect(screen.getByRole("main").className).toContain("quota-card--height-compact");
+    expect(root.style.opacity).toBe("0.6");
+    fireEvent.mouseLeave(screen.getByRole("main"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(180); });
+    expect(screen.getByRole("main").className).toContain("quota-orb");
+    expect(screen.getByRole("main").parentElement).toBe(root);
+    expect(root.style.opacity).toBe("0.6");
+    act(() => api.desktopListen.mock.calls.at(-1)![0].onPreferences({ ...prefs, selectedSkin: skin, opacityPercent: 100 }));
+    expect(root.style.opacity).toBe("1");
+    expect(root.style.transform).toBe("");
+  });
+
+  it("uses 100% for older preferences and safely normalizes incoming invalid values", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, selectedSkin: "computer", language: "en", alwaysOnTop: false });
+    const view = render(<App />); await flush();
+    const root = view.container;
+    expect(root.style.opacity).toBe("1");
+    expect(screen.getByRole("main").className).toContain("skin-computer");
+    for (const [input, expected] of [["60", "1"], [null, "1"], [Number.NaN, "1"], [0, "0.6"], [83, "0.85"]] as const) {
+      act(() => api.desktopListen.mock.calls.at(-1)![0].onPreferences({ ...prefs, selectedSkin: "computer", opacityPercent: input }));
+      expect(root.style.opacity).toBe(expected);
+      expect(screen.getByRole("main").className).toContain("skin-computer");
+    }
+  });
+
+  it.each(["loading", "unavailable", "signed_out", "stale"])("dims %s states in both widget modes", async (status) => {
+    api.preferences.mockResolvedValue({ ...prefs, opacityPercent: 60 });
+    api.quota.mockResolvedValue([{ ...quota, status, shortWindow: null, weeklyWindow: null }]);
+    const view = render(<App />); await flush();
+    const root = view.container;
+    expect(root.style.opacity).toBe("0.6");
+    fireEvent.mouseEnter(screen.getByRole("main")); await flush();
+    expect(root.style.opacity).toBe("0.6");
+    expect(screen.getByRole("main").parentElement).toBe(root);
+    expect(screen.getByRole("main").style.opacity).toBe("");
+  });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 describe("App hover integration with the real TokenUsage component", () => {

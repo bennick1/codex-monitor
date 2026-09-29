@@ -56,6 +56,11 @@ pub struct WidgetPreferences {
     pub appearance: String,
     #[serde(default = "default_skin")]
     pub selected_skin: String,
+    #[serde(
+        default = "default_opacity_percent",
+        deserialize_with = "deserialize_opacity_percent"
+    )]
+    pub opacity_percent: u8,
 }
 
 fn default_always_on_top() -> bool {
@@ -70,6 +75,28 @@ fn default_appearance() -> String {
 fn default_skin() -> String {
     "default".into()
 }
+fn default_opacity_percent() -> u8 {
+    100
+}
+
+fn normalize_opacity_percent(value: f64) -> u8 {
+    if !value.is_finite() {
+        return default_opacity_percent();
+    }
+    ((value.clamp(60.0, 100.0) / 5.0).round() * 5.0) as u8
+}
+
+fn deserialize_opacity_percent<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // A malformed new field must not discard otherwise valid older settings.
+    let value = serde_json::Value::deserialize(deserializer)?;
+    Ok(value
+        .as_f64()
+        .map(normalize_opacity_percent)
+        .unwrap_or_else(default_opacity_percent))
+}
 impl Default for WidgetPreferences {
     fn default() -> Self {
         Self {
@@ -81,12 +108,14 @@ impl Default for WidgetPreferences {
             language: default_language(),
             appearance: default_appearance(),
             selected_skin: default_skin(),
+            opacity_percent: default_opacity_percent(),
         }
     }
 }
 
 impl WidgetPreferences {
     pub fn normalized(mut self) -> Self {
+        self.opacity_percent = normalize_opacity_percent(f64::from(self.opacity_percent));
         self.auto_rotate_seconds = self.auto_rotate_seconds.clamp(5, 300);
         if self.pinned_provider.as_deref() != Some("codex") {
             self.pinned_provider = None;
@@ -97,9 +126,39 @@ impl WidgetPreferences {
         if self.appearance != "system" && self.appearance != "light" && self.appearance != "dark" {
             self.appearance = default_appearance();
         }
-        if !matches!(self.selected_skin.as_str(), "default" | "blur" | "computer") {
+        if !matches!(
+            self.selected_skin.as_str(),
+            "default" | "blur" | "computer" | "mecha-light"
+        ) {
             self.selected_skin = default_skin();
         }
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn opacity_normalization_handles_non_finite_boundaries_and_steps() {
+        for value in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            assert_eq!(normalize_opacity_percent(value), 100);
+        }
+        for (value, expected) in [
+            (-1.0, 60),
+            (0.0, 60),
+            (59.9, 60),
+            (60.0, 60),
+            (62.49, 60),
+            (62.5, 65),
+            (79.0, 80),
+            (80.0, 80),
+            (97.5, 100),
+            (100.0, 100),
+            (150.0, 100),
+        ] {
+            assert_eq!(normalize_opacity_percent(value), expected);
+        }
     }
 }

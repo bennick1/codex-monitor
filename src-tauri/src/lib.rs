@@ -63,13 +63,44 @@ const POSITION_EPSILON: u32 = 2;
 const DEFAULT_SKIN_ID: &str = "default";
 const BLUR_SKIN_ID: &str = "blur";
 const COMPUTER_SKIN_ID: &str = "computer";
+const MECHA_LIGHT_SKIN_ID: &str = "mecha-light";
 const SKIN_BLUR_MENU_ID: &str = "skin-blur";
 const SKIN_COMPUTER_MENU_ID: &str = "skin-computer";
+const SKIN_MECHA_LIGHT_MENU_ID: &str = "skin-mecha-light";
+const OPACITY_PERCENT_OPTIONS: [u8; 9] = [60, 65, 70, 75, 80, 85, 90, 95, 100];
+const OPACITY_RESET_MENU_ID: &str = "opacity-reset";
+
+fn opacity_percent_for_menu_id(menu_id: &str) -> Option<u8> {
+    if menu_id == OPACITY_RESET_MENU_ID {
+        return Some(100);
+    }
+    OPACITY_PERCENT_OPTIONS
+        .into_iter()
+        .find(|value| menu_id == format!("opacity-{value}"))
+}
+
+fn preferences_for_opacity_menu(
+    preferences: &WidgetPreferences,
+    menu_id: &str,
+) -> Option<WidgetPreferences> {
+    let mut next = preferences.clone();
+    next.opacity_percent = opacity_percent_for_menu_id(menu_id)?;
+    Some(next.normalized())
+}
+
+fn opacity_menu_labels(language: &str) -> (&'static str, &'static str) {
+    if language == "en" {
+        ("Opacity", "Reset to 100%")
+    } else {
+        ("不透明度", "恢复 100%")
+    }
+}
 
 fn skin_for_menu_id(menu_id: &str) -> Option<&'static str> {
     match menu_id {
         SKIN_BLUR_MENU_ID => Some(BLUR_SKIN_ID),
         SKIN_COMPUTER_MENU_ID => Some(COMPUTER_SKIN_ID),
+        SKIN_MECHA_LIGHT_MENU_ID => Some(MECHA_LIGHT_SKIN_ID),
         _ => None,
     }
 }
@@ -98,10 +129,11 @@ fn preferences_for_theme_menu(
     Some(next.normalized())
 }
 
-fn skin_check_state(selected_skin: &str) -> (bool, bool) {
+fn skin_check_state(selected_skin: &str) -> (bool, bool, bool) {
     (
         selected_skin == BLUR_SKIN_ID,
         selected_skin == COMPUTER_SKIN_ID,
+        selected_skin == MECHA_LIGHT_SKIN_ID,
     )
 }
 
@@ -112,6 +144,7 @@ struct ThemeMenuLabels {
     system: &'static str,
     dark: &'static str,
     light: &'static str,
+    mecha_light: &'static str,
 }
 
 fn theme_menu_labels(language: &str) -> ThemeMenuLabels {
@@ -122,6 +155,7 @@ fn theme_menu_labels(language: &str) -> ThemeMenuLabels {
             system: "Follow system",
             dark: "Dark",
             light: "Light",
+            mecha_light: "Mecha Light",
         }
     } else {
         ThemeMenuLabels {
@@ -130,6 +164,7 @@ fn theme_menu_labels(language: &str) -> ThemeMenuLabels {
             system: "跟随系统",
             dark: "深色",
             light: "浅色",
+            mecha_light: "浅色机甲",
         }
     }
 }
@@ -313,15 +348,17 @@ mod preference_migration_tests {
         let prefs = load_preferences(&dir.path().join("preferences.json"));
         assert_eq!(prefs.appearance, "light");
         assert_eq!(prefs.selected_skin, DEFAULT_SKIN_ID);
+        assert_eq!(prefs.opacity_percent, 100);
         assert_eq!(fs::read_dir(dir.path()).unwrap().count(), 0);
     }
 
     #[test]
-    fn stored_skin_accepts_only_the_three_builtin_values() {
+    fn stored_skin_accepts_only_the_four_builtin_values() {
         for (stored, expected) in [
             (DEFAULT_SKIN_ID, DEFAULT_SKIN_ID),
             (BLUR_SKIN_ID, BLUR_SKIN_ID),
             (COMPUTER_SKIN_ID, COMPUTER_SKIN_ID),
+            (MECHA_LIGHT_SKIN_ID, MECHA_LIGHT_SKIN_ID),
             ("whatever", DEFAULT_SKIN_ID),
         ] {
             let dir = tempfile::tempdir().unwrap();
@@ -339,6 +376,10 @@ mod preference_migration_tests {
             skin_for_menu_id(SKIN_COMPUTER_MENU_ID),
             Some(COMPUTER_SKIN_ID)
         );
+        assert_eq!(
+            skin_for_menu_id(SKIN_MECHA_LIGHT_MENU_ID),
+            Some(MECHA_LIGHT_SKIN_ID)
+        );
         assert_eq!(skin_for_menu_id("supporter-skin-blur"), None);
         assert_eq!(skin_for_menu_id("skin-unknown"), None);
     }
@@ -347,33 +388,53 @@ mod preference_migration_tests {
     fn tray_skin_selection_is_free_mutually_exclusive_and_restart_safe() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("preferences.json");
-        let original = WidgetPreferences::default();
+        let original = WidgetPreferences {
+            opacity_percent: 75,
+            ..WidgetPreferences::default()
+        };
 
         let blur = preferences_for_theme_menu(&original, SKIN_BLUR_MENU_ID).unwrap();
-        assert_eq!(skin_check_state(&blur.selected_skin), (true, false));
+        assert_eq!(skin_check_state(&blur.selected_skin), (true, false, false));
         persist_preferences(&path, &blur).unwrap();
         assert_eq!(
             skin_check_state(&load_preferences(&path).selected_skin),
-            (true, false)
+            (true, false, false)
         );
 
         let computer = preferences_for_theme_menu(&blur, SKIN_COMPUTER_MENU_ID).unwrap();
-        assert_eq!(skin_check_state(&computer.selected_skin), (false, true));
+        assert_eq!(
+            skin_check_state(&computer.selected_skin),
+            (false, true, false)
+        );
         persist_preferences(&path, &computer).unwrap();
         assert_eq!(
             skin_check_state(&load_preferences(&path).selected_skin),
-            (false, true)
+            (false, true, false)
         );
+
+        let mecha = preferences_for_theme_menu(&computer, SKIN_MECHA_LIGHT_MENU_ID).unwrap();
+        assert_eq!(skin_check_state(&mecha.selected_skin), (false, false, true));
+        assert_eq!(mecha.opacity_percent, 75);
+        persist_preferences(&path, &mecha).unwrap();
+        assert_eq!(
+            skin_check_state(&load_preferences(&path).selected_skin),
+            (false, false, true)
+        );
+        assert_eq!(load_preferences(&path).opacity_percent, 75);
 
         for (menu_id, appearance) in [
             ("theme-system", "system"),
             ("theme-dark", "dark"),
             ("theme-light", "light"),
         ] {
-            let default = preferences_for_theme_menu(&computer, menu_id).unwrap();
+            let default = preferences_for_theme_menu(&mecha, menu_id).unwrap();
             assert_eq!(default.appearance, appearance);
             assert_eq!(default.selected_skin, DEFAULT_SKIN_ID);
-            assert_eq!(skin_check_state(&default.selected_skin), (false, false));
+            assert_eq!(
+                skin_check_state(&default.selected_skin),
+                (false, false, false)
+            );
+            assert_eq!(default.opacity_percent, 75);
         }
         assert!(preferences_for_theme_menu(&original, "supporter-skin-blur").is_none());
     }
@@ -381,11 +442,13 @@ mod preference_migration_tests {
     #[test]
     fn tray_theme_labels_match_the_existing_chinese_and_english_structure() {
         let zh = theme_menu_labels("zh-CN");
+        assert_eq!(zh.mecha_light, "浅色机甲");
         assert_eq!(
             [zh.theme, zh.default_skin, zh.system, zh.dark, zh.light],
             ["主题", "默认皮肤", "跟随系统", "深色", "浅色"]
         );
         let en = theme_menu_labels("en");
+        assert_eq!(en.mecha_light, "Mecha Light");
         assert_eq!(
             [en.theme, en.default_skin, en.system, en.dark, en.light],
             ["Theme", "Default skin", "Follow system", "Dark", "Light"]
@@ -428,7 +491,8 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 8);
+                assert_eq!(saved.as_object().unwrap().len(), 9);
+                assert_eq!(saved.get("opacityPercent"), Some(&serde_json::json!(100)));
                 assert_eq!(
                     saved.get("selectedSkin").and_then(|value| value.as_str()),
                     Some(expected_skin)
@@ -458,6 +522,109 @@ mod preference_migration_tests {
                 assert_eq!(recovered.selected_skin, expected_skin);
             }
         }
+    }
+
+    #[test]
+    fn opacity_load_normalizes_only_the_new_field_and_round_trips_all_preferences() {
+        let cases = [
+            (None, 100),
+            (Some(serde_json::json!(null)), 100),
+            (Some(serde_json::json!("80")), 100),
+            (Some(serde_json::json!(true)), 100),
+            (Some(serde_json::json!({"value": 80})), 100),
+            (Some(serde_json::json!([80])), 100),
+            (Some(serde_json::json!(-20)), 60),
+            (Some(serde_json::json!(62.49)), 60),
+            (Some(serde_json::json!(62.5)), 65),
+            (Some(serde_json::json!(80)), 80),
+            (Some(serde_json::json!(999)), 100),
+        ];
+        for (input, expected) in cases {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("preferences.json");
+            let mut old = serde_json::json!({
+                "locked": true, "alwaysOnTop": false, "stayExpanded": true,
+                "pinnedProvider": "codex", "autoRotateSeconds": 42,
+                "language": "en", "appearance": "system", "selectedSkin": "computer"
+            });
+            if let Some(input) = input {
+                old["opacityPercent"] = input;
+            }
+            fs::write(&path, serde_json::to_vec(&old).unwrap()).unwrap();
+            let prefs = load_preferences(&path);
+            assert_eq!(prefs.opacity_percent, expected);
+            assert!(prefs.locked && prefs.stay_expanded);
+            assert!(!prefs.always_on_top);
+            assert_eq!(prefs.pinned_provider.as_deref(), Some("codex"));
+            assert_eq!(prefs.auto_rotate_seconds, 42);
+            assert_eq!(prefs.language, "en");
+            assert_eq!(prefs.appearance, "system");
+            assert_eq!(prefs.selected_skin, "computer");
+            persist_preferences(&path, &prefs).unwrap();
+            let saved = serde_json::to_value(load_preferences(&path)).unwrap();
+            assert_eq!(saved, serde_json::to_value(&prefs).unwrap());
+            // The existing backup path restores the same opacity after a bad write.
+            persist_preferences(&path, &prefs).unwrap();
+            fs::write(&path, b"invalid").unwrap();
+            assert_eq!(
+                serde_json::to_value(load_preferences(&path)).unwrap(),
+                saved
+            );
+        }
+    }
+
+    #[test]
+    fn tray_opacity_selection_is_exclusive_and_persistent_in_both_languages() {
+        assert_eq!(opacity_menu_labels("zh-CN"), ("不透明度", "恢复 100%"));
+        assert_eq!(opacity_menu_labels("en"), ("Opacity", "Reset to 100%"));
+        for invalid in [
+            "opacity-55",
+            "opacity-105",
+            "opacity-080",
+            "opacity-80x",
+            "80",
+        ] {
+            assert!(opacity_percent_for_menu_id(invalid).is_none());
+        }
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("preferences.json");
+        let mut prefs = WidgetPreferences {
+            selected_skin: "blur".into(),
+            language: "en".into(),
+            always_on_top: false,
+            ..WidgetPreferences::default()
+        };
+        for percent in OPACITY_PERCENT_OPTIONS {
+            prefs = preferences_for_opacity_menu(&prefs, &format!("opacity-{percent}")).unwrap();
+            assert_eq!(prefs.opacity_percent, percent);
+            assert_eq!(
+                OPACITY_PERCENT_OPTIONS
+                    .iter()
+                    .filter(|value| **value == prefs.opacity_percent)
+                    .count(),
+                1
+            );
+            assert_eq!(prefs.selected_skin, "blur");
+            assert_eq!(prefs.language, "en");
+            assert!(!prefs.always_on_top);
+            persist_preferences(&path, &prefs).unwrap();
+            assert_eq!(load_preferences(&path).opacity_percent, percent);
+            for menu_id in [
+                SKIN_COMPUTER_MENU_ID,
+                SKIN_MECHA_LIGHT_MENU_ID,
+                "theme-system",
+                "theme-dark",
+                "theme-light",
+            ] {
+                let changed_theme = preferences_for_theme_menu(&prefs, menu_id).unwrap();
+                assert_eq!(changed_theme.opacity_percent, percent);
+            }
+        }
+        prefs.opacity_percent = 60;
+        let reset = preferences_for_opacity_menu(&prefs, OPACITY_RESET_MENU_ID).unwrap();
+        assert_eq!(reset.opacity_percent, 100);
+        persist_preferences(&path, &reset).unwrap();
+        assert_eq!(load_preferences(&path).opacity_percent, 100);
     }
 }
 
@@ -498,6 +665,21 @@ fn apply_theme_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPr
     let mut preferences = state.preferences.lock().ok()?;
     let normalized = preferences_for_theme_menu(&preferences, menu_id)?;
     persist_preferences(&state.preferences_path, &normalized).ok()?;
+    *preferences = normalized.clone();
+    let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
+    Some(normalized)
+}
+
+fn apply_opacity_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPreferences> {
+    let state = app.try_state::<AppState>()?;
+    let mut preferences = preferences_lock(&state);
+    let normalized = preferences_for_opacity_menu(&preferences, menu_id)?;
+    // Keep the current selection if saving fails; never leave menu checks ahead
+    // of the saved and rendered value.
+    if persist_preferences(&state.preferences_path, &normalized).is_err() {
+        eprintln!("opacity settings could not be saved");
+        return Some(preferences.clone());
+    }
     *preferences = normalized.clone();
     let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
     Some(normalized)
@@ -1529,6 +1711,14 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         false,
         None::<&str>,
     )?;
+    let skin_mecha_light = CheckMenuItem::with_id(
+        app,
+        SKIN_MECHA_LIGHT_MENU_ID,
+        "Mecha Light",
+        true,
+        false,
+        None::<&str>,
+    )?;
     let default_skin = Submenu::with_items(
         app,
         "Default skin / 默认皮肤",
@@ -1539,7 +1729,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         app,
         "Theme / 主题",
         true,
-        &[&default_skin, &skin_blur, &skin_computer],
+        &[&default_skin, &skin_blur, &skin_computer, &skin_mecha_light],
     )?;
     let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
     let autostart = CheckMenuItem::with_id(
@@ -1560,11 +1750,37 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+    let initial_opacity = app
+        .try_state::<AppState>()
+        .map(|state| preferences_lock(&state).opacity_percent)
+        .unwrap_or(100);
+    let opacity = Submenu::new(app, "Opacity / 不透明度", true)?;
+    let mut opacity_items = Vec::new();
+    for value in OPACITY_PERCENT_OPTIONS {
+        let item = CheckMenuItem::with_id(
+            app,
+            format!("opacity-{value}"),
+            format!("{value}%"),
+            true,
+            value == initial_opacity,
+            None::<&str>,
+        )?;
+        opacity.append(&item)?;
+        opacity_items.push((value, item));
+    }
+    let opacity_reset = MenuItem::with_id(
+        app,
+        OPACITY_RESET_MENU_ID,
+        "Reset to 100%",
+        true,
+        None::<&str>,
+    )?;
+    opacity.append(&opacity_reset)?;
     let settings = Submenu::with_items(
         app,
         "Settings / 设置",
         true,
-        &[&unlock, &pin, &language, &autostart],
+        &[&unlock, &pin, &language, &opacity, &autostart],
     )?;
     let initial_language = app
         .try_state::<AppState>()
@@ -1599,15 +1815,20 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let _ = theme_system.set_checked(initial_appearance == "system");
     let _ = theme_dark.set_checked(initial_appearance == "dark");
     let _ = theme_light.set_checked(initial_appearance == "light");
-    let (blur_checked, computer_checked) = skin_check_state(&initial_skin);
+    let (blur_checked, computer_checked, mecha_light_checked) = skin_check_state(&initial_skin);
     let _ = skin_blur.set_checked(blur_checked);
     let _ = skin_computer.set_checked(computer_checked);
+    let _ = skin_mecha_light.set_checked(mecha_light_checked);
     let initial_theme_labels = theme_menu_labels(&initial_language);
+    let (opacity_label, opacity_reset_label) = opacity_menu_labels(&initial_language);
+    let _ = opacity.set_text(opacity_label);
+    let _ = opacity_reset.set_text(opacity_reset_label);
     let _ = theme.set_text(initial_theme_labels.theme);
     let _ = default_skin.set_text(initial_theme_labels.default_skin);
     let _ = theme_system.set_text(initial_theme_labels.system);
     let _ = theme_dark.set_text(initial_theme_labels.dark);
     let _ = theme_light.set_text(initial_theme_labels.light);
+    let _ = skin_mecha_light.set_text(initial_theme_labels.mecha_light);
     if initial_language != "en" {
         let _ = show.set_text("显示 / 隐藏");
         let _ = refresh.set_text("立即刷新");
@@ -1654,6 +1875,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let theme_light_state = theme_light.clone();
     let skin_blur_state = skin_blur.clone();
     let skin_computer_state = skin_computer.clone();
+    let skin_mecha_light_state = skin_mecha_light.clone();
     let quit_menu = quit.clone();
     #[cfg(debug_assertions)]
     let test_short_window_menu = test_short_window.clone();
@@ -1754,6 +1976,11 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
                         let _ = theme_system_menu.set_text(labels.system);
                         let _ = theme_dark_menu.set_text(labels.dark);
                         let _ = theme_light_menu.set_text(labels.light);
+                        let _ = skin_mecha_light_state.set_text(labels.mecha_light);
+                        let (opacity_label, opacity_reset_label) =
+                            opacity_menu_labels(&normalized.language);
+                        let _ = opacity.set_text(opacity_label);
+                        let _ = opacity_reset.set_text(opacity_reset_label);
                         let _ = autostart_menu.set_text(if english {
                             "Start at login"
                         } else {
@@ -1768,15 +1995,24 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             | "theme-dark"
             | "theme-light"
             | SKIN_BLUR_MENU_ID
-            | SKIN_COMPUTER_MENU_ID => {
+            | SKIN_COMPUTER_MENU_ID
+            | SKIN_MECHA_LIGHT_MENU_ID => {
                 if let Some(normalized) = apply_theme_menu_selection(app, event.id.as_ref()) {
                     let _ = theme_system_state.set_checked(normalized.appearance == "system");
                     let _ = theme_dark_state.set_checked(normalized.appearance == "dark");
                     let _ = theme_light_state.set_checked(normalized.appearance == "light");
-                    let (blur_checked, computer_checked) =
+                    let (blur_checked, computer_checked, mecha_light_checked) =
                         skin_check_state(&normalized.selected_skin);
                     let _ = skin_blur_state.set_checked(blur_checked);
                     let _ = skin_computer_state.set_checked(computer_checked);
+                    let _ = skin_mecha_light_state.set_checked(mecha_light_checked);
+                }
+            }
+            menu_id if opacity_percent_for_menu_id(menu_id).is_some() => {
+                if let Some(normalized) = apply_opacity_menu_selection(app, menu_id) {
+                    for (value, item) in &opacity_items {
+                        let _ = item.set_checked(*value == normalized.opacity_percent);
+                    }
                 }
             }
             "autostart" => {
