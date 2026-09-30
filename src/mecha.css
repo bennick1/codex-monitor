@@ -49,17 +49,51 @@
 
 .quota-card.quota-card--skin-mecha-light .token-usage { color: #293d58; border-top: 1px solid #96a4b5; box-shadow: 0 -1px #fcfeff; }
 .quota-card.quota-card--skin-mecha-light .token-heading h2 { color: #273e5c; font-weight: 650; letter-spacing: .02em; }
-.quota-card.quota-card--skin-mecha-light .token-heading .token-switch { gap: 2px; padding: 1px; border-radius: 0; background: #a9b5c566; }
-.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button {
-  position: relative; color: #3e516a; border: 1px solid #9fabb9; border-radius: 0;
-  clip-path: polygon(7px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 7px);
-  background: linear-gradient(#f6f9fe, #ccd5df); box-shadow: inset 0 1px #fff;
+/* Only the three mode tabs: keep the existing 28px strip and button hit boxes.
+   The two clipped paint layers form nested, continuous contours; the button
+   itself stays unclipped so keyboard focus and corner clicks remain intact. */
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch {
+  gap: 2px; padding: 1px; border-radius: 0; background: transparent;
 }
-.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button[aria-pressed="true"] {
-  color: #213b5c; border-color: var(--mecha-accent); background: linear-gradient(#fff, #dae5f0);
-  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--mecha-accent) 60%, white), inset 0 -1px #8096ad;
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button {
+  --tab-rim: linear-gradient(150deg, #f4f7fb 0%, #aeb9c7 24%, #8b99aa 65%, #596b80 100%);
+  --tab-face: linear-gradient(135deg, #e5eaf0, #cbd4df 54%, #e2e8f0);
+  position: relative; isolation: isolate; color: #3e516a;
+  border: 1px solid transparent; border-radius: 0; background: transparent; box-shadow: none;
 }
-.quota-card.quota-card--skin-mecha-light .token-heading .token-switch button:focus-visible { outline-color: var(--mecha-accent); outline-offset: -3px; }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::before,
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::after {
+  content: ""; position: absolute; pointer-events: none; z-index: -1;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::before {
+  inset: -1px;
+  clip-path: polygon(7% 0, 93% 0, 100% 6px, 100% calc(100% - 6px), 93% 100%, 7% 100%, 0 calc(100% - 6px), 0 6px);
+  background: linear-gradient(0deg, #617287 0, #8e9cae 2px, transparent 3px), var(--tab-rim);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::after {
+  inset: 0 0 2px;
+  clip-path: polygon(6% 0, 94% 0, 100% 5px, 100% calc(100% - 5px), 94% 100%, 6% 100%, 0 calc(100% - 5px), 0 5px);
+  /* The text-free vector traces the inner bevel, including all four diagonal
+     edges. A rectangular inset shadow would lose these edges when clipped. */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 22' preserveAspectRatio='none'%3E%3Cpath d='M6 .6H94L99.4 5.3V16.7L94 21.4H6L.6 16.7V5.3Z' fill='none' stroke='%23f7fbff' stroke-width='1' vector-effect='non-scaling-stroke'/%3E%3Cpath d='M1.8 16.3L6.7 20.2H93.3L98.2 16.3' fill='none' stroke='%2399a8ba' stroke-opacity='.55' stroke-width='.7' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") center / 100% 100% no-repeat, var(--tab-face);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button[aria-pressed="true"] {
+  --tab-rim: linear-gradient(135deg, var(--mecha-accent), color-mix(in srgb, var(--mecha-accent) 48%, white) 30%, var(--mecha-accent) 74%, #63768e);
+  --tab-face: linear-gradient(145deg, #f8fcff, color-mix(in srgb, var(--mecha-accent) 14%, #eaf1f8) 52%, #f7fbff);
+  color: #213b5c;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button[aria-pressed="true"]::after {
+  inset: 1px 1px 2px;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:hover {
+  --tab-face: linear-gradient(145deg, #fff, #dce4ee 54%, #f1f5fb);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button[aria-pressed="true"]:hover {
+  --tab-face: linear-gradient(145deg, #fff, color-mix(in srgb, var(--mecha-accent) 12%, #edf4fb) 52%, #fff);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:focus-visible {
+  outline: 2px dashed var(--mecha-accent); outline-offset: 1px; z-index: 1;
+}
 .quota-card.quota-card--skin-mecha-light .token-turn-row { border-bottom: 1px solid #9eafc144; }
 .quota-card.quota-card--skin-mecha-light .token-turn-fast { color: var(--mecha-accent); }
 .quota-card.quota-card--skin-mecha-light .token-turn-effort-text { color: var(--mecha-accent); }

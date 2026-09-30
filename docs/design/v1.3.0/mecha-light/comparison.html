@@ -6,8 +6,33 @@
 <style>
 *{box-sizing:border-box}body{margin:0;background:#e4e8ef;color:#26364e;font:15px/1.65 system-ui,sans-serif}main{max-width:1500px;margin:auto;padding:32px}h1{font-size:28px}h2{margin-top:40px;font-size:22px}p{max-width:1000px}a{color:#095cb0}figure{margin:0}figcaption{padding:10px 0;font-size:14px}button,select{font:inherit;padding:6px 12px;border:1px solid #98a9bf;border-radius:5px;background:#fff;color:#26364e}.controls{position:sticky;top:0;z-index:3;background:#edf1f6f5;padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid #a4b1c4}.reference{width:100%;max-width:1448px;height:auto;border:1px solid #a4b1c4}.states,.orbs,.extras{display:flex;gap:20px;overflow:auto;padding:16px 0}.state{flex:none;border:1px solid #bac5d3;background:#f5f7fa;padding:12px}.actual{display:block;width:314px;height:514px;background:repeating-conic-gradient(#dbe1e9 0% 25%,#f0f3f8 0% 50%) 0/20px 20px}.actual.orb{width:80px;height:80px}.actual.zoom{width:628px;height:1028px}.actual.orb.zoom{width:160px;height:160px}.orbs .original{width:220px;height:220px;object-fit:contain}.chip{display:inline-block;padding:3px 9px;border-radius:4px;background:#d6e1ee}details{margin:20px 0}summary{cursor:pointer;font-weight:650}li{margin:7px 0}.extra{width:314px;height:auto}.notice{border-left:4px solid #a66c0d;padding:12px 18px;background:#fff8e8}.caption{min-height:45px}footer{padding:30px 0;color:#536781}
 </style>
+<style>
+.tabs-matrix{--tab-zoom:1;overflow-x:auto;padding:12px 0}.tabs-row,.tabs-columns{display:grid;grid-template-columns:repeat(3,calc(266px * var(--tab-zoom)));gap:24px;width:max-content}.tabs-row{align-items:start;margin:8px 0 20px}.tabs-columns{font-weight:650}.tabs-strip{display:block;width:calc(266px * var(--tab-zoom));height:auto;background:#e4e8ef}.tabs-reference{display:block;width:calc(258px * var(--tab-zoom));height:auto;margin-left:calc(4px * var(--tab-zoom))}.tabs-matrix.enlarged .tabs-strip{image-rendering:pixelated}.tabs-caption{margin:18px 0 0;font-size:14px;font-weight:650}.tabs-focus{display:flex;gap:20px;flex-wrap:wrap}.tabs-focus img{width:266px;height:auto}.history-label{border-top:2px solid #a4b1c4;padding-top:28px;margin-top:40px}
+</style>
 <main>
 <h1>Mecha Light · 原图 / 实际界面对照</h1>
+<section id="tabs-fix">
+<h2>Token 三模式 Tab · 本轮补充修复</h2>
+<p class="notice"><strong>Mecha Token Tabs：Needs Revision → 修复后等待人工复验。</strong>用户反馈整体方向大体符合预期，其他部分沿用；不能据此把整套皮肤或其他人工项目记为 Passed。</p>
+<p>Before：<code>86209637f82aae1db0dbe358679cb526879304db</code>。After：包含本页证据的新 Tabs Fix Candidate，完整 SHA 与双端 CI 见交付包 <code>BUILD-INFO.txt</code>。实际样式文件 SHA-256：<code>ac6132ea08d3b9f7dae2ae53010ad7c39d3f1110fb2d9d95ade7afee0786725d</code>。</p>
+<p>每行均为 Reference / Before / After。首行为蓝色、选中额度周；三种额度状态各展示三个选中位置。批准原图始终选中额度周，后两种位置复用同一原始局部，没有重画参考。原图局部只等比缩至 258px 宽；实际 Tab 区保持 258 × 28 CSS px，附四周 4px 截图边距，不单独拉伸高度。</p>
+<div class="controls" aria-label="Tab 对照设置">
+<label>语言 <select id="tabs-language"><option value="zh-CN">中文</option><option value="en">English</option></select></label>
+<label>布局 <select id="tabs-height"><option value="full">Full · 506px</option><option value="compact">Compact · 452px</option></select></label>
+<label>不透明度 <select id="tabs-opacity"><option value="100">100%</option><option value="60">60%</option></select></label>
+<label>比例 <select id="tabs-zoom"><option value="1">1× · 真实尺寸</option><option value="3">3× · 放大检查</option></select></label>
+</div>
+<div id="tabs-matrix" class="tabs-matrix"></div>
+<p><a href="tabs-fix/nine-states-1x.png">九组完整对照 · 1× PNG</a> · <a href="tabs-fix/nine-states-3x.png">九组完整对照 · 3× PNG</a> · <a href="tabs-fix/validation-summary.json">本轮验证与图片摘要</a></p>
+<details><summary>键盘焦点与完整 Widget</summary>
+<p>焦点使用独立的 2px 虚线框；按钮本体不裁切，装饰层不接收事件。以下选中额度周、聚焦按模型，分别展示蓝／黄橙／红状态。</p>
+<div id="tabs-focus" class="tabs-focus"></div>
+<p>完整同条件 Widget：<a href="tabs-fix/before-blue-turns-zh-CN-full-100-light-card.png">Before</a> / <a href="tabs-fix/after-blue-turns-zh-CN-full-100-light-card.png">After</a>。Full / Compact 外框尺寸、内容区和列表矩形逐项保持一致。参考光学高度高于现有 Tab 区，本轮没有借增高 Widget 或挤压列表贴合原图。</p>
+</details>
+<p>本轮实现为连续切角外缘、白色内缘、银灰面板与底部金属厚边；选中轮廓和面板色倾向沿用主额度 palette。文案、字体、模式事件、aria-pressed 和整体 opacity 均保持原合同。99 组对照与 24 组交互通过；自动化只证明工程检查，实际材质观感仍由用户复验。</p>
+</section>
+<h2 class="history-label">原 Candidate 8620963 · 历史完整皮肤证据（保留）</h2>
+<p>以下 28 张实现截图与原验证记录属于此前 Candidate，保留作历史证据；不会因本轮反馈改写成此前已获人工通过。最新三模式 Tab 以上方 Before / After 为准。</p>
 <p>参考集 <code>CM-v1.3.0-Mecha-Light-Approved-v1</code>。原图保持冻结；下面的界面是生产组件在 Chromium 中渲染的合成数据截图。默认按真实 CSS 尺寸显示：展开 306 × 506，收起 72 × 72（截图各带 4px 安全边距）。截图使用 2× backing pixels，显示为 1× 时不放大界面。</p>
 <p class="notice"><strong>Mecha Human Visual Acceptance：Pending。</strong>自动化和截图不代替 macOS／Windows 实机体验或用户的视觉确认。示例数字、模型和时间均为合成数据。</p>
 <div class="controls"><label>不透明度 <select id="opacity"><option value="100">100%</option><option value="60">60% · 最低</option></select></label><label>实际界面比例 <select id="zoom"><option value="1">1× · 真实尺寸</option><option value="2">2× · 放大检查</option></select></label><span class="chip">70% 蓝 · 34% 黄橙 · 6% 红</span></div>
@@ -32,6 +57,21 @@
 <footer>请重点确认：真实 1× 主数字与四列是否清楚、金属层次与主轮廓是否符合批准稿、局部灯带是否克制、展开／收起字体与颜色是否一致。原生 Hover、拖动、停靠、全屏 Space、Tray 与重启仍需候选安装包人工验收。</footer>
 </main>
 <script>
+const tabStates=[['blue','蓝色 · 70%'],['amber','黄橙色 · 34%'],['red','红色 · 6%']];
+const tabModes=[['turns','额度周 / Quota week'],['overview','总览 / Overview'],['models','按模型 / By model']];
+function updateTabs(){
+  const language=document.getElementById('tabs-language').value,height=document.getElementById('tabs-height').value,opacity=document.getElementById('tabs-opacity').value,zoom=document.getElementById('tabs-zoom').value;
+  const matrix=document.getElementById('tabs-matrix');matrix.style.setProperty('--tab-zoom',zoom);matrix.classList.toggle('enlarged',zoom==='3');matrix.replaceChildren();
+  const heads=document.createElement('div');heads.className='tabs-columns';for(const title of ['Reference · 批准原图','Before · 8620963','After · Tabs Fix']){const h=document.createElement('span');h.textContent=title;heads.append(h);}matrix.append(heads);
+  for(const [state,stateLabel] of tabStates)for(const [mode,modeLabel] of tabModes){
+    const title=document.createElement('p');title.className='tabs-caption';title.textContent=`${stateLabel} · 选中 ${modeLabel}`;matrix.append(title);
+    const row=document.createElement('div');row.className='tabs-row';
+    const reference=document.createElement('img');reference.className='tabs-reference';reference.src=`tabs-fix/reference-${state}-original-crop.png`;reference.alt=`批准${stateLabel}原图局部，固定选中额度周`;row.append(reference);
+    for(const phase of ['before','after']){const img=document.createElement('img');img.className='tabs-strip';img.src=`tabs-fix/${phase}-${state}-${mode}-${language}-${height}-${opacity}-light-tabs.png`;img.alt=`${phase} ${stateLabel} ${modeLabel} ${language} ${height} ${opacity}%`;row.append(img);}matrix.append(row);
+  }
+}
+for(const control of ['tabs-language','tabs-height','tabs-opacity','tabs-zoom'])document.getElementById(control).addEventListener('change',updateTabs);
+for(const [state,label] of tabStates){const figure=document.createElement('figure');figure.innerHTML=`<figcaption>${label} · 按模型获得键盘焦点</figcaption><img src="tabs-fix/focus-${state}-overview-zh-CN-full-100-light-models-enter-tabs.png" alt="${label}按模型的完整虚线焦点框">`;document.getElementById('tabs-focus').append(figure);}updateTabs();
 const source=(view,p,opacity)=>`implementation/${view}-zh-CN-5h-ok-fresh-${p}-turns-${opacity}.png`;
 const label=p=>p>50?'蓝色':p>10?'黄橙色':'红色';
 function actual(view,p){const img=document.createElement('img');img.className=`actual ${view==='orb'?'orb':''}`;img.dataset.view=view;img.dataset.percent=p;img.alt=`实际 ${p}% ${view==='orb'?'收起':'展开'}，${label(p)}`;return img;}
