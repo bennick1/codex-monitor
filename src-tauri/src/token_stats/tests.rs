@@ -4455,10 +4455,17 @@ fn fast_v2_replay_missing_uncommitted_source_does_not_block_verified_thread() {
         let missing = h.home.join("sessions/missing.jsonl");
         fs::write(&missing, contents).unwrap();
         h.scan();
+        let relative_path = missing
+            .canonicalize()
+            .unwrap()
+            .strip_prefix(h.source.resolve().unwrap().0)
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
         assert_eq!(
             h.db.query_row(
-                "SELECT offset FROM source_files WHERE relative_path='sessions/missing.jsonl'",
-                [],
+                "SELECT offset FROM source_files WHERE relative_path=?1",
+                [relative_path],
                 |r| r.get::<_, i64>(0)
             )
             .unwrap(),
