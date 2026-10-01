@@ -1,11 +1,12 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const api = vi.hoisted(() => ({
   calls: [] as string[],
-  invoke: vi.fn(async (command: string) => {
+  invoke: vi.fn(async (command: string): Promise<unknown> => {
     api.calls.push(`start:${command}`);
     await Promise.resolve();
     api.calls.push(`end:${command}`);
+    return undefined;
   }),
   currentMonitor: vi.fn(async () => ({
     workArea: { position: { x: 0, y: 0 }, size: { width: 1920, height: 1040 } },
@@ -19,6 +20,67 @@ beforeEach(() => {
   vi.clearAllMocks();
   api.calls.length = 0;
   vi.stubGlobal("window", { __TAURI_INTERNALS__: {} });
+});
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it("reports sidebar hit regions through the existing command without a viewport wait", async () => {
+  const { syncSidebarRegions } = await import("./bridge");
+  const regions = [{ x: 0, y: 262, width: 8, height: 56 }];
+  await syncSidebarRegions("handle", regions);
+  expect(api.invoke).toHaveBeenCalledWith("set_sidebar_phase", { phase: "handle", interactiveRegions: regions });
+  expect(api.invoke).toHaveBeenCalledTimes(1);
+});
+
+it("waits for the resized WebView and a painted frame before completing a sidebar transition", async () => {
+  const frames = new Map<number, FrameRequestCallback>();
+  let id = 0;
+  const view = {
+    __TAURI_INTERNALS__: {}, innerWidth: 64, innerHeight: 288,
+    requestAnimationFrame: (callback: FrameRequestCallback) => { frames.set(++id, callback); return id; },
+    cancelAnimationFrame: (key: number) => frames.delete(key),
+    setTimeout, clearTimeout,
+  };
+  vi.stubGlobal("window", view);
+  api.invoke.mockResolvedValueOnce({ width: 344, height: 480 });
+  const { setSidebarPhase } = await import("./bridge");
+  let finished = false;
+  const operation = setSidebarPhase("detail").then(() => { finished = true; });
+  await vi.waitFor(() => expect(api.invoke).toHaveBeenCalledWith("set_sidebar_phase", { phase: "detail" }));
+  expect(finished).toBe(false);
+  const paint = async () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback(0)); await Promise.resolve(); };
+  await paint(); await paint();
+  expect(finished).toBe(false);
+  view.innerWidth = 344; view.innerHeight = 480;
+  await paint();
+  expect(finished).toBe(false);
+  view.innerWidth = 64;
+  await paint();
+  view.innerWidth = 344;
+  await paint();
+  expect(finished).toBe(false);
+  await paint(); await operation;
+  expect(finished).toBe(true);
+  expect(frames.size).toBe(0);
+});
+
+it("cleans up a stalled sidebar frame and allows the next native transition", async () => {
+  vi.useFakeTimers();
+  const cancelFrame = vi.fn();
+  vi.stubGlobal("window", {
+    __TAURI_INTERNALS__: {}, innerWidth: 64, innerHeight: 288,
+    requestAnimationFrame: vi.fn(() => 42), cancelAnimationFrame: cancelFrame,
+    setTimeout, clearTimeout,
+  });
+  api.invoke.mockResolvedValueOnce({ width: 344, height: 480 });
+  const { setSidebarPhase } = await import("./bridge");
+  const operation = setSidebarPhase("detail").catch(error => error as Error);
+  await vi.waitFor(() => expect(api.invoke).toHaveBeenCalledWith("set_sidebar_phase", { phase: "detail" }));
+  await vi.advanceTimersByTimeAsync(1500);
+  expect(await operation).toEqual(new Error("Sidebar viewport did not settle"));
+  expect(cancelFrame).toHaveBeenCalledWith(42);
+  api.invoke.mockResolvedValueOnce(null);
+  await setSidebarPhase("handle");
+  expect(api.invoke).toHaveBeenLastCalledWith("set_sidebar_phase", { phase: "handle" });
 });
 
 describe("widget transitions", () => {

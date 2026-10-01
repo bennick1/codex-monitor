@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { tokenSnapshot, totals } from "./test/tokenFixtures";
 
-const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn(), save: vi.fn(), phase: vi.fn(), regions: vi.fn(), account: vi.fn(), deepseek: vi.fn(), sideListen: vi.fn() }));
 vi.mock("./lib/bridge", () => ({
   getTokenStatistics: api.get, listenTokenStatisticsUpdated: api.tokenListen, refreshTokenStatistics: api.refreshTokens,
   fetchSnapshots: api.quota, getPreferences: api.preferences, listenDesktopEvents: api.desktopListen,
-  setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: vi.fn(), setAlwaysOnTop: vi.fn(),
+  setSidebarPhase: api.phase, syncSidebarRegions: api.regions, getAccountUsage: api.account, getDeepSeekUsage: api.deepseek, listenSidebarRecovery: api.sideListen, listenSidebarDismiss: api.sideListen, listenSidebarPointer: api.sideListen, listenDeepSeekReady: api.sideListen,
+  setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: api.save, setAlwaysOnTop: vi.fn(),
 }));
 vi.mock("./lib/releasePage", () => ({ openReleasePage: vi.fn() }));
 const prefs = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
@@ -18,6 +19,8 @@ async function flush() { await act(async () => { await Promise.resolve(); }); }
 beforeEach(() => {
   vi.useFakeTimers(); vi.resetAllMocks();
   api.get.mockResolvedValue(tokenSnapshot()); api.tokenListen.mockResolvedValue(() => {}); api.desktopListen.mockResolvedValue(() => {});
+  api.save.mockResolvedValue(undefined); api.phase.mockResolvedValue(undefined); api.account.mockRejectedValue(new Error("synthetic unavailable")); api.deepseek.mockResolvedValue({ status: "signed_out", balance: null, spent: null }); api.sideListen.mockResolvedValue(() => {});
+  api.regions.mockResolvedValue(undefined);
   api.expand.mockResolvedValue(undefined); api.quota.mockResolvedValue([quota]); api.preferences.mockResolvedValue(prefs); api.refreshTokens.mockResolvedValue({ queued: true });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -88,6 +91,21 @@ describe("App hover integration with the real TokenUsage component", () => {
     vi.unstubAllGlobals();
   });
 
+  it.each(["system", "light", "dark"])("applies %s appearance to the sidebar and responds only when following the system", async (appearance) => {
+    let change = () => {};
+    const media = { matches: false, addEventListener: (_: string, cb: () => void) => { change = cb; }, removeEventListener: vi.fn() };
+    vi.stubGlobal("matchMedia", () => media);
+    api.preferences.mockResolvedValue({ ...prefs, displayMode: "sidebar", appearance });
+    const view = render(<App />); await flush();
+    expect(screen.getByRole("main").className).toContain(`sidebar--theme-${appearance === "dark" ? "dark" : "light"}`);
+    act(() => { media.matches = true; change(); });
+    expect(screen.getByRole("main").className).toContain(`sidebar--theme-${appearance === "light" ? "light" : "dark"}`);
+    act(() => { media.matches = false; change(); });
+    expect(screen.getByRole("main").className).toContain(`sidebar--theme-${appearance === "dark" ? "dark" : "light"}`);
+    view.unmount(); expect(media.removeEventListener).toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
   it("loads valid skins, rejects invalid values, and applies desktop changes immediately", async () => {
     api.preferences.mockResolvedValue({ ...prefs, selectedSkin: "blur" });
     const view = render(<App />); await flush();
@@ -101,3 +119,14 @@ describe("App hover integration with the real TokenUsage component", () => {
     expect(screen.getByRole("main").className).not.toMatch(/skin-(blur|computer)/);
   });
 });
+
+ it("keeps the display menu operable after pointer exit and switches to the sidebar", async () => {
+  render(<App />); await flush(); fireEvent.mouseEnter(screen.getByRole("main")); await flush();
+  fireEvent.click(screen.getByRole("button", { name: "展示模式" }));
+  fireEvent.mouseLeave(screen.getByRole("main"));
+  await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+  expect(screen.getByRole("dialog", { name: "展示模式" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "切换到侧边栏" })); await flush();
+  expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ displayMode: "sidebar", sidebarSide: "right", locked: false }));
+  expect(screen.getByRole("main", { name: "侧边栏" })).toBeTruthy();
+ });

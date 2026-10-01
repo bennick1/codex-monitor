@@ -1,6 +1,7 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
+import { Sidebar } from "./components/Sidebar";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
 import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
 import { needsFastRefresh, quotaTier } from "./lib/format";
@@ -10,13 +11,19 @@ import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const DEFAULT_PREFS: WidgetPreferences = { displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
 const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
   ...DEFAULT_PREFS,
   ...value,
   language: normalizeLanguage(value.language),
   selectedSkin: normalizeSkin(value.selectedSkin),
+  displayMode: value.displayMode === "sidebar" ? "sidebar" : "floating",
+  sidebarSide: value.sidebarSide === "left" ? "left" : "right",
+  sidebarShowCodex: value.sidebarShowCodex !== false,
+  sidebarShowDeepseek: value.sidebarShowDeepseek !== false,
+  sidebarOpacity: typeof value.sidebarOpacity === "number" && Number.isFinite(value.sidebarOpacity) ? Math.min(1, Math.max(.2, value.sidebarOpacity)) : .9,
+  locked: value.displayMode === "sidebar" ? false : value.locked ?? false,
 });
 const INITIAL_SNAPSHOT: ProviderSnapshot = {
   provider: "codex",
@@ -37,18 +44,21 @@ export default function App() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [compact, setCompact] = useState(true);
+  const previousMode = useRef(preferences.displayMode);
   const [consumingProviders, setConsumingProviders] = useState<Set<string>>(() => new Set());
   const [operationError, setOperationError] = useState<string | null>(null);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
   const current = preferences.pinnedProvider
     ? snapshots.find((item) => item.provider === preferences.pinnedProvider) ?? snapshots[0] ?? INITIAL_SNAPSHOT
     : snapshots[activeIndex % Math.max(1, snapshots.length)] ?? INITIAL_SNAPSHOT;
-  const tokens = useTokenStatistics(!compact, current);
+  const tokens = useTokenStatistics(preferences.displayMode !== "sidebar" && !compact, current);
   const failures = useRef(0);
   const previousPrimary = useRef(new Map<string, number>());
   const consumptionTimers = useRef(new Map<string, number>());
   const collapseTimer = useRef<number | null>(null);
   const hoverSequence = useRef(0);
+  const menuOpen = useRef(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const language = normalizeLanguage(preferences.language);
   const t = copy[language];
   const operation = language === "zh-CN" ? {
@@ -70,11 +80,12 @@ export default function App() {
   const skin: WidgetSkin = preferences.selectedSkin;
   const heightMode = expandedHeightMode(current);
   useEffect(() => {
+    if (preferences.displayMode === "sidebar") return;
     // This only reconciles the transparent-window safety inset after a theme
     // change. A platform refusal is non-fatal: the current widget geometry is
     // still usable and users should never see an internal resize error.
     void syncWidgetAppearance(theme, heightMode).catch(() => undefined);
-  }, [theme, heightMode]);
+  }, [theme, heightMode, preferences.displayMode]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -128,7 +139,7 @@ export default function App() {
       setPreferences(normalizePreferences(value));
       // Window-state may restore the last expanded footprint while React starts
       // as an orb. Reconcile once, unless the user has already begun hovering.
-      if (!value.stayExpanded && hoverSequence.current === 0) {
+      if (value.displayMode !== "sidebar" && !value.stayExpanded && hoverSequence.current === 0) {
         void setWidgetExpanded(false).catch(() => undefined);
       }
     })().catch(() => setPreferences(DEFAULT_PREFS));
@@ -207,7 +218,7 @@ export default function App() {
       collapseTimer.current = null;
     }
     setHovered(value);
-    if (!value && preferences.stayExpanded) return;
+    if (!value && (preferences.stayExpanded || menuOpen.current)) return;
     if (value) void refresh(true);
     if (value) {
       const sequence = ++hoverSequence.current;
@@ -228,17 +239,48 @@ export default function App() {
   }, [operation.collapseFailed, operation.expandFailed, preferences.stayExpanded, refresh]);
 
   useEffect(() => {
-    if (!preferences.stayExpanded) return;
+    if (preferences.displayMode === "sidebar" || !preferences.stayExpanded) return;
     if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
     setCompact(false);
     void setWidgetExpanded(true).catch(() => setOperationError(operation.expandFailed));
-  }, [operation.expandFailed, preferences.stayExpanded]);
+  }, [operation.expandFailed, preferences.stayExpanded, preferences.displayMode]);
+
+  useEffect(() => {
+    if (previousMode.current !== preferences.displayMode) {
+      previousMode.current = preferences.displayMode;
+      ++hoverSequence.current;
+      if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+      if (preferences.displayMode !== "sidebar") {
+        setCompact(!preferences.stayExpanded);
+        void setWidgetExpanded(preferences.stayExpanded).catch(() => setOperationError(operation.expandFailed));
+      }
+    }
+  }, [preferences.displayMode, preferences.stayExpanded, operation.expandFailed]);
+
+  const showMenu = () => {
+    if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+    menuOpen.current = true;
+    setModeMenuOpen(true);
+  };
+  const closeMenu = () => { menuOpen.current = false; setModeMenuOpen(false); };
+
+  if (preferences.displayMode === "sidebar") {
+    return <Sidebar snapshot={snapshots.find(value => value.provider === "codex") ?? INITIAL_SNAPSHOT}
+      preferences={preferences} theme={theme} onPreferences={savePreferences} onRefresh={refreshAll}
+      notice={operationError} />;
+  }
 
   if (compact) {
     return <QuotaOrb snapshot={current} language={language} onDrag={() => startDragging()} onHover={handleHover} theme={theme} skin={skin} style={cardStyle} />;
   }
 
   return (
+    <div style={{ display: "contents" }}>
+    {modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
+      <strong>{language === "zh-CN" ? "展示模式" : "Display mode"}</strong>
+      <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "sidebar" }); }}>{language === "zh-CN" ? "切换到侧边栏" : "Switch to sidebar"}</button>
+      <button onClick={closeMenu}>{language === "zh-CN" ? "保留悬浮窗" : "Keep floating widget"}</button>
+    </div>}
     <QuotaCard
       snapshot={current}
       preferences={preferences}
@@ -251,12 +293,13 @@ export default function App() {
       onDrag={() => startDragging()}
       onHover={handleHover}
       onRefresh={refreshAll}
+      onMenu={showMenu}
       tokens={tokens}
       isConsuming={consumingProviders.has(current.provider)}
       theme={theme}
       skin={skin}
       style={cardStyle}
       notice={operationError}
-    />
+    /></div>
   );
 }

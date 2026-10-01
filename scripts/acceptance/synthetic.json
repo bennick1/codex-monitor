@@ -1,0 +1,5 @@
+{
+  "identifier": "app.codexmonitor.sidebar.validation.windows",
+  "productName": "Codex Monitor Sidebar Test",
+  "bundle": { "createUpdaterArtifacts": false }
+}

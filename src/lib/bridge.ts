@@ -1,6 +1,8 @@
 import type { QuotaWindowBoundary } from "./tokenStatistics";
+import { EMPTY_DEEPSEEK, type AccountUsage, type DeepSeekUsage } from "./sidebarData";
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 import type { TokenStatisticsSnapshot, TokenStatisticsNotification, TokenStatisticsRefresh } from "./tokenStatistics";
+import type { SidebarInputRect } from "./widgetGeometry";
 
 const defaultPreferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 
@@ -26,6 +28,103 @@ function enqueueWidgetTransition(operation: () => Promise<void>): Promise<void> 
 }
 
 export const isTauri = () => "__TAURI_INTERNALS__" in window;
+
+export type SidebarPhase = "handle" | "rail" | "detail" | "menu";
+interface SidebarViewport { width: number; height: number }
+
+function waitForSidebarViewport(size: SidebarViewport): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let frame = 0;
+    let matchingFrames = 0;
+    const finish = (error?: Error) => {
+      window.cancelAnimationFrame(frame);
+      window.clearTimeout(timeout);
+      if (error) reject(error); else resolve();
+    };
+    const check = () => {
+      // An AppKit/Windows resize reply may precede the WebView resize event.
+      // Paint the hidden surface at its real size before starting its entrance.
+      const matches = Math.abs(window.innerWidth - size.width) <= 1 && Math.abs(window.innerHeight - size.height) <= 1;
+      matchingFrames = matches ? matchingFrames + 1 : 0;
+      if (matchingFrames >= 2) finish();
+      else frame = window.requestAnimationFrame(check);
+    };
+    const timeout = window.setTimeout(() => finish(new Error("Sidebar viewport did not settle")), 1500);
+    frame = window.requestAnimationFrame(check);
+  });
+}
+
+export function setSidebarPhase(phase: SidebarPhase): Promise<void> {
+  if (!isTauri()) return Promise.resolve();
+  return enqueueWidgetTransition(async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const viewport = await invoke<SidebarViewport | null>("set_sidebar_phase", { phase });
+    if (viewport) await waitForSidebarViewport(viewport);
+  });
+}
+
+export async function syncSidebarRegions(phase: SidebarPhase, interactiveRegions: SidebarInputRect[]): Promise<void> {
+  if (!isTauri()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  // Region updates use the existing command but never resize or take focus.
+  await invoke("set_sidebar_phase", { phase, interactiveRegions });
+}
+
+export async function sidebarAction(action: "refresh" | "releases" | "quit" | "autostart"): Promise<boolean> {
+  if (!isTauri()) return false;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("sidebar_action", { action });
+}
+
+export async function getAutostart(): Promise<boolean> {
+  if (!isTauri()) return false;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<boolean>("get_autostart");
+}
+
+export async function listenSidebarRecovery(handler: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("sidebar-recover", handler);
+}
+
+export async function listenSidebarDismiss(handler: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("sidebar-dismiss", handler);
+}
+
+export interface SidebarPointer {
+  inside: boolean;
+  position?: { x: number; y: number; width: number; height: number; movement: number };
+}
+
+export async function listenSidebarPointer(handler: (pointer: SidebarPointer) => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen<SidebarPointer>("sidebar-pointer", event => handler(event.payload));
+}
+
+export async function getAccountUsage(): Promise<AccountUsage> {
+  if (!isTauri()) throw new Error("Account statistics require the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<AccountUsage>("get_account_usage");
+}
+export async function getDeepSeekUsage(): Promise<DeepSeekUsage> {
+  if (!isTauri()) return EMPTY_DEEPSEEK;
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<DeepSeekUsage>("get_deepseek_usage");
+}
+export async function deepSeekSession(action: "open" | "disconnect"): Promise<void> {
+  if (!isTauri()) throw new Error("DeepSeek login requires the desktop app.");
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke(action === "open" ? "open_deepseek_login" : "disconnect_deepseek");
+}
+export async function listenDeepSeekReady(handler: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("deepseek-ready", handler);
+}
 
 export async function fetchSnapshots(force = false): Promise<ProviderSnapshot[]> {
   if (!isTauri()) return [mockSnapshot];
@@ -59,8 +158,10 @@ export async function getPreferences(): Promise<WidgetPreferences> {
 
 export async function updatePreferences(value: WidgetPreferences): Promise<void> {
   if (!isTauri()) return;
-  const { invoke } = await import("@tauri-apps/api/core");
-  await invoke("set_preferences", { preferences: value });
+  await enqueueWidgetTransition(async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("set_preferences", { preferences: value });
+  });
 }
 
 export async function setClickThrough(locked: boolean): Promise<WidgetPreferences> {

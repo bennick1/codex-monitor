@@ -18,7 +18,17 @@ Current release: **v1.2.1**, officially released. Updates are manual: Codex Moni
 
 Quota comes from the Codex service. Local token counts are a separate measurement and are not used to estimate quota. Totals cover recognized local history, not all usage across your account or devices; incomplete history is marked in the widget.
 
-## Screenshots
+## 侧边栏模式
+
+从菜单的“展示模式”选择“侧边栏”；原有悬浮窗模式继续保留。侧边栏默认贴右侧，菜单栏图标随之隐藏。移入 6×48 像素的实色小拉手展开圆角竖条，悬停额度圆环查看详情；底部圆弧悬停后显出齿轮，点击可调整左右位置、展开背景不透明度或切回悬浮窗。拉手不受透明度设置影响。详情始终向屏幕内展开；操作菜单或键盘焦点位于组件内时保持展开，点击设置外部会收起，其余情况离开 450 毫秒后收起。再次打开应用会显示窗口并解除鼠标穿透。
+
+- **外观：** 侧边栏支持浅色、深色和跟随系统，与悬浮窗共用已有外观偏好。跟随系统时，背景、文字、图表和图标同步切换，无需重启；拉手随主题切换，但保持实色。macOS 通过原生鼠标监听补充 WebView 悬停事件，让未激活的侧边栏也能响应移入。
+- **剩余口径：** Pro 系列的侧边栏只显示每周额度，周数据缺失时显示 `—`；这是展示选择，未改变接口采集或悬浮模式。其他订阅优先显示 5 小时剩余额度，缺失时使用周额度。DeepSeek 显示 `余额 ÷（余额 + 累计费用）`，不是套餐配额或充值记录，分母为零时显示 `—`。
+- **账户与本机分开：** 侧边栏仅展示账户累计、单日峰值、最长对话、连续天数和每日 Token；本机 SQLite 统计保留在悬浮模式。缺失账户数据不补零，也不用 Token 推算额度。
+- **DeepSeek：** 通过齿轮中的“登录 / 管理 DeepSeek”打开独立的开放平台窗口；登录后读取余额、费用、请求数、API 密钥数量及近 30 个自然日统计。退出登录会清理此窗口的网站数据。网站接口可能变化，读取失败会明确显示未更新状态。
+- **验证范围：** 见 [侧边栏验收记录](docs/SIDEBAR-VALIDATION.md)；侧边栏代码不代表既有 v1.2.1 安装包已包含此功能。
+
+## 界面预览
 
 ![Codex Monitor quota and Token Statistics, using synthetic data](docs/images/codex-monitor-v1-token-preview.png)
 
@@ -46,7 +56,7 @@ v1.2.1 uses Token Statistics SQLite **schema 4**, adding persisted Fast selectio
 3. Hover or focus each Token value to see the exact count, such as `12,685,398` for `1268.54万`.
 4. Use the tray menu to refresh, open the manual release download page, switch among the Default, Blur, and Computer skins, change language/appearance, show or hide the widget, or quit.
 
-On macOS the app is a menu-bar accessory: it intentionally has no Dock or Command-Tab entry. Fullscreen Spaces and sleep/wake behavior must pass the tests in the release report.
+macOS 应用没有 Dock 或 Command-Tab 入口。悬浮窗模式显示菜单栏图标，侧边栏模式从齿轮进入菜单；悬浮卡片也提供菜单按钮。全屏 Space 和睡眠唤醒需单独完成实机验收。
 
 Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. An initial scan may take time. Deleted logs cannot be recovered, but previously collected statistics remain in the local database.
 
@@ -54,7 +64,7 @@ Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.co
 
 Codex Monitor does not collect or retain prompts, chat history, source code, or account credentials in its statistics database, logs, or telemetry. Statistics stay on this machine.
 
-To read quota, the app accesses the existing local `auth.json` and uses its access token only for the required ChatGPT quota requests. It does not copy credentials to its own storage. The independent token collector reads structured usage records from local session files, skips message bodies, and stores only counters and the minimal timestamps, hashed identities, source references, and checkpoints needed for reliable local statistics.
+读取 Codex 额度和账户统计时，应用复用本机 `auth.json`，仅向所需 ChatGPT 接口发送已有凭据，不复制保存 Codex 凭据。本机 Token 采集器继续跳过消息正文，仅存储统计所需的计数、时间和最小关联信息。可选的 DeepSeek 登录使用独立网站数据容器；网站会话由系统 WebView 管理，详情见 [隐私说明](PRIVACY.md)。
 
 There is no analytics, tracking, account system, or cloud sync. See [PRIVACY.md](PRIVACY.md) for network and storage details and [SECURITY.md](SECURITY.md) for reporting guidance.
 

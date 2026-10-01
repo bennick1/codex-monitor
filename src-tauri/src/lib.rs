@@ -1,7 +1,12 @@
+mod account_usage;
 mod codex;
+mod deepseek;
 #[cfg(target_os = "macos")]
 mod macos_widget;
 mod models;
+mod sidebar;
+#[cfg(debug_assertions)]
+mod sidebar_fixtures;
 mod token_stats;
 
 use std::{
@@ -250,7 +255,14 @@ async fn fetch_provider_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
         return ProviderSnapshot {
             provider: "codex".into(),
             display_name: "CODEX".into(),
-            plan: Some("TEST".into()),
+            plan: Some(
+                if std::env::var("CODEX_MONITOR_SYNTHETIC_PRO").as_deref() == Ok("1") {
+                    "PRO · TEST"
+                } else {
+                    "TEST"
+                }
+                .into(),
+            ),
             short_window: None,
             weekly_window: Some(UsageWindow {
                 remaining_percent: 64.25,
@@ -428,7 +440,12 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 8);
+                assert_eq!(saved.as_object().unwrap().len(), 14);
+                assert_eq!(saved["displayMode"], "floating");
+                assert_eq!(saved["sidebarSide"], "right");
+                assert_eq!(saved["deepseekEnabled"], false);
+                assert_eq!(saved["sidebarShowCodex"], true);
+                assert_eq!(saved["sidebarShowDeepseek"], true);
                 assert_eq!(
                     saved.get("selectedSkin").and_then(|value| value.as_str()),
                     Some(expected_skin)
@@ -543,6 +560,21 @@ async fn get_snapshots(
         *cache = Some((Instant::now(), values.clone()));
     }
     Ok(apply_short_window_test_override(&state, values))
+}
+
+#[tauri::command]
+async fn get_account_usage(
+    window: tauri::WebviewWindow,
+    state: State<'_, AppState>,
+) -> Result<account_usage::AccountUsage, String> {
+    if window.label() != "widget" {
+        return Err("unsupported caller".into());
+    }
+    #[cfg(debug_assertions)]
+    if sidebar_fixtures::enabled() {
+        return account_usage::parse(&sidebar_fixtures::account());
+    }
+    codex::fetch_account_usage(&state.client).await
 }
 
 #[tauri::command]
@@ -853,6 +885,9 @@ fn expand_widget(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    if sidebar::enabled(&app) {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
@@ -1093,6 +1128,9 @@ mod geometry_tests {
 
 #[tauri::command]
 fn collapse_widget(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    if sidebar::enabled(&app) {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
@@ -1156,6 +1194,9 @@ fn collapse_widget(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 
 #[tauri::command]
 fn begin_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    if sidebar::enabled(&app) {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
@@ -1181,6 +1222,9 @@ fn begin_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), S
 
 #[tauri::command]
 fn finish_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
+    if sidebar::enabled(&app) {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
@@ -1294,11 +1338,19 @@ fn get_preferences(state: State<'_, AppState>) -> WidgetPreferences {
 #[tauri::command]
 fn set_preferences(
     preferences: WidgetPreferences,
+    app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
     let preferences = preferences.normalized();
+    let previous = preferences_lock(&state).clone();
     persist_preferences(&state.preferences_path, &preferences)?;
-    *preferences_lock(&state) = preferences;
+    if let Err(error) = sidebar::apply_mode(&app, &previous, &preferences) {
+        let _ = persist_preferences(&state.preferences_path, &previous);
+        let _ = sidebar::apply_mode(&app, &preferences, &previous);
+        return Err(error);
+    }
+    *preferences_lock(&state) = preferences.clone();
+    let _ = app.emit_to("widget", "preferences-changed", preferences);
     Ok(())
 }
 
@@ -1323,7 +1375,8 @@ fn set_widget_locked(
         .map_err(|_| "settings unavailable".to_string())?
         .clone();
     let mut next = previous.clone();
-    next.locked = locked;
+    next.locked = locked && next.display_mode != "sidebar";
+    let locked = next.locked;
     persist_preferences(&state.preferences_path, &next)?;
     if let Err(error) = apply_lock(&app, locked) {
         let _ = persist_preferences(&state.preferences_path, &previous);
@@ -1379,6 +1432,9 @@ fn sync_widget_appearance(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    if sidebar::enabled(&app) {
+        return Ok(());
+    }
     let window = app
         .get_webview_window("widget")
         .ok_or_else(|| "widget window missing".to_string())?;
@@ -1490,6 +1546,21 @@ fn resized_position_in_bounds(
 }
 
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
+    let mode_floating = MenuItem::with_id(
+        app,
+        "mode-floating",
+        "Floating widget / 悬浮窗",
+        true,
+        None::<&str>,
+    )?;
+    let mode_sidebar =
+        MenuItem::with_id(app, "mode-sidebar", "Sidebar / 侧边栏", true, None::<&str>)?;
+    let display_mode = Submenu::with_items(
+        app,
+        "Display mode / 展示模式",
+        true,
+        &[&mode_floating, &mode_sidebar],
+    )?;
     let show = MenuItem::with_id(app, "show", "Show / Hide", true, None::<&str>)?;
     let refresh = MenuItem::with_id(app, "refresh", "Refresh now", true, None::<&str>)?;
     let releases = MenuItem::with_id(
@@ -1626,13 +1697,25 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             &refresh,
             &releases,
             &settings,
+            &display_mode,
             &theme,
             &test_short_window,
             &quit,
         ],
     )?;
     #[cfg(not(debug_assertions))]
-    let menu = Menu::with_items(app, &[&show, &refresh, &releases, &settings, &theme, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &show,
+            &refresh,
+            &releases,
+            &settings,
+            &display_mode,
+            &theme,
+            &quit,
+        ],
+    )?;
     let mut builder = TrayIconBuilder::with_id("main")
         .menu(&menu)
         .tooltip("Codex Monitor");
@@ -1659,6 +1742,19 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
     let test_short_window_menu = test_short_window.clone();
     builder
         .on_menu_event(move |app, event| match event.id.as_ref() {
+            "mode-floating" | "mode-sidebar" => {
+                let state = app.state::<AppState>();
+                let mut preferences = preferences_lock(&state).clone();
+                preferences.display_mode = if event.id.as_ref() == "mode-sidebar" {
+                    "sidebar"
+                } else {
+                    "floating"
+                }
+                .into();
+                if set_preferences(preferences, app.clone(), state).is_err() {
+                    eprintln!("display mode update failed");
+                }
+            }
             "show" => {
                 if let Some(window) = app.get_webview_window("widget") {
                     if window.is_visible().unwrap_or(false) {
@@ -1824,13 +1920,15 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let window_state = macos_widget::state_plugin();
     #[cfg(not(target_os = "macos"))]
-    let window_state = WindowStateBuilder::default().build();
+    let window_state = WindowStateBuilder::default()
+        .with_denylist(&["deepseek-login"])
+        .build();
     #[allow(unused_mut)]
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            if let Some(window) = app.get_webview_window("widget") {
-                show_widget(&window);
+            if sidebar::recover(app).is_err() {
+                eprintln!("widget recovery failed");
             }
         }))
         .plugin(tauri_plugin_autostart::init(
@@ -1839,6 +1937,28 @@ pub fn run() {
         ))
         .plugin(window_state)
         .setup(|app| {
+            #[cfg(debug_assertions)]
+            if app.config().identifier == "app.codexmonitor.sidebar.acceptance" {
+                let home = std::env::var_os("CODEX_HOME")
+                    .filter(|value| !value.is_empty())
+                    .ok_or("acceptance requires an isolated CODEX_HOME")?;
+                sidebar_fixtures::validate_acceptance_home(std::path::Path::new(&home))?;
+                if sidebar_fixtures::enabled() {
+                    return Err("real-account acceptance must not use synthetic data".into());
+                }
+            }
+            #[cfg(debug_assertions)]
+            if app
+                .config()
+                .identifier
+                .starts_with("app.codexmonitor.sidebar.validation")
+                && (!sidebar_fixtures::enabled()
+                    || std::env::var_os("CODEX_HOME").is_none_or(|value| value.is_empty()))
+            {
+                return Err(
+                    "sidebar validation requires synthetic data and an isolated CODEX_HOME".into(),
+                );
+            }
             #[cfg(debug_assertions)]
             if std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
                 && app.config().identifier == "app.quotafloat.desktop"
@@ -1857,6 +1977,8 @@ pub fn run() {
                     let _ = token_handle.emit("token-statistics-updated", event);
                 },
             ));
+            app.manage(sidebar::SidebarState::default());
+            app.manage(deepseek::DeepSeekState::default());
             let data_dir = app.path().app_config_dir()?;
             let preferences_path = data_dir.join("preferences.json");
             let preferences = load_preferences(&preferences_path);
@@ -1898,29 +2020,38 @@ pub fn run() {
             }
             #[cfg(target_os = "macos")]
             macos_widget::create_widget(app).map_err(std::io::Error::other)?;
-            if preferences.locked {
-                let _ = apply_lock(app.handle(), true);
-            }
             if let Some(window) = app.get_webview_window("widget") {
                 #[cfg(target_os = "macos")]
                 macos_widget::initialize(&window, preferences.always_on_top)
                     .map_err(std::io::Error::other)?;
+                if preferences.display_mode == "sidebar" {
+                    sidebar::apply_mode(app.handle(), &preferences, &preferences)
+                        .map_err(std::io::Error::other)?;
+                }
                 #[cfg(not(target_os = "macos"))]
                 {
                     let _ = window.set_always_on_top(preferences.always_on_top);
                     #[cfg(debug_assertions)]
                     {
-                        let _ = window.center();
-                        let _ = window.show();
-                        let _ = window.set_focus();
+                        if preferences.display_mode != "sidebar" {
+                            let _ = window.center();
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
                     }
                 }
             }
+            // A fresh launch is an explicit recovery entry, including when the
+            // last process saved a hidden or click-through floating window.
+            sidebar::recover(app.handle()).map_err(std::io::Error::other)?;
             #[cfg(all(debug_assertions, not(target_os = "macos")))]
             {
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
                     std::thread::sleep(Duration::from_millis(800));
+                    if sidebar::enabled(&handle) {
+                        return;
+                    }
                     if let Some(window) = handle.get_webview_window("widget") {
                         let _ = window.set_position(PhysicalPosition::new(120, 120));
                         let _ = window.show();
@@ -1930,21 +2061,36 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            token_stats::service::get_token_statistics,
-            token_stats::service::refresh_token_statistics,
-            get_snapshots,
-            refresh_snapshots,
-            expand_widget,
-            collapse_widget,
-            begin_widget_drag,
-            finish_widget_drag,
-            get_preferences,
-            set_preferences,
-            set_widget_locked,
-            set_widget_always_on_top,
-            sync_widget_appearance,
-        ])
+        .invoke_handler(|invoke| {
+            // Remote sign-in content must never gain access to local app commands.
+            if invoke.message.webview_ref().label() != "widget" {
+                invoke.resolver.reject("unsupported caller");
+                return true;
+            }
+            let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+                deepseek::open_deepseek_login,
+                deepseek::disconnect_deepseek,
+                deepseek::get_deepseek_usage,
+                sidebar::set_sidebar_phase,
+                sidebar::sidebar_action,
+                sidebar::get_autostart,
+                token_stats::service::get_token_statistics,
+                token_stats::service::refresh_token_statistics,
+                get_snapshots,
+                get_account_usage,
+                refresh_snapshots,
+                expand_widget,
+                collapse_widget,
+                begin_widget_drag,
+                finish_widget_drag,
+                get_preferences,
+                set_preferences,
+                set_widget_locked,
+                set_widget_always_on_top,
+                sync_widget_appearance,
+            ];
+            handler(invoke)
+        })
         .on_tray_icon_event(|app, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -1966,8 +2112,18 @@ pub fn run() {
                     service.refresh();
                 }
             }
+            if window.label() != "widget" {
+                return;
+            }
+            if matches!(event, WindowEvent::Focused(false)) {
+                sidebar::dismiss_menu(window.app_handle());
+            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
+                if sidebar::enabled(window.app_handle()) {
+                    let _ = sidebar::recover(window.app_handle());
+                    return;
+                }
                 let _ = window.hide();
                 #[cfg(target_os = "macos")]
                 macos_widget::save_visibility(window.app_handle());
@@ -1978,13 +2134,23 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     macos_widget::prepare_app(&mut app);
     app.run(|app_handle, event| {
+        #[cfg(target_os = "macos")]
+        if matches!(event, tauri::RunEvent::Reopen { .. }) && sidebar::recover(app_handle).is_err()
+        {
+            eprintln!("widget recovery failed");
+        }
         if matches!(event, tauri::RunEvent::Resumed) {
+            if sidebar::enabled(app_handle) {
+                let _ = sidebar::recover(app_handle);
+            }
             if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {
                 service.refresh();
             }
             let _ = app_handle.emit_to("widget", "refresh-requested", ());
         }
         if matches!(event, tauri::RunEvent::Exit) {
+            #[cfg(target_os = "macos")]
+            macos_widget::stop_pointer_monitors();
             if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {
                 service.stop();
             }

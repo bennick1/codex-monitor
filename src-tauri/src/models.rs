@@ -43,6 +43,12 @@ impl ProviderSnapshot {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct WidgetPreferences {
+    pub deepseek_enabled: bool,
+    pub display_mode: String,
+    pub sidebar_side: String,
+    pub sidebar_opacity: f64,
+    pub sidebar_show_codex: bool,
+    pub sidebar_show_deepseek: bool,
     pub locked: bool,
     #[serde(default = "default_always_on_top")]
     pub always_on_top: bool,
@@ -73,6 +79,12 @@ fn default_skin() -> String {
 impl Default for WidgetPreferences {
     fn default() -> Self {
         Self {
+            deepseek_enabled: false,
+            display_mode: "floating".into(),
+            sidebar_side: "right".into(),
+            sidebar_opacity: 0.9,
+            sidebar_show_codex: true,
+            sidebar_show_deepseek: true,
             locked: false,
             always_on_top: true,
             stay_expanded: false,
@@ -87,6 +99,20 @@ impl Default for WidgetPreferences {
 
 impl WidgetPreferences {
     pub fn normalized(mut self) -> Self {
+        if self.display_mode != "sidebar" {
+            self.display_mode = "floating".into();
+        } else {
+            // A sidebar is the only visible way back when its tray is hidden.
+            self.locked = false;
+        }
+        if self.sidebar_side != "left" {
+            self.sidebar_side = "right".into();
+        }
+        self.sidebar_opacity = if self.sidebar_opacity.is_finite() {
+            self.sidebar_opacity.clamp(0.2, 1.0)
+        } else {
+            0.9
+        };
         self.auto_rotate_seconds = self.auto_rotate_seconds.clamp(5, 300);
         if self.pinned_provider.as_deref() != Some("codex") {
             self.pinned_provider = None;
@@ -101,5 +127,50 @@ impl WidgetPreferences {
             self.selected_skin = default_skin();
         }
         self
+    }
+}
+
+#[cfg(test)]
+mod sidebar_preference_tests {
+    use super::*;
+    #[test]
+    fn old_preferences_keep_floating_mode_and_sidebar_is_always_reachable() {
+        let legacy: WidgetPreferences =
+            serde_json::from_str(r#"{"locked":true,"selectedSkin":"blur"}"#).unwrap();
+        assert_eq!(legacy.display_mode, "floating");
+        assert_eq!(legacy.sidebar_side, "right");
+        assert!(legacy.sidebar_show_codex && legacy.sidebar_show_deepseek);
+        assert!(legacy.locked);
+        let next = WidgetPreferences {
+            display_mode: "sidebar".into(),
+            sidebar_side: "invalid".into(),
+            sidebar_opacity: 0.0,
+            ..legacy
+        }
+        .normalized();
+        assert!(!next.locked);
+        assert_eq!(next.sidebar_opacity, 0.2);
+        assert_eq!(next.sidebar_side, "right");
+        assert_eq!(next.selected_skin, "blur");
+    }
+
+    #[test]
+    fn sidebar_visibility_survives_round_trip_without_changing_login_state() {
+        for codex in [true, false] {
+            for deepseek in [true, false] {
+                let value = WidgetPreferences {
+                    sidebar_show_codex: codex,
+                    sidebar_show_deepseek: deepseek,
+                    deepseek_enabled: true,
+                    ..Default::default()
+                };
+                let saved = serde_json::to_string(&value).unwrap();
+                let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+                let restored = restored.normalized();
+                assert_eq!(restored.sidebar_show_codex, codex);
+                assert_eq!(restored.sidebar_show_deepseek, deepseek);
+                assert!(restored.deepseek_enabled);
+            }
+        }
     }
 }

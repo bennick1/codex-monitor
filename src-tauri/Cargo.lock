@@ -510,6 +510,7 @@ name = "codex-monitor"
 version = "1.2.1"
 dependencies = [
  "base64 0.22.1",
+ "block2",
  "chrono",
  "chrono-tz",
  "dirs 6.0.0",
