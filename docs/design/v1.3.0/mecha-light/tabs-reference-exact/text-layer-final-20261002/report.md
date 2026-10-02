@@ -65,3 +65,11 @@ forced-colors 下显示真实文字。固定字图对字体替换、仅文字放
 当前有效验证入口是 `capture-mecha-tabs-exact.mjs`、`compare-mecha-tabs.py`、`test-mecha-tabs-exact.mjs`、`test-mecha-tabs-text-layer.mjs` 及既有布局/键盘/不透明度脚本；Round 2/3 的预览和检查保留为历史，不作为最终实现。复跑 capture/label 必须选择全新phase。作用域测试可将 `MECHA_BASELINE_CSS` 指向本目录的 `scope-baseline-mecha.css`，将 `MECHA_REGRESSION_OUTPUT` 指向全新输出目录；需要既有Playwright/Chromium与Pillow/NumPy运行时。没有新增CI验证外壳、依赖或workflow。既有布局/键盘/不透明度脚本复核时仅在内存中重定向输出路径，原脚本及断言未变；原SHA及完整日志在本地独立归档outputs目录。
 
 历史预览、失败详情及诊断仍保留在原目录和两份既有保险包/最终增量中；Git仅收录正式实现、生产映射、有效验证入口、已签署对照、必要历史失败摘要和验收记录，不提交全部诊断、保险包或构建产物。
+
+## 2026-10-02 最终原生验收与发布 provenance
+
+用户在固定 Candidate `98158b9df4c731ac486886f27a10b54b0672327c` 的双端安装包交接后明确确认：“人工验收完成，无问题。” 据此记录 **Final Native Human Acceptance：Passed**；本报告此前三色直接参考及交互派生的视觉签署与实现冻结不变。历史 Pending 保留为当时记录，不再作为本次最终验收状态。
+
+正式 [Codex Monitor v1.3.0](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.0)，Release ID `401944221`，发布时间 `2026-10-02 23:49:59 +08:00`，`draft=false`、`prerelease=false`；annotated tag object `b80181691647d4a6f7c8ecdb75f963e9a5bff1e0`，target `98158b9df4c731ac486886f27a10b54b0672327c`。安装包唯一来源为 [Candidate CI 37021024626](https://github.com/bennick1/codex-monitor/actions/runs/37021024626)；main 同 SHA [CI 37026558975](https://github.com/bennick1/codex-monitor/actions/runs/37026558975) 成功。原 ZIP、实际验收包、正式改名包和远端回下载逐字节一致；完整资产 size／SHA-256、签名状态及文档收口见 [v1.3.0 功能验证报告](../../../../../v1.3.0-feature-validation-report.md)。
+
+本次仅追加发布事实，不修改资源、冻结哈希、截图、原始对照环境或像素结论。中文固定字图、原生读屏器／完整 WCAG 未独立验收、Fast selected/requested 与两条历史 Unknown 等限制继续保留；原生人工通过不扩大任何既有自动化或零像素差异结论。
