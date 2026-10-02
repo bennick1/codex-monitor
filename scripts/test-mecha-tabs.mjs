@@ -9,8 +9,8 @@ import { inflateSync } from 'node:zlib';
 import { createServer } from 'vite';
 
 const { chromium } = await import(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
-const baseline = '86209637f82aae1db0dbe358679cb526879304db';
-const output = resolve('outputs/v1.3.0-tabs-fix');
+const baseline = '1980d03dc0468ea499b0718280a3ad49dbf7a223';
+const output = resolve('outputs/v1.3.0-tabs-round2');
 const fixedTime = '2026-09-30T12:00:00.000Z';
 const browserArgs = ['--disable-gpu', '--force-color-profile=srgb'];
 const tabSelector = '.token-heading > .token-switch';
@@ -139,6 +139,13 @@ try {
   await page.waitForFunction(() => document.documentElement.dataset.fixtureReady === 'true');
   assert.equal(instrumentationCount, 2, 'fixture drag instrumentation was not loaded');
   await page.addStyleTag({ content: '*, *::before, *::after { animation: none !important; transition: none !important; }' });
+  await page.evaluate(async () => {
+    const assets = ['token-tabs.svg', 'token-tab-lights.svg'];
+    await Promise.all(assets.map(file => new Promise((resolve, reject) => {
+      const img = new Image(); img.onload = resolve; img.onerror = reject;
+      img.src = `/assets/mecha-light/${file}`;
+    })));
+  });
 
   const settle = async () => page.evaluate(async () => {
     await document.fonts.ready;
@@ -171,7 +178,7 @@ try {
     const tabs = [...group.querySelectorAll('button')];
     const content = host.querySelector('.token-grid, .token-model-view, .token-turn-view');
     const list = host.querySelector('.token-model-list, .token-turn-list');
-    const geometry = { card: rect(host), tokenUsage: rect(host.querySelector('.token-usage')), heading: rect(host.querySelector('.token-heading')),
+    const geometry = { card: rect(host), tokenUsage: rect(host.querySelector('.token-usage')), title: rect(host.querySelector('.token-heading h2')), heading: rect(host.querySelector('.token-heading')),
       tabs: rect(group), buttons: tabs.map(rect), content: content && rect(content), list: list && rect(list) };
     if (geometry.card.width !== 306 || geometry.card.height !== (options.shortWindow ? 506 : 452)) errors.push('widget dimensions changed');
     if (group.getAttribute('role') !== 'group' || !group.getAttribute('aria-label')) errors.push('mode group semantics changed');
@@ -235,9 +242,14 @@ try {
     height: Math.ceil(box.y + box.height) - Math.floor(box.y) + 2 * padding });
   const capturePair = async options => {
     const name = caseName(options), sides = {}, screenshots = {};
-    const saveCard = options.skin !== 'mecha-light'
-      || options.language === 'zh-CN' && options.shortWindow && options.opacityPercent === 100 && options.theme === 'light'
-      || options.language === 'en' && !options.shortWindow && options.opacityPercent === 60 && options.mode === 'turns';
+    // Keep the full verification matrix, but publish only the five requested
+    // comparisons and one English/60% supplement, not hundreds of duplicates.
+    const primary = options.skin === 'mecha-light' && options.language === 'zh-CN'
+      && options.shortWindow && options.opacityPercent === 100 && options.theme === 'light'
+      && (options.mode === 'turns' || options.state === 'blue');
+    const supplement = options.skin === 'mecha-light' && options.state === 'blue' && options.mode === 'models'
+      && options.language === 'en' && !options.shortWindow && options.opacityPercent === 60 && options.theme === 'light';
+    const saveCard = primary && options.state === 'blue' && options.mode === 'turns';
     for (const [side, css] of [['before', beforeCss], ['after', afterCss]]) {
       // Keep the same component instances and compositor layers for the pair;
       // only the scoped stylesheet changes. Unrelated skin blur layers must
@@ -246,11 +258,11 @@ try {
       else { await replaceCss(css); await neutral(); }
       const geometry = await page.locator(tabSelector).boundingBox();
       const tabsPath = `${side}-${name}-tabs.png`;
-      const tabsPng = await page.screenshot({ path: resolve(output, tabsPath), clip: clipFor(geometry, 4), animations: 'disabled' });
-      screenshots[`${side}Tabs`] = tabsPath;
+      const tabsPng = await page.screenshot({ ...(primary || supplement ? { path: resolve(output, tabsPath) } : {}), clip: clipFor(geometry), animations: 'disabled' });
+      if (primary || supplement) screenshots[`${side}Tabs`] = tabsPath;
       const cardPath = `${side}-${name}-card.png`;
-      const cardPng = await page.locator('.quota-card').screenshot({ ...(saveCard ? { path: resolve(output, cardPath) } : {}), animations: 'disabled' });
-      if (saveCard) screenshots[`${side}Card`] = cardPath;
+      const cardPng = await page.locator('.quota-card').screenshot({ ...(saveCard || supplement && side === 'after' ? { path: resolve(output, cardPath) } : {}), animations: 'disabled' });
+      if (saveCard || supplement && side === 'after') screenshots[`${side}Card`] = cardPath;
       const periodsPng = options.mode === 'models' ? await page.locator('.token-period-switch').screenshot({ animations: 'disabled' }) : null;
       const data = await inspect(options, side === 'after');
       sides[side] = { data, card: decodePng(cardPng), tabs: decodePng(tabsPng), periods: periodsPng && decodePng(periodsPng) };
@@ -258,18 +270,28 @@ try {
     const { before, after } = sides;
     const errors = [...before.data.errors.map(error => `before: ${error}`), ...after.data.errors.map(error => `after: ${error}`)];
     const geometryEqual = JSON.stringify(before.data.geometry) === JSON.stringify(after.data.geometry);
-    if (!geometryEqual) errors.push('Before/After card, tabs, content, or list geometry changed');
+    const stableGeometryEqual = ['card', 'tokenUsage', 'title', 'content', 'list'].every(key =>
+      JSON.stringify(before.data.geometry[key]) === JSON.stringify(after.data.geometry[key]));
+    if (!stableGeometryEqual) errors.push('Before/After card, title, content, or list geometry changed');
+    if (options.skin !== 'mecha-light' && !geometryEqual) errors.push('unrelated skin geometry changed');
+    const tabBefore = before.data.geometry.tabs, tabAfter = after.data.geometry.tabs;
+    if (options.skin === 'mecha-light' && (tabAfter.width !== 258 || tabAfter.height !== 33
+      || tabAfter.x !== tabBefore.x || tabAfter.height - tabBefore.height !== 5))
+      errors.push('measured Tab proportion or bounded +5px height allocation changed');
     const labelsEqual = before.data.tabsStyle.every((tab, index) => ['label', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight']
       .every(key => tab[key] === after.data.tabsStyle[index]?.[key]));
     if (!labelsEqual) errors.push('mode label/font contract changed');
-    const tabBox = before.data.geometry.tabs, cardBox = before.data.geometry.card;
-    const excluded = clipFor({ ...tabBox, x: tabBox.x - cardBox.x, y: tabBox.y - cardBox.y });
+    const cardBox = before.data.geometry.card;
+    // Only the union of the old/new Tab rectangles may change. Recovering the
+    // surrounding 5px must not move the title or consume any data/list space.
+    const excluded = clipFor({ x: tabBefore.x - cardBox.x, y: Math.min(tabBefore.y, tabAfter.y) - cardBox.y,
+      width: tabBefore.width, height: Math.max(tabBefore.y + tabBefore.height, tabAfter.y + tabAfter.height) - Math.min(tabBefore.y, tabAfter.y) });
     const unchangedPixels = comparePixels(before.card, after.card, options.skin === 'mecha-light' ? excluded : null);
     if (!unchangedPixels.equal) errors.push(options.skin === 'mecha-light' ? 'pixels outside mode-tab rectangle changed' : 'unrelated skin RGBA pixels changed');
     const periodsEqual = !before.periods || (comparePixels(before.periods, after.periods).equal
       && JSON.stringify(before.data.periodStyles) === JSON.stringify(after.data.periodStyles));
     if (!periodsEqual) errors.push('five period buttons changed in computed styles or RGBA pixels');
-    report.comparisons.push({ name, options, screenshots, geometryEqual, labelsEqual, unchangedPixels, periodsEqual,
+    report.comparisons.push({ name, options, screenshots, geometryEqual, stableGeometryEqual, allowedPixelRegion: excluded, labelsEqual, unchangedPixels, periodsEqual,
       modeTabsPixels: comparePixels(before.tabs, after.tabs), geometry: { before: before.data.geometry, after: after.data.geometry },
       accent: after.data.accent, rawAccent: after.data.rawAccent, tabsStyle: { before: before.data.tabsStyle, after: after.data.tabsStyle },
       internalScroll: after.data.scroll, cardRgbaSha256: { before: before.card.rgbaSha256, after: after.card.rgbaSha256 }, errors: [...new Set(errors)] });
@@ -351,8 +373,10 @@ try {
           outlineColor: style.outlineColor, accentColor: getComputedStyle(document.querySelector('.primary-metric')).color,
           clipPath: style.clipPath, clipping };
       }, tabSelector);
-      const focusedPath = `focus-${name}-${modes[index]}-${key.toLowerCase()}-tabs.png`;
-      const focused = decodePng(await page.screenshot({ path: resolve(output, focusedPath), clip: clipFor(tabsBox, 4), animations: 'disabled' }));
+      const saveFocus = state.state === 'blue' && language === 'zh-CN' && theme === 'light'
+        && opacityPercent === 100 && index === 1 && key === 'Enter';
+      const focusedPath = saveFocus ? `focus-${name}-${modes[index]}-${key.toLowerCase()}-tabs.png` : null;
+      const focused = decodePng(await page.screenshot({ ...(saveFocus ? { path: resolve(output, focusedPath) } : {}), clip: clipFor(tabsBox, 4), animations: 'disabled' }));
       const visibleChange = comparePixels(beforeFocus, focused);
       if (focus.focusedIndex !== index || !focus.focusVisible) errors.push(`${modes[index]} ${key}: Tab focus failed`);
       if (focus.outlineStyle === 'none' || focus.outlineWidth < 1 || focus.outlineColor !== focus.accentColor || visibleChange.equal)

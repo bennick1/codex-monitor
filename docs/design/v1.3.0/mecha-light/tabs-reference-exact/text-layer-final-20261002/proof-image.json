@@ -1,0 +1,30 @@
+{
+  "method": "Three unretouched production-component widget screenshots placed side by side at native 1x resolution; 16px white gutters only",
+  "inputs": [
+    {
+      "source": "docs/design/v1.3.0/mecha-light/tabs-reference-exact/text-layer-three-colors-02/blue-turns-full-widget.png",
+      "sha256": "3f76fcd6b78cbc7717ec61b45256fdb737c4be78d6d8a012cbc206a358bee484",
+      "offset": [
+        0,
+        0
+      ]
+    },
+    {
+      "source": "docs/design/v1.3.0/mecha-light/tabs-reference-exact/text-layer-three-colors-02/amber-turns-full-widget.png",
+      "sha256": "e2de82796db1b088fb87a0e2f8960ef183fc63ba01003eee799da60ef71d2dc1",
+      "offset": [
+        322,
+        0
+      ]
+    },
+    {
+      "source": "docs/design/v1.3.0/mecha-light/tabs-reference-exact/text-layer-three-colors-02/red-turns-full-widget.png",
+      "sha256": "fbe9acbe9688ac5b99e21992204ee6608e76aa1b7e8a8c16e2c5e5888d240dc2",
+      "offset": [
+        644,
+        0
+      ]
+    }
+  ],
+  "sha256": "d8cc77fca74272c2c2c0959f5afbddc39c8c6a195fcbfc5e636d7ba889d1cdc0"
+}

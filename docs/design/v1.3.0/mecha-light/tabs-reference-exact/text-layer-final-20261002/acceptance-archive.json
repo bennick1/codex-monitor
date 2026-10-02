@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-02",
+  "userSignature": "Mecha Tabs 三色原图还原及交互派生视觉验收通过。",
+  "directThreeColors": "Human Accepted",
+  "overviewAndModelsInteractionDerivatives": "Human Accepted",
+  "textAndPanelImplementation": "Frozen — 用户明确签署",
+  "acceptedLocalBaseHead": "1980d03dc0468ea499b0718280a3ad49dbf7a223",
+  "remoteDocumentsFastForward": "3e93c53d97c374ac8bea2a042662f281375ce313",
+  "initialFilesVerifiedUnchangedAfterFastForward": 1092,
+  "frozenFiles": 103,
+  "frozenManifest": "accepted-files.sha256",
+  "existingBackups": {
+    "outputs/tabs-reference-exact-backup-20261001/local-work.tar.gz": "24da6248055dc199c8488620a46da30ea0eb7318bf3dd5cb99e7b0ce051015f6",
+    "outputs/tabs-text-layer-final-backup-20261002/local-work.tar.gz": "5e30487e33c379d0926aea0da044f162835cd82523ee1d04bbcc08c1b2138f92"
+  },
+  "reusedArchiveFiles": 1577,
+  "incrementalBackup": {
+    "path": "outputs/v1.3.0-final-archive-20261002/accepted-delta.tar.gz",
+    "files": 228,
+    "sha256": "73d957136712e9c61fabd19e1c3d7bec253d85ddde337e587e4b8e66ea921215",
+    "archiveReadback": "passed"
+  },
+  "panelAssets": 18,
+  "labelAssets": 18,
+  "generationDuringArchive": "Not run; accepted assets are reused verbatim",
+  "directPixelScope": {
+    "browser": "Chromium 154.0.8037.58",
+    "canvas": [
+      258,
+      36
+    ],
+    "DPR": 1,
+    "zoomPercent": 100,
+    "opacityPercent": 100,
+    "hover": false,
+    "focus": false,
+    "allColorsSelectedMode": "turns",
+    "mask": null
+  },
+  "nativeAndOtherGates": "Previous status retained; not passed by this archive",
+  "historicalFastRecords": "Original two records remain Unknown",
+  "candidateSource": "Final normal commit containing implementation and acceptance records; exact full SHA and CI recorded in delivered BUILD-INFO.txt",
+  "engineeringRecheck": "Passed; see archive-recheck.json",
+  "originalEvidenceAndAllImplementationHashesAfterChecks": "unchanged (only five acceptance report/gallery files updated)"
+}

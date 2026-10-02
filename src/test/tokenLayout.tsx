@@ -18,6 +18,7 @@ export interface TokenLayoutFixtureOptions {
   shortWindow?: boolean;
   percent?: number;
   opacityPercent?: number;
+  preserveState?: boolean;
   orbState?: "healthy" | "caution" | "critical" | "stale" | "unavailable" | "signed_out";
 }
 
@@ -95,7 +96,7 @@ let renderKey = 0;
 const settle = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 
 window.__renderTokenFixture = async (options) => {
-  renderKey += 1;
+  if (!options.preserveState) renderKey += 1;
   const opacity = options.opacityPercent ?? 100;
   rootNode.style.opacity = opacity < 100 ? `${opacity / 100}` : "";
   rootNode.style.transform = opacity < 100 ? "translateZ(0)" : "";

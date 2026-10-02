@@ -223,7 +223,7 @@ export const QuotaCard = memo(function QuotaCard({
           ) : null}
         </section>
       )}
-      {tokens ? <TokenUsage view={tokens} language={language} /> : null}
+      {tokens ? <TokenUsage view={tokens} language={language} mechaTabTone={skin === "mecha-light" ? tier : undefined} /> : null}
     </main>
   );
 });

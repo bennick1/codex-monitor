@@ -1,0 +1,26 @@
+{
+  "task": "CM-130-TABS-TEXT-LAYER-FINAL-20261002",
+  "backup": "outputs/tabs-text-layer-final-backup-20261002/local-work.tar.gz",
+  "backupSha256": "5e30487e33c379d0926aea0da044f162835cd82523ee1d04bbcc08c1b2138f92",
+  "archiveReadbackVerified": true,
+  "protectedFiles": 1577,
+  "unchangedProtectedFiles": 1571,
+  "changedWithOriginalsRetained": [
+    "scripts/capture-mecha-tabs-exact.mjs",
+    "scripts/compare-mecha-tabs.py",
+    "scripts/derive-mecha-tabs.py",
+    "scripts/test-mecha-tabs-exact.mjs",
+    "src/components/TokenUsage.tsx",
+    "src/mecha-tabs-reference.css"
+  ],
+  "missingFiles": [],
+  "original75FileInsuranceAndAllHistoricalEvidence": "byte-identical",
+  "frozenReferenceMapAndMasks": "byte-identical",
+  "all18ExistingPanels": "byte-identical",
+  "newTrackedFileEditsRecoverableFromHEAD": [
+    "src/components/QuotaCard.tsx",
+    "src/test/tokenLayout.tsx"
+  ],
+  "sourceSha256": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+  "labelMapSha256": "bc5a7c58e71325eacba5a9df9765369a9a494725ca94bb71dcae95b3cf6a56a5"
+}

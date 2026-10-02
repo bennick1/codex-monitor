@@ -1,0 +1,359 @@
+{
+  "task": "CM-130-TABS-REFERENCE-EXACT-20261001",
+  "source": "docs/design/v1.3.0/mecha-light/references/expanded-three-states.png",
+  "sourceSha256": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+  "sourceSize": [
+    1448,
+    1086
+  ],
+  "sourceBytes": 2564146,
+  "outputCanvas": [
+    258,
+    36
+  ],
+  "runtimeLayout": [
+    258,
+    33
+  ],
+  "paintOffset": [
+    0,
+    -2
+  ],
+  "normalization": "Pillow affine BICUBIC, isotropic scale 258/sourceWidth; x0 -> 0; y583 -> 35. No local registration or warping.",
+  "cropRule": "x: measured full strip; y:529..586 guard band. Complete contour, seams and true bottom retained in the fixed 258x36 comparison canvas.",
+  "repair": "For each frozen text rectangle, interpolate RGB vertically between the immediately adjacent rows. Only pixels inside the listed rectangles change. Edges and light are untouched.",
+  "states": {
+    "blue": {
+      "sourceCrop": [
+        65,
+        529,
+        457,
+        586
+      ],
+      "scale": 0.6581632653061225,
+      "affineOutputToSource": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ],
+      "sourceSeams": [
+        135,
+        253
+      ],
+      "runtimeWidths": [
+        89,
+        78,
+        91
+      ],
+      "textRepairRectangles": [
+        [
+          117,
+          550,
+          149,
+          567
+        ],
+        [
+          236,
+          550,
+          282,
+          567
+        ],
+        [
+          364,
+          549,
+          412,
+          567
+        ]
+      ],
+      "geometry": {
+        "idleTopY": 538,
+        "activeTopY": 533,
+        "bevelStartY": 570,
+        "brightBottomY": 578,
+        "trueBottomY": 582,
+        "activeTopLift": 3.2908163265306123,
+        "activeLeftStepApproxSource": [
+          318,
+          570,
+          18,
+          10
+        ]
+      },
+      "assets": {
+        "assets/mecha-light/tabs-reference-exact/blue-first-idle.png": {
+          "sha256": "e28ec1e2e20ed1377c28648397a265f776b15f31028e5e47b9deaaa79e6bb4dd",
+          "size": [
+            89,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/blue-middle-idle.png": {
+          "sha256": "f68417936df6ae6bbddcc7668ee3a499aa8debb3002b66105a87426a69b6abdc",
+          "size": [
+            78,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/blue-last-active.png": {
+          "sha256": "63c9069ebbdb7fa3dad2a9c3ea51d61f9753645e73f4f6e08958fadec5b89d6e",
+          "size": [
+            91,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/blue-first-active.png": {
+          "sha256": "20dffb0a5b9e7b6a1b7a561240f14e0b251b7930d6d8cf8a0d1e805f6dbad11a",
+          "size": [
+            89,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/blue-middle-active.png": {
+          "sha256": "fada2a7fa733598bf3ca62bef549fa91219669be059b3c5dbaadc32a572f3d8a",
+          "size": [
+            78,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/blue-last-idle.png": {
+          "sha256": "09244a4b4cc35296ae234a520c6c1f0f64049ac39ab2d0584f73428ce3f976b7",
+          "size": [
+            91,
+            36
+          ],
+          "origin": "interaction derivative"
+        }
+      }
+    },
+    "amber": {
+      "sourceCrop": [
+        538,
+        529,
+        922,
+        586
+      ],
+      "scale": 0.671875,
+      "affineOutputToSource": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ],
+      "sourceSeams": [
+        129,
+        247
+      ],
+      "runtimeWidths": [
+        87,
+        79,
+        92
+      ],
+      "textRepairRectangles": [
+        [
+          588,
+          550,
+          620,
+          567
+        ],
+        [
+          702,
+          550,
+          749,
+          567
+        ],
+        [
+          831,
+          549,
+          878,
+          567
+        ]
+      ],
+      "geometry": {
+        "idleTopY": 538,
+        "activeTopY": 533,
+        "bevelStartY": 570,
+        "brightBottomY": 578,
+        "trueBottomY": 582,
+        "activeTopLift": 3.359375,
+        "activeLeftStepApproxSource": [
+          785,
+          570,
+          18,
+          10
+        ]
+      },
+      "assets": {
+        "assets/mecha-light/tabs-reference-exact/amber-first-idle.png": {
+          "sha256": "e026a8b4bfc2b21d73d31ee9ed9b40a374d65071274cc872fde2a71e790a8f95",
+          "size": [
+            87,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/amber-middle-idle.png": {
+          "sha256": "7764644a115adb8d36b10a337bbec279df1f3241813d9f36f30f85fd3047bd24",
+          "size": [
+            79,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/amber-last-active.png": {
+          "sha256": "b05826a35af4793d9ae0efb6c586dc3510e6549f0220e8753da6314dbc5dcce3",
+          "size": [
+            92,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/amber-first-active.png": {
+          "sha256": "a47b0e326a99ee49a2250ee33eb19fd78f485a904c1ec15696528f4d2c0921d8",
+          "size": [
+            87,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/amber-middle-active.png": {
+          "sha256": "bf9a40eab43dd725a8d1e23dc860607f5ddda8a5d6fd68288ec1bd882b405e28",
+          "size": [
+            79,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/amber-last-idle.png": {
+          "sha256": "7f0f8afb94d74560cfc8986c8937c857c82abd8fd9a4222f28c151c595c68dda",
+          "size": [
+            92,
+            36
+          ],
+          "origin": "interaction derivative"
+        }
+      }
+    },
+    "red": {
+      "sourceCrop": [
+        1000,
+        529,
+        1387,
+        586
+      ],
+      "scale": 0.6666666666666666,
+      "affineOutputToSource": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ],
+      "sourceSeams": [
+        129,
+        247
+      ],
+      "runtimeWidths": [
+        86,
+        79,
+        93
+      ],
+      "textRepairRectangles": [
+        [
+          1052,
+          550,
+          1083,
+          567
+        ],
+        [
+          1165,
+          550,
+          1212,
+          567
+        ],
+        [
+          1293,
+          549,
+          1341,
+          567
+        ]
+      ],
+      "geometry": {
+        "idleTopY": 538,
+        "activeTopY": 533,
+        "bevelStartY": 570,
+        "brightBottomY": 578,
+        "trueBottomY": 582,
+        "activeTopLift": 3.333333333333333,
+        "activeLeftStepApproxSource": [
+          1247,
+          570,
+          18,
+          10
+        ]
+      },
+      "assets": {
+        "assets/mecha-light/tabs-reference-exact/red-first-idle.png": {
+          "sha256": "de08ab9bbf439690c840530458268c2fa3bb0c996c1c99908e5928644d0e95b0",
+          "size": [
+            86,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/red-middle-idle.png": {
+          "sha256": "da92084e15492aa2549888b047581768b1141455c290c3bcd58b14983915a9b0",
+          "size": [
+            79,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/red-last-active.png": {
+          "sha256": "1a001ee1c53dbe90f0871a75ced738da66fecbb3b6fbf7bde90c46afc17a2988",
+          "size": [
+            93,
+            36
+          ],
+          "origin": "direct source, with declared text repair"
+        },
+        "assets/mecha-light/tabs-reference-exact/red-first-active.png": {
+          "sha256": "b6c6936ece28063600b525daf961e283687dc4af71c3d28eb8ac7eecb534aa82",
+          "size": [
+            86,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/red-middle-active.png": {
+          "sha256": "24610da55e57987f08820edfaa4ee453e2ba4f5dd4d6a69267054a2c88f5ee02",
+          "size": [
+            79,
+            36
+          ],
+          "origin": "interaction derivative"
+        },
+        "assets/mecha-light/tabs-reference-exact/red-last-idle.png": {
+          "sha256": "827e383d4a78ae19c5f38157f42b79ca99c5c3e62ad4d59e3fca90999db11187",
+          "size": [
+            93,
+            36
+          ],
+          "origin": "interaction derivative"
+        }
+      }
+    }
+  },
+  "derivedStates": "Overview/By model selected: use the corresponding color active face, preserving left 18px and right 10px; resize only the flat middle. Last idle cap mirrors the first idle left 8px. No direct reference exists for these states.",
+  "acceptance": "Unresolved until full unmasked comparison and explicit human signature."
+}

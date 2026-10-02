@@ -1,0 +1,4040 @@
+{
+  "task": "CM-130-TABS-TEXT-LAYER-FINAL-20261002",
+  "evidence": "Synthetic Chromium, real production components. No native, assistive-technology or human sign-off.",
+  "checks": [
+    {
+      "name": "blue-overview-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:active:blue-first-active",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 328,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-models-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:active:blue-middle-active",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 328,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-turns-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": true,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-overview-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:active:amber-first-active",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 328,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:idle:amber-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-models-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:active:amber-middle-active",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 328,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:idle:amber-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-turns-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": true,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:active:amber-last-active",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 328,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-overview-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:active:red-first-active",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 329,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:idle:red-last-idle",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-models-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 330,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:active:red-middle-active",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 328,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:idle:red-last-idle",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-turns-dpr1",
+      "passed": true,
+      "result": {
+        "directReference": true,
+        "dpr": 1,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 330,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:active:red-last-active",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-overview-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:active:blue-first-active",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 328,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-models-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:active:blue-middle-active",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 328,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-turns-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-overview-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:active:amber-first-active",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 328,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:idle:amber-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-models-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:active:amber-middle-active",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 328,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:idle:amber-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 329,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "amber-turns-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:active:amber-last-active",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 328,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-overview-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "true",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:active:red-first-active",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 329,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:idle:red-last-idle",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-models-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 330,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:active:red-middle-active",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 328,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:idle:red-last-idle",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "red-turns-dpr2",
+      "passed": true,
+      "result": {
+        "directReference": false,
+        "dpr": 2,
+        "info": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "label": {
+              "x": 70,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+              "display": "block",
+              "box": {
+                "x": 62,
+                "y": 330,
+                "width": 22,
+                "height": 12
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 12,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 152.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 137,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "label": {
+              "x": 238.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:red-turns:active:red-last-active",
+              "display": "block",
+              "box": {
+                "x": 223,
+                "y": 329,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "accessibilityNames": [
+          "总览",
+          "按模型",
+          "额度周"
+        ]
+      }
+    },
+    {
+      "name": "blue-opacity60-once",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 89,
+            "height": 33
+          },
+          "label": {
+            "x": 71.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+            "display": "block",
+            "box": {
+              "x": 61,
+              "y": 329,
+              "width": 23,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 23,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 117,
+            "y": 319,
+            "width": 78,
+            "height": 33
+          },
+          "label": {
+            "x": 155,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+            "display": "block",
+            "box": {
+              "x": 140,
+              "y": 329,
+              "width": 32,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 32,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 195,
+            "y": 319,
+            "width": 91,
+            "height": 33
+          },
+          "label": {
+            "x": 239.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+            "display": "block",
+            "box": {
+              "x": 224,
+              "y": 329,
+              "width": 33,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "amber-opacity60-once",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 87,
+            "height": 33
+          },
+          "label": {
+            "x": 70.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+            "display": "block",
+            "box": {
+              "x": 61,
+              "y": 329,
+              "width": 22,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 22,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 115,
+            "y": 319,
+            "width": 79,
+            "height": 33
+          },
+          "label": {
+            "x": 153.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+            "display": "block",
+            "box": {
+              "x": 138,
+              "y": 329,
+              "width": 32,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 32,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 194,
+            "y": 319,
+            "width": 92,
+            "height": 33
+          },
+          "label": {
+            "x": 239,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:turns:amber-turns:active:amber-last-active",
+            "display": "block",
+            "box": {
+              "x": 224,
+              "y": 328,
+              "width": 33,
+              "height": 14
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 14,
+            "ready": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "red-opacity60-once",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 86,
+            "height": 33
+          },
+          "label": {
+            "x": 70,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+            "display": "block",
+            "box": {
+              "x": 62,
+              "y": 330,
+              "width": 22,
+              "height": 12
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 22,
+            "height": 12,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 114,
+            "y": 319,
+            "width": 79,
+            "height": 33
+          },
+          "label": {
+            "x": 152.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+            "display": "block",
+            "box": {
+              "x": 137,
+              "y": 329,
+              "width": 33,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 193,
+            "y": 319,
+            "width": 93,
+            "height": 33
+          },
+          "label": {
+            "x": 238.5,
+            "y": 334.5,
+            "width": 1,
+            "height": 1
+          },
+          "status": "ready",
+          "textClip": "inset(50%)",
+          "textDisplay": "block",
+          "textVisibility": "visible",
+          "opacity": 0.6,
+          "opacityLayers": 1,
+          "image": {
+            "id": "zh-CN:turns:red-turns:active:red-last-active",
+            "display": "block",
+            "box": {
+              "x": 223,
+              "y": 329,
+              "width": 33,
+              "height": 13
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "forced-colors-real-text",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 89,
+            "height": 33
+          },
+          "label": {
+            "x": 63,
+            "y": 328.5,
+            "width": 20,
+            "height": 14
+          },
+          "status": "ready",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 23,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 117,
+            "y": 319,
+            "width": 78,
+            "height": 33
+          },
+          "label": {
+            "x": 141,
+            "y": 330.5,
+            "width": 30,
+            "height": 10
+          },
+          "status": "ready",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 32,
+            "height": 13,
+            "ready": "true"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 195,
+            "y": 319,
+            "width": 91,
+            "height": 33
+          },
+          "label": {
+            "x": 225.75,
+            "y": 327.5,
+            "width": 30,
+            "height": 14
+          },
+          "status": "ready",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-panel-real-text",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 89,
+            "height": 33
+          },
+          "label": {
+            "x": 63,
+            "y": 330.5,
+            "width": 20,
+            "height": 10
+          },
+          "status": "text",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": null
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 117,
+            "y": 319,
+            "width": 78,
+            "height": 33
+          },
+          "label": {
+            "x": 141,
+            "y": 330.5,
+            "width": 30,
+            "height": 10
+          },
+          "status": "text",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": null
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 195,
+            "y": 319,
+            "width": 91,
+            "height": 33
+          },
+          "label": {
+            "x": 225.375,
+            "y": 327.5,
+            "width": 30.75,
+            "height": 14
+          },
+          "status": "text",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": null
+        }
+      ]
+    },
+    {
+      "name": "missing-label",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 86,
+            "height": 33
+          },
+          "label": {
+            "x": 63,
+            "y": 328.5,
+            "width": 20,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 114,
+            "y": 319,
+            "width": 79,
+            "height": 33
+          },
+          "label": {
+            "x": 138.5,
+            "y": 330.5,
+            "width": 30,
+            "height": 10
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 193,
+            "y": 319,
+            "width": 93,
+            "height": 33
+          },
+          "label": {
+            "x": 224.375,
+            "y": 327.5,
+            "width": 30.75,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:turns:red-turns:active:red-last-active",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "corrupt-label",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 86,
+            "height": 33
+          },
+          "label": {
+            "x": 63,
+            "y": 328.5,
+            "width": 20,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 114,
+            "y": 319,
+            "width": 79,
+            "height": 33
+          },
+          "label": {
+            "x": 138.5,
+            "y": 330.5,
+            "width": 30,
+            "height": 10
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 193,
+            "y": 319,
+            "width": 93,
+            "height": 33
+          },
+          "label": {
+            "x": 224.375,
+            "y": 327.5,
+            "width": 30.75,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:turns:red-turns:active:red-last-active",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 0,
+            "height": 0,
+            "ready": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-panel",
+      "passed": true,
+      "result": [
+        {
+          "name": "总览",
+          "pressed": "false",
+          "box": {
+            "x": 28,
+            "y": 319,
+            "width": 86,
+            "height": 33
+          },
+          "label": {
+            "x": 63,
+            "y": 328.5,
+            "width": 20,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 22,
+            "height": 12,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "按模型",
+          "pressed": "false",
+          "box": {
+            "x": 114,
+            "y": 319,
+            "width": 79,
+            "height": 33
+          },
+          "label": {
+            "x": 138.5,
+            "y": 330.5,
+            "width": 30,
+            "height": 10
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "false"
+          }
+        },
+        {
+          "name": "额度周",
+          "pressed": "true",
+          "box": {
+            "x": 193,
+            "y": 319,
+            "width": 93,
+            "height": 33
+          },
+          "label": {
+            "x": 224.375,
+            "y": 327.5,
+            "width": 30.75,
+            "height": 14
+          },
+          "status": "error",
+          "textClip": "none",
+          "textDisplay": "inline",
+          "textVisibility": "visible",
+          "opacity": 1,
+          "opacityLayers": 0,
+          "image": {
+            "id": "zh-CN:turns:red-turns:active:red-last-active",
+            "display": "none",
+            "box": {
+              "x": 0,
+              "y": 0,
+              "width": 0,
+              "height": 0
+            },
+            "pointerEvents": "none",
+            "draggable": false,
+            "width": 33,
+            "height": 13,
+            "ready": "false"
+          }
+        }
+      ]
+    },
+    {
+      "name": "late-decode-language",
+      "passed": true,
+      "result": {
+        "pending": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 63,
+              "y": 328.5,
+              "width": 20,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 141,
+              "y": 330.5,
+              "width": 30,
+              "height": 10
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 225.75,
+              "y": 327.5,
+              "width": 30,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "false"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "Overview",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 46.171875,
+              "y": 327.5,
+              "width": 52.640625,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          },
+          {
+            "name": "By model",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 129.703125,
+              "y": 327.5,
+              "width": 52.578125,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          },
+          {
+            "name": "Quota week",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 205.296875,
+              "y": 327.5,
+              "width": 70.390625,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          }
+        ],
+        "preservesComponentState": true
+      }
+    },
+    {
+      "name": "late-decode-skin",
+      "passed": true,
+      "result": {
+        "pending": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 63,
+              "y": 328.5,
+              "width": 20,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 141,
+              "y": 330.5,
+              "width": 30,
+              "height": 10
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 225.75,
+              "y": 327.5,
+              "width": 30,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "false"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 29,
+              "y": 322,
+              "width": 84,
+              "height": 24
+            },
+            "label": {
+              "x": 59.078125,
+              "y": 326,
+              "width": 23.84375,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 322,
+              "width": 84,
+              "height": 24
+            },
+            "label": {
+              "x": 139.109375,
+              "y": 326,
+              "width": 35.765625,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 201,
+              "y": 322,
+              "width": 84,
+              "height": 24
+            },
+            "label": {
+              "x": 225.109375,
+              "y": 326,
+              "width": 35.765625,
+              "height": 15
+            },
+            "status": "text",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": null
+          }
+        ],
+        "preservesComponentState": true
+      }
+    },
+    {
+      "name": "late-decode-color",
+      "passed": true,
+      "result": {
+        "pending": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 63,
+              "y": 328.5,
+              "width": 20,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 141,
+              "y": 330.5,
+              "width": 30,
+              "height": 10
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 225.75,
+              "y": 327.5,
+              "width": 30,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "false"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "label": {
+              "x": 70.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 22,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 22,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "label": {
+              "x": 153.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+              "display": "block",
+              "box": {
+                "x": 138,
+                "y": 329,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "label": {
+              "x": 239,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:amber-turns:active:amber-last-active",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 328,
+                "width": 33,
+                "height": 14
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 14,
+              "ready": "true"
+            }
+          }
+        ],
+        "preservesComponentState": true
+      }
+    },
+    {
+      "name": "late-decode-selection",
+      "passed": true,
+      "result": {
+        "pending": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 63,
+              "y": 328.5,
+              "width": 20,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "false",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 141,
+              "y": 330.5,
+              "width": 30,
+              "height": 10
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "false"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "true",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 225.75,
+              "y": 327.5,
+              "width": 30,
+              "height": 14
+            },
+            "status": "loading",
+            "textClip": "none",
+            "textDisplay": "inline",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+              "display": "none",
+              "box": {
+                "x": 0,
+                "y": 0,
+                "width": 0,
+                "height": 0
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "false"
+            }
+          }
+        ],
+        "after": [
+          {
+            "name": "总览",
+            "pressed": "false",
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "label": {
+              "x": 71.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+              "display": "block",
+              "box": {
+                "x": 61,
+                "y": 329,
+                "width": 23,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 23,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "按模型",
+            "pressed": "true",
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "label": {
+              "x": 155,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:models:blue-turns:active:blue-middle-active",
+              "display": "block",
+              "box": {
+                "x": 140,
+                "y": 328,
+                "width": 32,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 32,
+              "height": 13,
+              "ready": "true"
+            }
+          },
+          {
+            "name": "额度周",
+            "pressed": "false",
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "label": {
+              "x": 239.5,
+              "y": 334.5,
+              "width": 1,
+              "height": 1
+            },
+            "status": "ready",
+            "textClip": "inset(50%)",
+            "textDisplay": "block",
+            "textVisibility": "visible",
+            "opacity": 1,
+            "opacityLayers": 0,
+            "image": {
+              "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+              "display": "block",
+              "box": {
+                "x": 224,
+                "y": 330,
+                "width": 33,
+                "height": 13
+              },
+              "pointerEvents": "none",
+              "draggable": false,
+              "width": 33,
+              "height": 13,
+              "ready": "true"
+            }
+          }
+        ],
+        "preservesComponentState": true
+      }
+    }
+  ],
+  "errors": [],
+  "expectedDiagnostics": [
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:true:zh-CN:overview:red-turns:active:red-first-active EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:models:false:zh-CN:models:red-turns:idle:red-middle-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:false:zh-CN:turns:red-turns:idle:red-last-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:false:zh-CN:overview:red-turns:idle:red-first-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:true:zh-CN:turns:red-turns:active:red-last-active EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:true:zh-CN:overview:red-turns:active:red-first-active EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:models:false:zh-CN:models:red-turns:idle:red-middle-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:false:zh-CN:turns:red-turns:idle:red-last-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:false:zh-CN:overview:red-turns:idle:red-first-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:true:zh-CN:turns:red-turns:active:red-last-active EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:true:zh-CN:overview:red-turns:active:red-first-active EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:models:false:zh-CN:models:red-turns:idle:red-middle-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:false:zh-CN:turns:red-turns:idle:red-last-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:overview:false:zh-CN:overview:red-turns:idle:red-first-idle EncodingError: The source image cannot be decoded.",
+    "[MechaTabLabel] Decode failed; showing real text zh-CN:critical:turns:true:zh-CN:turns:red-turns:active:red-last-active EncodingError: The source image cannot be decoded."
+  ],
+  "browser": "154.0.8037.58",
+  "summary": {
+    "checks": 30,
+    "failed": 0,
+    "runtimeErrors": 0
+  }
+}

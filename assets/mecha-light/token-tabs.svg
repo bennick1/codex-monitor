@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="86" height="198" viewBox="0 0 86 198" preserveAspectRatio="none">
+  <!-- Text-free paint for the mode buttons. Fragment views share a 33px baseline;
+       inactive faces sit 3px lower, with open joint edges between neighbours. -->
+  <view id="first" viewBox="0 0 86 33"/>
+  <view id="middle" viewBox="0 33 86 33"/>
+  <view id="last" viewBox="0 66 86 33"/>
+  <view id="first-active" viewBox="0 99 86 33"/>
+  <view id="middle-active" viewBox="0 132 86 33"/>
+  <view id="last-active" viewBox="0 165 86 33"/>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2=".8" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#f5f7f9"/><stop offset=".38" stop-color="#e2e6eb"/>
+      <stop offset=".7" stop-color="#d6dee7"/><stop offset="1" stop-color="#f2f5f8"/>
+    </linearGradient>
+    <linearGradient id="lit-metal" x1="0" y1="0" x2=".6" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#fff"/><stop offset=".46" stop-color="#e7eef5"/>
+      <stop offset=".8" stop-color="#f3f7fb"/><stop offset="1" stop-color="#fff"/>
+    </linearGradient>
+    <linearGradient id="bevel" x2="0" y2="1">
+      <stop stop-color="#fff"/><stop offset=".3" stop-color="#aeb9c5"/>
+      <stop offset=".78" stop-color="#c8d1db"/><stop offset="1" stop-color="#718191"/>
+    </linearGradient>
+    <linearGradient id="foot" x2="0" y2="1">
+      <stop stop-color="#a8b4c1"/><stop offset=".48" stop-color="#d0d8e0"/>
+      <stop offset="1" stop-color="#6c7c8c"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <path d="M6 3.5H86V33H6L.5 27V9.5Z" fill="url(#bevel)"/>
+    <path d="M1 26L6.5 30H86V32.5H6L1 27Z" fill="url(#foot)"/>
+    <path d="M6.6 4.8H85.6V28.7H6.7L1.6 25V10Z" fill="url(#metal)"/>
+    <path d="M1.6 25V10L6.6 4.8H85.6" fill="none" stroke="#fff" stroke-width=".9"/>
+    <path d="M2 25.3L7 29.4H75L78 28.7H85.6" fill="none" stroke="#f9fcff" stroke-width=".65"/>
+    <path d="M7 31H75L77 29.7M.7 26.4L6 31" fill="none" stroke="#7f8e9e" stroke-width=".7"/>
+  </g>
+  <g transform="translate(0 33)">
+    <path d="M4.5 3.5H86V33H0V8Z" fill="url(#bevel)"/>
+    <path d="M.5 26L5 30H86V32.5H0Z" fill="url(#foot)"/>
+    <path d="M4.9 4.8H85.6V28.7H5L1 25.2V8.7Z" fill="url(#metal)"/>
+    <path d="M1 25.2V8.7L4.9 4.8H85.6" fill="none" stroke="#fff" stroke-width=".9"/>
+    <path d="M1.4 25.7L5.5 29.4H68L71 28.7H85.6" fill="none" stroke="#f9fcff" stroke-width=".65"/>
+    <path d="M5 31H67L70 29.7M.2 8V26L4.6 30" fill="none" stroke="#7f8e9e" stroke-width=".7"/>
+  </g>
+  <g transform="translate(0 66)">
+    <path d="M4.5 3.5H80L85.5 9V27L79.5 33H0V8Z" fill="url(#bevel)"/>
+    <path d="M.5 26L5 30H79L85 25.5V27L79.5 32.5H0Z" fill="url(#foot)"/>
+    <path d="M4.9 4.8H79.4L84 9.5V25L78.6 28.7H5L1 25.2V8.7Z" fill="url(#metal)"/>
+    <path d="M1 25.2V8.7L4.9 4.8H79.4L84 9.5V25L78.6 28.7H5L1 25.2" fill="none" stroke="#fff" stroke-width=".9"/>
+    <path d="M5 31H78.8L84.8 26M.2 8V26L4.6 30" fill="none" stroke="#7f8e9e" stroke-width=".7"/>
+  </g>
+  <g transform="translate(0 99)">
+    <path d="M6 .5H82L85.5 4V29L81.5 33H6L.5 27V6Z" fill="url(#bevel)"/>
+    <path d="M1.2 25.4L6.5 29.5H81L85 26.3V29L81.5 32.5H6L1 27Z" fill="url(#foot)"/>
+    <path d="M6.8 2.2H81.3L83.8 4.8V26.3L80.6 29.2H6.8L2.3 25.5V6.8Z" fill="url(#lit-metal)"/>
+    <path d="M6.8 2.2H81.3L83.8 4.8V26.3L80.6 29.2H6.8L2.3 25.5V6.8Z" fill="none" stroke="#fff" stroke-width="1.15"/>
+    <path d="M6.5 31H80.9L84.8 27.4" fill="none" stroke="#8295a6" stroke-width=".6"/>
+  </g>
+  <g transform="translate(0 132)">
+    <path d="M5.5 .5H82L85.5 4V29L81.5 33H0V6Z" fill="url(#bevel)"/>
+    <path d="M.5 25H5.5L10 30H81L85 26.3V29L81.5 32.5H0Z" fill="url(#foot)"/>
+    <path d="M6.2 2.2H81.3L83.8 4.8V26.3L80.6 29.2H10.3L5.6 24.2H1.8V6.8Z" fill="url(#lit-metal)"/>
+    <path d="M6.2 2.2H81.3L83.8 4.8V26.3L80.6 29.2H10.3L5.6 24.2H1.8V6.8Z" fill="none" stroke="#fff" stroke-width="1.15"/>
+    <path d="M1 32V26H5L9.5 31H80.9L84.8 27.4" fill="none" stroke="#8295a6" stroke-width=".6"/>
+  </g>
+  <g transform="translate(0 165)">
+    <path d="M6 .5H79.5L85.5 6.5V26L79 33H0V6.5Z" fill="url(#bevel)"/>
+    <path d="M.5 25H5.5L10 30H78L85 23.8V26L79 32.5H0Z" fill="url(#foot)"/>
+    <path d="M6.8 2.2H78.8L83.8 7.1V24.3L77.9 29.2H10.3L5.6 24.2H1.8V7.1Z" fill="url(#lit-metal)"/>
+    <path d="M6.8 2.2H78.8L83.8 7.1V24.3L77.9 29.2H10.3L5.6 24.2H1.8V7.1Z" fill="none" stroke="#fff" stroke-width="1.15"/>
+    <path d="M1 32V26H5L9.5 31H78.4L84.8 25.4" fill="none" stroke="#8295a6" stroke-width=".6"/>
+  </g>
+</svg>

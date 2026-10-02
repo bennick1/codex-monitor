@@ -1,0 +1,54 @@
+{
+  "task": "CM-130-TABS-REFERENCE-EXACT-20261001",
+  "taskCommit": "0d36753bb5dee914723fed3d0ecb7c9616d3cab5",
+  "taskDocumentSha256": "34cfc1d545629eb5fcec1803949613ad95eec33bbad6f4c0cbaab9b61908be0a",
+  "taskRead": "git show of the full document, without moving local HEAD",
+  "head": "1980d03dc0468ea499b0718280a3ad49dbf7a223",
+  "branch": "feat/v1.3.0-fast-opacity-mecha-skin",
+  "repository": "https://github.com/bennick1/codex-monitor.git",
+  "backup": "outputs/tabs-reference-exact-backup-20261001/local-work.tar.gz",
+  "backupSha256": "24da6248055dc199c8488620a46da30ea0eb7318bf3dd5cb99e7b0ce051015f6",
+  "originalUncommittedFiles": 75,
+  "archiveReadbackHashesVerified": true,
+  "originalFilesStillByteIdentical": 74,
+  "originalFilesChangedWithBackupRetained": [
+    "src/mecha.css"
+  ],
+  "currentSourceSha256": {
+    "src/components/TokenUsage.tsx": "f6ff8180369a51a8cc4d12ba1b1b69e396bc31a44f3b767c35ed15acf5ccd917",
+    "src/mecha.css": "2c1cbaa14234b10d03409f9fbe9fa652486798ab05bbac515a17cc1a36e2d9c0",
+    "src/mecha-tabs-reference.css": "b74febc8847a225fdb857ee9c6209ee4146e76d8bdc64b81fa623cbc75686cf6",
+    "scripts/capture-mecha-tabs-exact.mjs": "9c87143cb3d094fe0acab342ec9a47594395c14f48a14326f48e69920f8b212a",
+    "scripts/compare-mecha-tabs.py": "e65dd1279ae1f6f1be326a653398bd81313f5c09fde63f04d0b247a71be33a7d",
+    "scripts/derive-mecha-tabs.py": "a076d3b367675927fbd60fe3c8ccafc443e7387811a2c0e23a0b56a1b935003d",
+    "scripts/preview-mecha-tabs-exact.mjs": "1ef1c1341893663187821c7150f8f29214de497308a751e2387f04b866374e66",
+    "scripts/test-mecha-tabs-exact.mjs": "415b08522e5d5adea2bf4646956e9deba7f0f5d427c2e92b0dd32555ee8eb960"
+  },
+  "existingHistoricalArtifactsPreserved": true,
+  "frozenReferences": {
+    "docs/design/v1.3.0/mecha-light/references/collapsed-amber.png": "e0cee4c46cfa2f0f3bc08eb00cb0bde9308968594a403d1d4df8cddb4fa4cc15",
+    "docs/design/v1.3.0/mecha-light/references/collapsed-blue.png": "b4cfc24bef227b7d911ebc98aac4493dddfd71c69f9a0ac9268650bf0e26cc1a",
+    "docs/design/v1.3.0/mecha-light/references/expanded-three-states.png": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+    "docs/design/v1.3.0/mecha-light/references/collapsed-red.png": "e8aafebb45f7e1416ba0af9ce215d25e13f9be08d95cf5818a3828442f2ce73a"
+  },
+  "manifestSha256": "b3e4b855774a58c80ae81d48dde9d8cb867710e4d461a85b3061f94d6e270ead",
+  "sha256sumsSha256": "371b2bc33c684e86210a663a9e1f6abc4e44559d9368322d01b7e377fdc0dff5",
+  "untouchedScope": "Fast, opacity logic/preferences, statistics, ordering, Schema, shell, Orb, other skins, period buttons, Branding, version, dependencies and CI",
+  "commitPushPackaging": "Not performed; visual acceptance is pending",
+  "latestEvidenceDirectory": "iteration-05",
+  "validation": {
+    "frontendTests": "17 files / 264 tests passed",
+    "scopeRegression": {
+      "comparisons": 117,
+      "failed": 0,
+      "interactions": 6,
+      "runtimeErrors": 0
+    },
+    "existingMechaLayout": "323 passed",
+    "existingMechaKeyboard": "4 passed",
+    "build": "npm run build -- --outDir outputs/v1.3.0-tabs-reference-exact/build-latest; passed",
+    "gitDiffCheck": "passed",
+    "humanVisualAcceptance": "Not requested because known differences remain",
+    "nativeAcceptance": "Not performed"
+  }
+}

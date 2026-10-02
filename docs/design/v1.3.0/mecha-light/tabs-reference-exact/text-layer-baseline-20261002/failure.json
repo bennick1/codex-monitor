@@ -1,0 +1,5 @@
+{
+  "result": "Failed before capture; zero cases",
+  "reason": "Bundled Playwright default Chromium executable was not installed",
+  "recovery": "Used the existing system Chrome via PLAYWRIGHT_CHROMIUM_EXECUTABLE in text-layer-baseline-chrome-20261002; no dependency installation"
+}

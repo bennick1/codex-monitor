@@ -4,8 +4,9 @@ import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
 import type { ModelTokenPeriodKey } from "../lib/tokenStatistics";
 import { TurnUsage } from "./TurnUsage";
 import { formatTokenCount, formatTokenCountExact } from "../lib/tokenFormat";
+import { MechaTabLabel, type MechaTabTone } from "./MechaTabLabel";
 
-export function TokenUsage({ view, language }: { view: TokenStatisticsView; language: Language }) {
+export function TokenUsage({ view, language, mechaTabTone }: { view: TokenStatisticsView; language: Language; mechaTabTone?: MechaTabTone }) {
   const id = useId();
   const [mode, setMode] = useState<"overview" | "models" | "turns">("overview");
   const [period, setPeriod] = useState<ModelTokenPeriodKey>("quotaPeriod");
@@ -34,10 +35,10 @@ export function TokenUsage({ view, language }: { view: TokenStatisticsView; lang
     onMouseDown={(event) => event.stopPropagation()}>
     <div className="token-heading">
       <h2 id={id}>{t.title}</h2>
-      <div className="token-switch" role="group" aria-label={t.title}>
-        <button type="button" aria-pressed={mode === "overview"} onClick={() => setMode("overview")}>{t.overview}</button>
-        <button type="button" aria-pressed={mode === "models"} onClick={() => setMode("models")}>{t.models}</button>
-        <button type="button" aria-pressed={mode === "turns"} onClick={() => setMode("turns")}>{t.turns}</button>
+      <div className="token-switch" role="group" aria-label={t.title} data-language={language}>
+        <button type="button" aria-pressed={mode === "overview"} onClick={() => setMode("overview")}><MechaTabLabel labelKey="overview" text={t.overview} language={language} tone={mechaTabTone} active={mode === "overview"} /></button>
+        <button type="button" aria-pressed={mode === "models"} onClick={() => setMode("models")}><MechaTabLabel labelKey="models" text={t.models} language={language} tone={mechaTabTone} active={mode === "models"} /></button>
+        <button type="button" aria-pressed={mode === "turns"} onClick={() => setMode("turns")}><MechaTabLabel labelKey="turns" text={t.turns} language={language} tone={mechaTabTone} active={mode === "turns"} /></button>
       </div>
     </div>
     {mode === "overview" ? <dl className="token-grid">
