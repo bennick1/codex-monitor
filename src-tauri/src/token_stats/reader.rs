@@ -595,11 +595,15 @@ pub(super) fn repair_models(
 #[derive(Default)]
 pub struct Scanner {
     pub startup: bool,
+    fast_requests: super::fast_requests::Cursor,
 }
 
 impl Scanner {
     pub fn new() -> Self {
-        Self { startup: true }
+        Self {
+            startup: true,
+            ..Self::default()
+        }
     }
 
     fn file(
@@ -881,7 +885,9 @@ impl Scanner {
         if self.startup {
             repair_models(db, source, cancel, &mut state.coverage)?;
         }
+        let fast_requests = self.fast_requests.read(&path, cancel)?;
         let tx = db.transaction_with_behavior(TransactionBehavior::Immediate)?;
+        super::fast_requests::project(&tx, &root, fast_requests.as_ref())?;
         // Only a COMPLETE directory enumeration may declare an absent alias missing.
         if discovery.complete {
             let mut statement = tx.prepare("SELECT id,relative_path FROM source_files WHERE root=?1 AND availability!='replaced'")?;
@@ -913,6 +919,9 @@ impl Scanner {
         let generation = store::bump(&tx)?;
         tx.commit()?;
         committed(generation);
+        if let Some(batch) = fast_requests {
+            self.fast_requests.committed(batch);
+        }
         self.startup = false;
         Ok((root, state))
     }

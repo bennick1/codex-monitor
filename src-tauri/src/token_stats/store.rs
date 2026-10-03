@@ -67,6 +67,7 @@ pub fn open(path: &Path) -> Result<Connection> {
         tx.execute_batch(include_str!("schema.sql"))?;
         tx.execute_batch(include_str!("model_schema.sql"))?;
         tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
+        super::fast_requests::ensure_schema(&tx)?;
         tx.execute_batch(include_str!("turn_schema.sql"))?;
         tx.execute_batch(include_str!("fast_schema.sql"))?;
         tx.commit()?;
@@ -104,6 +105,7 @@ pub fn open(path: &Path) -> Result<Connection> {
         // Complete the internal metadata revision before committing schema 2.
         // A late DDL failure must also roll back the tables and user_version.
         tx.execute_batch(MODEL_REPAIR_SCHEMA)?;
+        super::fast_requests::ensure_schema(&tx)?;
         if version < 3 {
             tx.execute_batch(include_str!("turn_schema.sql"))?;
         }

@@ -1,4 +1,8 @@
 //! All fixtures are synthetic. Never point these tests at a real Codex home.
+#[path = "fast_requests_tests.rs"]
+mod request_metadata;
+#[path = "fast_requests_compat_tests.rs"]
+mod request_metadata_compat;
 use super::{
     aggregate, normalize, parser,
     reader::{Scanner, Source},
