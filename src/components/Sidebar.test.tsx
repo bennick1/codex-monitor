@@ -34,6 +34,132 @@ beforeEach(() => {
   api.deepseek.mockResolvedValue({ ...EMPTY_DEEPSEEK, status: "ok", balance: 8.89, spent: 21.11 });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it("updates sidebar size during input without waiting for release and avoids duplicate saves", async () => {
+  api.phase.mockResolvedValue({ width: 394, height: 580, scale: 1.3 });
+  mount({ sidebarScale: 1.3 }); await flush(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  expect(screen.getByRole("main").style.getPropertyValue("--sidebar-scale")).toBe("1.3");
+  const slider = screen.getByRole("slider", { name: "侧边栏大小" });
+  expect((slider as HTMLInputElement).value).toBe("130");
+  fireEvent.pointerDown(slider);
+  fireEvent.change(slider, { target: { value: "80" } });
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarScale: .8, sidebarOpacity: .9 }));
+  fireEvent.change(slider, { target: { value: "100" } });
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarScale: 1 }));
+  expect(update).toHaveBeenCalledTimes(2);
+  fireEvent.pointerUp(slider);
+  fireEvent.keyUp(slider, { key: "ArrowRight" });
+  fireEvent.blur(slider);
+  expect(update).toHaveBeenCalledTimes(2);
+});
+
+it("uses the native fitted scale after a work-area resize without changing the saved preference", async () => {
+  api.phase.mockResolvedValue({ width: 394, height: 580, scale: 1.3 });
+  mount({ sidebarScale: 1.3 }); await flush(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  api.phase.mockResolvedValue({ width: 376, height: 288, scale: 1 });
+  fireEvent(window, new Event("resize")); await flush();
+  expect(screen.getByRole("main").style.getPropertyValue("--sidebar-scale")).toBe("1");
+  expect((screen.getByRole("slider", { name: "侧边栏大小" }) as HTMLInputElement).value).toBe("130");
+  expect(screen.getByText("已缩小以适应当前屏幕")).toBeTruthy();
+  expect(update).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog")).toBeTruthy();
+});
+
+function LiveScaleSidebar() {
+  const [value, save] = useState<WidgetPreferences>({ ...prefs, sidebarScale: 1 });
+  return <Sidebar snapshot={quota} preferences={value} theme="light" onPreferences={save} onRefresh={vi.fn()} notice={null} />;
+}
+
+it("reveals the direction arrow through native hover and cycles right, left, top without dismissing settings", async () => {
+  render(<LiveScaleSidebar />); await flush(); await expand();
+  const direction = screen.getByRole("button", { name: "贴靠右侧，切换到左侧" });
+  await nativeHover(direction.querySelector("svg"), 1);
+  expect(direction.getAttribute("data-native-hover")).toBe("true");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  const panel = screen.getByRole("dialog");
+  for (const [label, side, nextLabel] of [
+    ["贴靠右侧，切换到左侧", "left", "贴靠左侧，切换到顶部"],
+    ["贴靠左侧，切换到顶部", "top", "贴靠顶部，切换到右侧"],
+    ["贴靠顶部，切换到右侧", "right", "贴靠右侧，切换到左侧"],
+  ]) {
+    const button = screen.getByRole("button", { name: label });
+    fireEvent.pointerDown(button); fireEvent.click(button); await flush();
+    expect(screen.getByRole("main").className).toContain(`sidebar--${side}`);
+    expect(screen.getByRole("button", { name: nextLabel })).toBeTruthy();
+    expect((screen.getByLabelText("贴边位置") as HTMLSelectElement).value).toBe(side);
+    expect(screen.getByRole("dialog")).toBe(panel);
+    expect(panel.getAttribute("data-visible")).toBe("true");
+  }
+});
+
+it("keeps top direction and menu shortcuts available when both providers are disabled", async () => {
+  mount({ sidebarSide: "top", sidebarShowCodex: false, sidebarShowDeepseek: false }); await expand();
+  expect(screen.getByRole("button", { name: "贴靠顶部，切换到右侧" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  fireEvent.change(screen.getByLabelText("贴边位置"), { target: { value: "top" } });
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarSide: "top" }));
+});
+
+it("reverses a closing top rail over its direction shortcut but ignores transparent margins", async () => {
+  vi.stubGlobal("innerWidth", 304); vi.stubGlobal("innerHeight", 652);
+  mount({ sidebarSide: "top" }); await flush(); await expand();
+  await nativeHover(screen.getByRole("button", { name: "侧边栏菜单" }), 1);
+  act(() => api.pointer.mock.calls[0][0]({ inside: false }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+  expect(screen.getByRole("main").className).toContain("sidebar--handle");
+  await nativeHover(screen.getByRole("main"), 2, { x: 20, y: 100 });
+  expect(screen.getByRole("main").className).toContain("sidebar--handle");
+  api.phase.mockClear();
+  await nativeHover(screen.getByRole("main"), 3, { x: 32, y: 30 });
+  expect(screen.getByRole("main").className).toContain("sidebar--rail");
+  expect(api.phase).not.toHaveBeenCalled();
+});
+
+it("keeps menu rows stable while an unconstrained size change awaits the native viewport", async () => {
+  api.phase.mockResolvedValue({ width: 376, height: 580, scale: 1 });
+  render(<LiveScaleSidebar />); await flush(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  const panel = screen.getByRole("dialog");
+  const count = panel.children.length;
+  for (const scale of [1.3, .8, 1.1, 1]) {
+    let finish!: (value: { width: number; height: number; scale: number }) => void;
+    api.phase.mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+    fireEvent.change(screen.getByRole("slider", { name: "侧边栏大小" }), { target: { value: String(scale * 100) } });
+    await flush();
+    expect(screen.queryByText("已缩小以适应当前屏幕")).toBeNull();
+    expect(panel.children.length).toBe(count);
+    await act(async () => finish({ width: 316 + 60 * scale, height: 580, scale })); await flush();
+    expect(screen.queryByText("已缩小以适应当前屏幕")).toBeNull();
+    expect(panel.children.length).toBe(count);
+    expect(screen.getByRole("dialog")).toBe(panel);
+  }
+});
+
+it.each([false, true])("coalesces resize bursts and newer size choices after the pending request settles (failure: %s)", async fail => {
+  api.phase.mockResolvedValue({ width: 376, height: 580, scale: 1 });
+  render(<LiveScaleSidebar />); await flush(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  let finish!: (value: { width: number; height: number; scale: number }) => void;
+  let reject!: (error: Error) => void;
+  api.phase.mockClear();
+  api.phase.mockImplementationOnce(() => new Promise((resolve, fail) => { finish = resolve; reject = fail; }));
+  fireEvent.change(screen.getByRole("slider", { name: "侧边栏大小" }), { target: { value: "130" } }); await flush();
+  fireEvent(window, new Event("resize"));
+  fireEvent(window, new Event("resize"));
+  fireEvent.change(screen.getByRole("slider", { name: "侧边栏大小" }), { target: { value: "80" } }); await flush();
+  expect(api.phase).toHaveBeenCalledTimes(1);
+  api.phase.mockResolvedValue({ width: 364, height: 580, scale: .8 });
+  await act(async () => { if (fail) reject(new Error("old request failed")); else finish({ width: 394, height: 580, scale: 1.3 }); }); await flush();
+  expect(api.phase).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("main").style.getPropertyValue("--sidebar-scale")).toBe("0.8");
+  expect(screen.queryByText("已缩小以适应当前屏幕")).toBeNull();
+  fireEvent(window, new Event("resize")); await flush();
+  expect(api.phase).toHaveBeenCalledTimes(3);
+});
+
 it("finishes the visual exit before shrinking the native footprint and makes exiting controls inert", async () => {
   mount(); await expand();
   fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
@@ -186,6 +312,21 @@ it("reverses a visual exit immediately without waiting for another native resize
   expect(detail.getAttribute("data-visible")).toBe("true");
   expect(api.phase).not.toHaveBeenCalled();
 });
+it("replays a work-area resize deferred by a detail exit that is reversed", async () => {
+  mount(); await expand();
+  await nativeHover(screen.getByRole("button", { name: "Codex 剩余 74%" }), 1);
+  await nativeHover(screen.getByRole("main"), 2);
+  await act(async () => { await vi.advanceTimersByTimeAsync(160); });
+  api.phase.mockClear();
+  api.phase.mockResolvedValue({ width: 300.8, height: 464, scale: .8 });
+  fireEvent(window, new Event("resize")); await flush();
+  expect(api.phase).not.toHaveBeenCalled();
+  await nativeHover(screen.getByRole("button", { name: "Codex 剩余 74%" }), 3);
+  await act(async () => { await vi.advanceTimersByTimeAsync(200); });
+  expect(api.phase).toHaveBeenCalledWith("detail");
+  expect(screen.getByRole("main").style.getPropertyValue("--sidebar-scale")).toBe("0.8");
+  expect(screen.getByRole("main").className).toContain("sidebar--detail");
+});
 it("keeps the detail surface mounted through a complete close and reopen", async () => {
   mount(); await expand();
   await nativeHover(screen.getByRole("button", { name: "Codex 剩余 74%" }), 1);
@@ -243,25 +384,25 @@ it("updates native input regions without resizing on provider changes and remove
     // The exiting card remains a crossing target until its 150ms exit ends.
     expect(api.regions.mock.calls.at(-1)?.[0]).toBe("detail");
     await act(async () => { await vi.advanceTimersByTimeAsync(150); });
-    expect(api.regions).toHaveBeenLastCalledWith("rail", [{ x: 0, y: 170, width: 60, height: 264 }]);
+    expect(api.regions).toHaveBeenLastCalledWith("rail", [{ x: 0, y: 146, width: 60, height: 288 }]);
     expect(detail.isConnected).toBe(true);
     await act(async () => { await vi.advanceTimersByTimeAsync(330); });
     expect(api.regions).toHaveBeenLastCalledWith("handle", [{ x: 0, y: 262, width: 8, height: 56 }]);
     expect(window.innerWidth).toBe(376); expect(window.innerHeight).toBe(580);
   } finally { width.mockRestore(); height.mockRestore(); }
 });
-it.each(["left", "right"] as const)("keeps the %s-side crossing corridor open without keeping unrelated rail blanks open", async side => {
+it.each(["left", "right", "top"] as const)("keeps the %s-side crossing corridor open without keeping unrelated rail blanks open", async side => {
   mount({ sidebarSide: side }); await expand();
   await nativeHover(screen.getByRole("button", { name: "Codex 剩余 74%" }), 1);
   const detail = screen.getByLabelText("Codex 用量详情");
   const dock = screen.getByRole("button", { name: "Codex 剩余 74%" }).closest(".sidebar-dock")!;
   const rect = (left: number, right: number, top: number, bottom: number) => ({ left, right, top, bottom, x: left, y: top, width: right - left, height: bottom - top, toJSON: () => ({}) });
-  vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(side === "left" ? rect(0, 60, 150, 330) : rect(284, 344, 150, 330));
-  vi.spyOn(detail, "getBoundingClientRect").mockReturnValue(side === "left" ? rect(72, 344, 50, 430) : rect(0, 272, 50, 430));
-  await nativeHover(screen.getByRole("main"), 2, { x: side === "left" ? 66 : 278, y: 230 });
+  vi.spyOn(dock, "getBoundingClientRect").mockReturnValue(side === "top" ? rect(62, 242, 0, 60) : side === "left" ? rect(0, 60, 150, 330) : rect(284, 344, 150, 330));
+  vi.spyOn(detail, "getBoundingClientRect").mockReturnValue(side === "top" ? rect(16, 288, 72, 452) : side === "left" ? rect(72, 344, 50, 430) : rect(0, 272, 50, 430));
+  await nativeHover(screen.getByRole("main"), 2, side === "top" ? { x: 152, y: 66 } : { x: side === "left" ? 66 : 278, y: 230 });
   await act(async () => { await vi.advanceTimersByTimeAsync(500); });
   expect(screen.getByRole("main").className).toContain("sidebar--detail");
-  await nativeHover(screen.getByRole("main"), 3, { x: side === "left" ? 66 : 278, y: 350 });
+  await nativeHover(screen.getByRole("main"), 3, side === "top" ? { x: 32, y: 66 } : { x: side === "left" ? 66 : 278, y: 350 });
   await act(async () => { await vi.advanceTimersByTimeAsync(120); });
   expect(screen.getByRole("main").className).toContain("sidebar--rail");
   // The fading panel is inert, so hit testing returns the root. Its visible
@@ -543,7 +684,7 @@ it("ignores stationary pointer enters after resize settles, including keyboard e
 it("dismisses settings on native focus loss or a click outside the panel, even when pinned", async () => {
   mount({ stayExpanded: true }); await flush();
   fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
-  fireEvent.pointerDown(screen.getByRole("slider")); await flush();
+  fireEvent.pointerDown(screen.getByRole("slider", { name: "背景不透明度" })); await flush();
   expect(screen.getByRole("dialog")).toBeTruthy();
   // Hovering another service must not replace a settings menu in use.
   fireEvent.mouseEnter(screen.getByRole("button", { name: "Codex 剩余 74%" })); await flush();
@@ -573,7 +714,7 @@ it("can change side, opacity and return to the existing mode from the gear", asy
   fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
   fireEvent.change(screen.getByLabelText("贴边位置"), { target: { value: "right" } });
   expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarSide: "right" }));
-  const slider = screen.getByRole("slider"); fireEvent.change(slider, { target: { value: "55" } }); fireEvent.pointerUp(slider);
+  const slider = screen.getByRole("slider", { name: "背景不透明度" }); fireEvent.change(slider, { target: { value: "55" } }); fireEvent.pointerUp(slider);
   expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarOpacity: .55 }));
   fireEvent.change(screen.getByLabelText("展示模式"), { target: { value: "floating" } });
   expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ displayMode: "floating" }));

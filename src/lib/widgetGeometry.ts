@@ -10,21 +10,35 @@ export function expandedHeightMode(snapshot: ProviderSnapshot): ExpandedHeightMo
 export interface SidebarInputRect { x: number; y: number; width: number; height: number }
 
 // Resting layout bounds, independent of the CSS entrance/exit transforms.
-export function sidebarInputRegions(width: number, height: number, side: "left" | "right", phase: SidebarPhase,
-  dockHeight: number, panelSize?: { width: number; height: number }): SidebarInputRect[] {
+export function sidebarInputRegions(width: number, height: number, side: "left" | "right" | "top", phase: SidebarPhase,
+  dockHeight: number, panelSize?: { width: number; height: number }, scale = 1): SidebarInputRect[] {
   const edge = (size: number) => side === "left" ? 0 : width - size;
-  const dockTop = (height - dockHeight) / 2;
+  const dockWidth = 60 * scale;
+  const dockSize = dockHeight * scale;
+  const dockTop = (height - dockSize) / 2;
+  const panelOffset = dockWidth + 12;
+  const horizontal = side === "top";
+  const dockLeft = (width - dockSize) / 2;
   const regions: SidebarInputRect[] = phase === "handle"
-    ? [{ x: edge(8), y: (height - 56) / 2, width: 8, height: 56 }]
-    : [{ x: edge(60), y: dockTop - 30, width: 60, height: dockHeight + 84 }];
+    ? [horizontal
+      ? { x: (width - 56 * scale) / 2, y: 0, width: 56 * scale, height: 8 * scale }
+      : { x: edge(8 * scale), y: (height - 56 * scale) / 2, width: 8 * scale, height: 56 * scale }]
+    : [horizontal
+      ? { x: dockLeft - 54 * scale, y: 0, width: dockSize + 108 * scale, height: dockWidth }
+      : { x: edge(dockWidth), y: dockTop - 54 * scale, width: dockWidth, height: dockSize + 108 * scale }];
   if ((phase === "detail" || phase === "menu") && panelSize && panelSize.width > 0 && panelSize.height > 0) {
-    const panel = { x: side === "left" ? 72 : width - 72 - panelSize.width,
-      y: (height - panelSize.height) / 2, ...panelSize };
+    const panel = { x: horizontal ? (width - panelSize.width) / 2 : side === "left" ? panelOffset : width - panelOffset - panelSize.width,
+      y: horizontal ? panelOffset : (height - panelSize.height) / 2, ...panelSize };
     regions.push(panel);
     if (phase === "detail") {
-      const top = Math.max(dockTop, panel.y);
-      regions.push({ x: side === "left" ? 60 : width - 72, y: top, width: 12,
-        height: Math.min(dockTop + dockHeight, panel.y + panel.height) - top });
+      if (horizontal) {
+        const left = Math.max(dockLeft, panel.x);
+        regions.push({ x: left, y: dockWidth, width: Math.min(dockLeft + dockSize, panel.x + panel.width) - left, height: 12 });
+      } else {
+        const top = Math.max(dockTop, panel.y);
+        regions.push({ x: side === "left" ? dockWidth : width - panelOffset, y: top, width: 12,
+          height: Math.min(dockTop + dockSize, panel.y + panel.height) - top });
+      }
     }
   }
   return regions.map(rect => {

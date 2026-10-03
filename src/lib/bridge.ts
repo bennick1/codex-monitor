@@ -21,16 +21,16 @@ const mockSnapshot: ProviderSnapshot = {
 
 let widgetTransition: Promise<void> = Promise.resolve();
 
-function enqueueWidgetTransition(operation: () => Promise<void>): Promise<void> {
+function enqueueWidgetTransition<T>(operation: () => Promise<T>): Promise<T> {
   const next = widgetTransition.then(operation, operation);
-  widgetTransition = next.catch(() => undefined);
+  widgetTransition = next.then(() => undefined, () => undefined);
   return next;
 }
 
 export const isTauri = () => "__TAURI_INTERNALS__" in window;
 
 export type SidebarPhase = "handle" | "rail" | "detail" | "menu";
-interface SidebarViewport { width: number; height: number }
+export interface SidebarViewport { width: number; height: number; scale: number }
 
 function waitForSidebarViewport(size: SidebarViewport): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -54,12 +54,13 @@ function waitForSidebarViewport(size: SidebarViewport): Promise<void> {
   });
 }
 
-export function setSidebarPhase(phase: SidebarPhase): Promise<void> {
-  if (!isTauri()) return Promise.resolve();
+export function setSidebarPhase(phase: SidebarPhase): Promise<SidebarViewport | null> {
+  if (!isTauri()) return Promise.resolve(null);
   return enqueueWidgetTransition(async () => {
     const { invoke } = await import("@tauri-apps/api/core");
     const viewport = await invoke<SidebarViewport | null>("set_sidebar_phase", { phase });
     if (viewport) await waitForSidebarViewport(viewport);
+    return viewport;
   });
 }
 

@@ -41,10 +41,10 @@ it("waits for the resized WebView and a painted frame before completing a sideba
     setTimeout, clearTimeout,
   };
   vi.stubGlobal("window", view);
-  api.invoke.mockResolvedValueOnce({ width: 344, height: 480 });
+  api.invoke.mockResolvedValueOnce({ width: 344, height: 480, scale: .8 });
   const { setSidebarPhase } = await import("./bridge");
   let finished = false;
-  const operation = setSidebarPhase("detail").then(() => { finished = true; });
+  const operation = setSidebarPhase("detail").then(viewport => { finished = true; return viewport; });
   await vi.waitFor(() => expect(api.invoke).toHaveBeenCalledWith("set_sidebar_phase", { phase: "detail" }));
   expect(finished).toBe(false);
   const paint = async () => { const pending = [...frames.values()]; frames.clear(); pending.forEach(callback => callback(0)); await Promise.resolve(); };
@@ -58,7 +58,8 @@ it("waits for the resized WebView and a painted frame before completing a sideba
   view.innerWidth = 344;
   await paint();
   expect(finished).toBe(false);
-  await paint(); await operation;
+  await paint();
+  expect(await operation).toEqual({ width: 344, height: 480, scale: .8 });
   expect(finished).toBe(true);
   expect(frames.size).toBe(0);
 });

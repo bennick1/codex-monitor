@@ -217,6 +217,9 @@ pub fn prepare_config(config: &mut tauri::Config) {
         widget.visible = false;
         widget.focus = false;
         widget.fullscreen = false;
+        // Hover never activates this accessory. Deliver its first real click
+        // to WebKit instead of consuming that click only to activate the app.
+        widget.accept_first_mouse = true;
     }
 }
 
@@ -529,6 +532,7 @@ mod tests {
         assert_eq!(widget.label, "widget");
         assert!(!widget.create && !widget.visible && !widget.focus && !widget.fullscreen);
         assert!(widget.focusable && widget.always_on_top);
+        assert!(widget.accept_first_mouse);
         assert_eq!(widget.width, 80.0);
         assert_eq!(widget.height, 80.0);
     }

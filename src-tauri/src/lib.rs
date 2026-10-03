@@ -440,9 +440,10 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 14);
+                assert_eq!(saved.as_object().unwrap().len(), 15);
                 assert_eq!(saved["displayMode"], "floating");
                 assert_eq!(saved["sidebarSide"], "right");
+                assert_eq!(saved["sidebarScale"], 1.0);
                 assert_eq!(saved["deepseekEnabled"], false);
                 assert_eq!(saved["sidebarShowCodex"], true);
                 assert_eq!(saved["sidebarShowDeepseek"], true);

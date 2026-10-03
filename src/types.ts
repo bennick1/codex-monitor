@@ -26,8 +26,9 @@ export interface ProviderSnapshot {
 export interface WidgetPreferences {
   deepseekEnabled?: boolean;
   displayMode?: "floating" | "sidebar";
-  sidebarSide?: "left" | "right";
+  sidebarSide?: "left" | "right" | "top";
   sidebarOpacity?: number;
+  sidebarScale?: number;
   sidebarShowCodex?: boolean;
   sidebarShowDeepseek?: boolean;
   locked: boolean;

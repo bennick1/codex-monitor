@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { Sidebar } from "./components/Sidebar";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
-import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
+import { fetchSnapshots, getPreferences, isTauri, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
 import { needsFastRefresh, quotaTier } from "./lib/format";
 import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
@@ -19,10 +19,11 @@ const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferen
   language: normalizeLanguage(value.language),
   selectedSkin: normalizeSkin(value.selectedSkin),
   displayMode: value.displayMode === "sidebar" ? "sidebar" : "floating",
-  sidebarSide: value.sidebarSide === "left" ? "left" : "right",
+  sidebarSide: value.sidebarSide === "left" || value.sidebarSide === "top" ? value.sidebarSide : "right",
   sidebarShowCodex: value.sidebarShowCodex !== false,
   sidebarShowDeepseek: value.sidebarShowDeepseek !== false,
   sidebarOpacity: typeof value.sidebarOpacity === "number" && Number.isFinite(value.sidebarOpacity) ? Math.min(1, Math.max(.2, value.sidebarOpacity)) : .9,
+  sidebarScale: typeof value.sidebarScale === "number" && Number.isFinite(value.sidebarScale) ? Math.min(1.3, Math.max(.8, value.sidebarScale)) : 1,
   locked: value.displayMode === "sidebar" ? false : value.locked ?? false,
 });
 const INITIAL_SNAPSHOT: ProviderSnapshot = {
@@ -41,6 +42,15 @@ const INITIAL_SNAPSHOT: ProviderSnapshot = {
 export default function App() {
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
+  const confirmedPreferences = useRef(DEFAULT_PREFS);
+  const preferenceSaveSequence = useRef(0);
+  const preferenceSavePending = useRef(false);
+  const preferenceEventVersion = useRef(0);
+  const acceptPreferences = useCallback((value: WidgetPreferences) => {
+    const normalized = normalizePreferences(value);
+    confirmedPreferences.current = normalized;
+    setPreferences(normalized);
+  }, []);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [compact, setCompact] = useState(true);
@@ -128,6 +138,7 @@ export default function App() {
 
   useEffect(() => {
     void refresh(true);
+    const sequence = preferenceSaveSequence.current;
     void (async () => {
       const value = await getPreferences().catch(async () => {
         // A WebView can occasionally issue its first invoke while it is
@@ -136,19 +147,20 @@ export default function App() {
         await new Promise((resolve) => window.setTimeout(resolve, 120));
         return getPreferences().catch(() => DEFAULT_PREFS);
       });
-      setPreferences(normalizePreferences(value));
+      if (sequence !== preferenceSaveSequence.current) return;
+      acceptPreferences(value);
       // Window-state may restore the last expanded footprint while React starts
       // as an orb. Reconcile once, unless the user has already begun hovering.
       if (value.displayMode !== "sidebar" && !value.stayExpanded && hoverSequence.current === 0) {
         void setWidgetExpanded(false).catch(() => undefined);
       }
-    })().catch(() => setPreferences(DEFAULT_PREFS));
+    })().catch(() => { if (sequence === preferenceSaveSequence.current) acceptPreferences(DEFAULT_PREFS); });
     return () => {
       for (const timer of consumptionTimers.current.values()) window.clearTimeout(timer);
       consumptionTimers.current.clear();
       if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
     };
-  }, [refresh]);
+  }, [refresh, acceptPreferences]);
 
   const refreshAll = useCallback(() => {
     void refresh(true);
@@ -159,14 +171,19 @@ export default function App() {
     let cancelled = false;
     let cleanup: () => void = () => {};
     void listenDesktopEvents({
-      onPreferences: (value) => setPreferences(normalizePreferences(value)),
+      onPreferences: (value) => {
+        preferenceEventVersion.current++;
+        // Older save acknowledgements must not replace a newer local edit.
+        // The final save reads back all preferences, including external changes.
+        if (!preferenceSavePending.current) acceptPreferences(value);
+      },
       onRefresh: refreshAll,
       onRelease: () => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed)),
     }).then((value) => {
       if (cancelled) value(); else cleanup = value;
     }).catch(() => setOperationError(operation.listenerFailed));
     return () => { cancelled = true; cleanup(); };
-  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll]);
+  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll, acceptPreferences]);
 
   const refreshMs = useMemo(() => {
     const backoff = failures.current === 0 ? 5 * 60_000 : Math.min(30 * 60_000, 30_000 * 2 ** (failures.current - 1));
@@ -206,11 +223,34 @@ export default function App() {
   const cardStyle = paletteName ? DESKTOP_PALETTES[theme][paletteName] : undefined;
 
   const savePreferences = useCallback((next: WidgetPreferences) => {
-    const previous = preferences;
+    const sequence = ++preferenceSaveSequence.current;
+    preferenceSavePending.current = true;
     setPreferences(next);
     setOperationError(null);
-    void updatePreferences(next).catch(() => { setPreferences(previous); setOperationError(operation.settingsFailed); });
-  }, [operation.settingsFailed, preferences]);
+    const reconcile = async (failed: boolean) => {
+      if (sequence !== preferenceSaveSequence.current) return;
+      let saved = failed ? confirmedPreferences.current : next;
+      if (isTauri()) {
+        // Re-read if an external preference event arrives while the read is in
+        // flight. A newer local save owns its own reconciliation and rollback.
+        let eventVersion: number;
+        do {
+          eventVersion = preferenceEventVersion.current;
+          saved = await getPreferences().catch(() => saved);
+          if (sequence !== preferenceSaveSequence.current) return;
+        } while (eventVersion !== preferenceEventVersion.current);
+      }
+      acceptPreferences(saved);
+      preferenceSavePending.current = false;
+      if (failed) setOperationError(operation.settingsFailed);
+    };
+    void updatePreferences(next).then(() => {
+      // Saves are serialized by the bridge, so this is a confirmed fallback
+      // even if a later save fails and its reconciliation read is unavailable.
+      confirmedPreferences.current = normalizePreferences(next);
+      return reconcile(false);
+    }, () => reconcile(true));
+  }, [operation.settingsFailed, acceptPreferences]);
 
   const handleHover = useCallback((value: boolean) => {
     if (collapseTimer.current !== null) {

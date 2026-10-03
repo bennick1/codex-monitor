@@ -1,4 +1,4 @@
-import { ArrowClockwise, GearSix, PushPin, X } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowUp, GearSix, PushPin, X } from "@phosphor-icons/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { ProviderSnapshot, WidgetPreferences, WidgetTheme } from "../types";
 import { deepSeekSession, getAccountUsage, getAutostart, getDeepSeekUsage, listenDeepSeekReady, listenSidebarRecovery, listenSidebarDismiss, listenSidebarPointer, setAlwaysOnTop, setSidebarPhase, syncSidebarRegions, sidebarAction, type SidebarPhase, type SidebarPointer } from "../lib/bridge";
@@ -12,6 +12,12 @@ import "./sidebar.css";
 const EXIT_MS = 150;
 const DETAIL_LEAVE_MS = 120;
 const reducedMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+function ActionArc({ children }: { children: ReactNode }) {
+  return <><svg className="sidebar-action-arc" viewBox="0 0 48 48" aria-hidden="true">
+    <circle cx="24" cy="24" r="21" pathLength="100" transform="rotate(-90 24 24)" />
+  </svg><span className="sidebar-action-icon" aria-hidden="true">{children}</span></>;
+}
 
 function Metric({ label, value, title }: { label: string; value: ReactNode; title?: string }) {
   return <div className="sidebar-metric"><dt>{label}</dt><dd title={title}>{value}</dd></div>;
@@ -37,6 +43,8 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   const showCodex = preferences.sidebarShowCodex !== false;
   const showDeepseek = preferences.sidebarShowDeepseek !== false;
   const providerCount = Number(showCodex) + Number(showDeepseek);
+  const side = preferences.sidebarSide ?? "right";
+  const nextSide = side === "right" ? "left" : side === "left" ? "top" : "right";
   const dockHeight = providerCount === 2 ? 180 : providerCount === 1 ? 98 : 60;
   const [phase, setPhase] = useState<SidebarPhase>(preferences.stayExpanded ? "rail" : "handle");
   const [panelPhase, setPanelPhase] = useState<"detail" | "menu" | null>(null);
@@ -46,6 +54,9 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   const [deepseek, setDeepseek] = useState<DeepSeekUsage>(EMPTY_DEEPSEEK);
   const [error, setError] = useState<string | null>(null);
   const [opacity, setOpacity] = useState(preferences.sidebarOpacity ?? 0.9);
+  const [scaleChoice, setScaleChoice] = useState(preferences.sidebarScale ?? 1);
+  const [scale, setScale] = useState(preferences.sidebarScale ?? 1);
+  const [scaleLimited, setScaleLimited] = useState(false);
   const [autostart, setAutostart] = useState<boolean | null>(null);
   const [now, setNow] = useState(() => new Date());
   const root = useRef<HTMLElement>(null);
@@ -74,6 +85,9 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   const panelAnimation = useRef<Animation | null>(null);
   const reportedRegions = useRef("");
   const resizing = useRef(false);
+  const viewportNeedsSync = useRef(false);
+  const viewportSyncPending = useRef(false);
+  const synchronizeViewport = useRef<() => void>(() => {});
   const pointerPosition = useRef<{ x: number; y: number } | null>(null);
   const resizePointer = useRef<{ x: number; y: number } | null>(null);
   const words = (cn: string, en: string) => zh ? cn : en;
@@ -94,6 +108,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       resizing.current = false;
       setPhase(next); phaseRef.current = next;
       setPanelPhase(current => next === "detail" || next === "menu" ? next : current === "detail" ? current : null);
+      if (viewportNeedsSync.current) synchronizeViewport.current();
       return;
     }
     pendingPhase.current = next;
@@ -107,9 +122,10 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       motionTimer.current = null;
       resizePointer.current = pointerPosition.current;
       resizeNativeMovement.current = nativeMovement.current;
-      void setSidebarPhase(next).then(() => {
+      void setSidebarPhase(next).then(viewport => {
         nativePhase.current = next;
         if (sequence !== phaseSequence.current) return;
+        if (viewport?.scale) setScale(viewport.scale);
         setPhase(next); phaseRef.current = next;
         setPanelPhase(current => next === "detail" || next === "menu" ? next : current === "detail" ? current : null);
       }).catch(() => {
@@ -121,6 +137,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
           pendingPhase.current = null;
           resizing.current = false;
           setLayoutRevision(value => value + 1);
+          if (viewportNeedsSync.current) synchronizeViewport.current();
         }
       });
     };
@@ -159,7 +176,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       const hitPhase = motionTimer.current !== null ? committed : phase;
       const element = panel.current;
       const regions = sidebarInputRegions(window.innerWidth, window.innerHeight, preferences.sidebarSide ?? "right", hitPhase,
-        dockHeight, element ? { width: element.offsetWidth, height: element.offsetHeight } : undefined);
+        dockHeight, element ? { width: element.offsetWidth, height: element.offsetHeight } : undefined, scale);
       const key = JSON.stringify([committed, regions]);
       if (reportedRegions.current === key) return;
       reportedRegions.current = key;
@@ -173,7 +190,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     if (panel.current) observer?.observe(panel.current);
     window.addEventListener("resize", report);
     return () => { observer?.disconnect(); window.removeEventListener("resize", report); };
-  }, [phase, panelPhase, provider, layoutRevision, preferences.sidebarSide, dockHeight, zh]);
+  }, [phase, panelPhase, provider, layoutRevision, preferences.sidebarSide, dockHeight, scale, zh]);
   const scheduleCollapse = useCallback(() => {
     if (timer.current !== null) return;
     timer.current = window.setTimeout(() => {
@@ -203,8 +220,11 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
         const left = detail.left >= dock.right ? dock.right : detail.right;
         const right = detail.left >= dock.right ? detail.left : dock.left;
         const inDetail = point.x >= detail.left && point.x <= detail.right && point.y >= detail.top && point.y <= detail.bottom;
-        const inCorridor = point.x >= left && point.x <= right
-          && point.y >= Math.max(detail.top, dock.top) && point.y <= Math.min(detail.bottom, dock.bottom);
+        const inCorridor = side === "top"
+          ? point.y >= dock.bottom && point.y <= detail.top
+            && point.x >= Math.max(detail.left, dock.left) && point.x <= Math.min(detail.right, dock.right)
+          : point.x >= left && point.x <= right
+            && point.y >= Math.max(detail.top, dock.top) && point.y <= Math.min(detail.bottom, dock.bottom);
         detailHovered.current = inDetail || inCorridor;
       }
     }
@@ -213,7 +233,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       if (exitingDetail) changePhase("detail");
     }
     else scheduleDetailCollapse();
-  }, [cancelDetailCollapse, scheduleDetailCollapse, changePhase]);
+  }, [cancelDetailCollapse, scheduleDetailCollapse, changePhase, side]);
   const dismissMenu = useCallback(() => {
     if (phaseRef.current !== "menu") return;
     inside.current = false; focused.current = false;
@@ -276,10 +296,9 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     if (entered && position && phaseRef.current === "handle" && pendingPhase.current === "handle") {
       // Reverse over the closing dock, not the old transparent window margins.
       // Use its resting bounds so the animated transform cannot move the target.
-      const left = preferences.sidebarSide === "left" ? 0 : window.innerWidth - 60;
-      const top = (window.innerHeight - dockHeight) / 2;
-      entered = position.x >= left && position.x <= left + 60
-        && position.y >= top - 30 && position.y <= top + dockHeight + 54;
+      const bounds = sidebarInputRegions(window.innerWidth, window.innerHeight, preferences.sidebarSide ?? "right", "rail", dockHeight, undefined, scale)[0];
+      entered = Boolean(bounds && position.x >= bounds.x && position.x <= bounds.x + bounds.width
+        && position.y >= bounds.y && position.y <= bounds.y + bounds.height);
     }
     inside.current = entered;
     if (entered) {
@@ -289,7 +308,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       scheduleCollapse();
     }
     resolveNativeHover(entered ? value : { inside: false });
-  }, [cancelCollapse, changePhase, scheduleCollapse, resolveNativeHover, preferences.sidebarSide, dockHeight]);
+  }, [cancelCollapse, changePhase, scheduleCollapse, resolveNativeHover, preferences.sidebarSide, dockHeight, scale]);
   useEffect(() => {
     // A native resize can finish while the pointer is still moving. Resolve the
     // latest sample once React has committed the matching footprint.
@@ -306,14 +325,43 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     if (refreshAgain.current) { refreshAgain.current = false; void refresh(); }
   }, []);
   useEffect(() => { setOpacity(preferences.sidebarOpacity ?? 0.9); }, [preferences.sidebarOpacity]);
+  useEffect(() => { setScaleChoice(preferences.sidebarScale ?? 1); }, [preferences.sidebarScale]);
   useEffect(() => {
-    const next = phaseRef.current;
-    void setSidebarPhase(next).then(() => {
-      nativePhase.current = next;
-      reportedRegions.current = "";
-      setLayoutRevision(value => value + 1);
-    }).catch(() => setError(zh ? "侧边窗口调整失败。" : "Sidebar resize failed."));
-  }, [preferences.sidebarSide, zh]);
+    let stopped = false;
+    const syncViewport = () => {
+      // Phase transitions synchronize their own viewport. A work-area or
+      // preference resize also needs the native effective scale before hit tests.
+      if (stopped) return;
+      if (pendingPhase.current || viewportSyncPending.current) { viewportNeedsSync.current = true; return; }
+      viewportNeedsSync.current = false;
+      viewportSyncPending.current = true;
+      const next = phaseRef.current;
+      resizing.current = true;
+      resizeNativeMovement.current = nativeMovement.current;
+      void setSidebarPhase(next).then(viewport => {
+        if (stopped || phaseRef.current !== next || pendingPhase.current) return;
+        nativePhase.current = next;
+        const requested = preferences.sidebarScale ?? 1;
+        const effective = viewport?.scale ?? requested;
+        setScale(effective);
+        // Only a confirmed work-area limit adds a row. A pending size change
+        // must not insert/remove this message and shift the settings controls.
+        setScaleLimited(effective < requested - .015);
+        reportedRegions.current = "";
+        setLayoutRevision(value => value + 1);
+      }).catch(() => { if (!stopped) setError(zh ? "侧边窗口调整失败。" : "Sidebar resize failed."); })
+        .finally(() => {
+          viewportSyncPending.current = false;
+          if (!stopped && !pendingPhase.current) resizing.current = false;
+          // Use the latest effect's preference snapshot after a resize burst.
+          if (viewportNeedsSync.current) synchronizeViewport.current();
+        });
+    };
+    synchronizeViewport.current = syncViewport;
+    syncViewport();
+    window.addEventListener("resize", syncViewport);
+    return () => { stopped = true; window.removeEventListener("resize", syncViewport); };
+  }, [preferences.sidebarSide, preferences.sidebarScale, zh]);
   useEffect(() => {
     void refreshData();
     let stopped = false; const cleanups: (() => void)[] = [];
@@ -357,7 +405,9 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   </button>;
   const days = account ? accountDays(account, now) : [];
   const money = (value: number | null) => formatMoney(value, preferences.language, deepseek.currency);
-  const style = { "--sidebar-opacity": opacity, "--sidebar-exit": `${EXIT_MS}ms`, "--sidebar-dock-height": `${dockHeight}px` } as CSSProperties;
+  const style = { "--sidebar-opacity": opacity, "--sidebar-scale": scale, "--sidebar-exit": `${EXIT_MS}ms`, "--sidebar-dock-height": `${dockHeight}px` } as CSSProperties;
+  const sideName = { right: words("右侧", "right"), left: words("左侧", "left"), top: words("顶部", "top") };
+  const directionLabel = words(`贴靠${sideName[side]}，切换到${sideName[nextSide]}`, `Docked ${sideName[side]}, switch to ${sideName[nextSide]}`);
 
   return <main ref={root} className={`sidebar sidebar--theme-${theme} sidebar--${preferences.sidebarSide ?? "right"} sidebar--${phase}`} style={style} aria-label={words("侧边栏", "Sidebar")}
     onMouseEnter={event => { pointerPosition.current = { x: event.screenX, y: event.screenY }; if (nativeTracking.current) return; inside.current = true; cancelCollapse(); if (phaseRef.current === "handle") changePhase("rail"); }}
@@ -371,7 +421,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     onMouseLeave={() => { if (!nativeTracking.current) { inside.current = false; trackDetailHover(null); scheduleCollapse(); } }}
     onPointerDownCapture={event => {
       pointerPosition.current = { x: event.screenX, y: event.screenY };
-      if (phaseRef.current === "menu" && !(event.target as Element).closest(".sidebar-menu, .sidebar-gear")) {
+      if (phaseRef.current === "menu" && !(event.target as Element).closest(".sidebar-menu, .sidebar-action")) {
         event.preventDefault(); event.stopPropagation(); dismissMenu();
       }
     }}
@@ -392,22 +442,27 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     }}>
     <button className="sidebar-handle" aria-label={words("展开侧边栏", "Expand sidebar")} aria-hidden={phase !== "handle"} disabled={phase !== "handle"} onClick={() => changePhase("rail")} onFocus={() => changePhase("rail")} />
       <div className={`sidebar-dock${providerCount === 0 ? " sidebar-dock--empty" : ""}`} aria-hidden={phase === "handle"} inert={phase === "handle"}>
-        <svg className="sidebar-silhouette" viewBox={`0 -30 60 ${dockHeight + 60}`} aria-hidden="true">
-          <path d={`M 60 -30 A 30 30 0 0 1 30 0 H 28 A 28 28 0 0 0 0 28 V ${dockHeight - 28} A 28 28 0 0 0 28 ${dockHeight} H 30 A 30 30 0 0 1 60 ${dockHeight + 30} Z`} />
+        <svg className="sidebar-silhouette" viewBox={side === "top" ? `-30 0 ${dockHeight + 60} 60` : `0 -30 60 ${dockHeight + 60}`} aria-hidden="true">
+          <path transform={side === "top" ? "matrix(0 -1 1 0 0 60)" : undefined} d={`M 60 -30 A 30 30 0 0 1 30 0 H 28 A 28 28 0 0 0 0 28 V ${dockHeight - 28} A 28 28 0 0 0 28 ${dockHeight} H 30 A 30 30 0 0 1 60 ${dockHeight + 30} Z`} />
         </svg>
+        <button className="sidebar-action sidebar-direction" data-sidebar-hover="direction" data-native-hover={nativeTarget === "direction"}
+          aria-label={directionLabel} title={directionLabel} onClick={() => { setNativeTarget(null); update({ sidebarSide: nextSide }); }}>
+          <ActionArc>{side === "right" ? <ArrowRight size={21} /> : side === "left" ? <ArrowLeft size={21} /> : <ArrowUp size={21} />}</ActionArc>
+        </button>
       <div className="sidebar-rail">
         {showCodex && ring("codex", quotaPercent, snapshot.status === "stale")}
         {showDeepseek && ring("deepseek", remaining, deepseek.status === "stale")}
       </div>
-        <button className="sidebar-gear" data-sidebar-hover="gear" data-native-hover={nativeTarget === "gear"} aria-label={words("侧边栏菜单", "Sidebar menu")} aria-expanded={phase === "menu"} onClick={menu}>
-          <svg className="sidebar-gear-arc" viewBox="0 0 48 48" aria-hidden="true"><path d="M 24 3 A 21 21 0 0 1 45 24" /></svg>
-          <span className="sidebar-gear-disc"><GearSix size={21} /></span>
+        <button className="sidebar-action sidebar-gear" data-sidebar-hover="gear" data-native-hover={nativeTarget === "gear"} aria-label={words("侧边栏菜单", "Sidebar menu")} aria-expanded={phase === "menu"} onClick={() => phaseRef.current === "menu" ? changePhase("rail") : menu()}>
+          <ActionArc><GearSix size={21} /></ActionArc>
         </button>
       </div>
       {panelPhase === "menu" ? <section ref={panel} className="sidebar-panel sidebar-menu" data-visible={phase === "menu"} aria-hidden={phase !== "menu"} inert={phase !== "menu"} role="dialog" aria-label={words("侧边栏菜单", "Sidebar menu")}>
         <header><h2>{words("设置", "Settings")}</h2><button aria-label={words("关闭菜单", "Close menu")} onClick={dismissMenu}><X size={17} /></button></header>
         <label>{words("展示模式", "Display mode")}<select value="sidebar" onChange={event => update({ displayMode: event.target.value as "floating" | "sidebar" })}><option value="floating">{words("悬浮窗", "Floating widget")}</option><option value="sidebar">{words("侧边栏", "Sidebar")}</option></select></label>
-        <label>{words("贴边位置", "Screen edge")}<select value={preferences.sidebarSide ?? "right"} onChange={event => update({ sidebarSide: event.target.value as "left" | "right" })}><option value="right">{words("右侧", "Right")}</option><option value="left">{words("左侧", "Left")}</option></select></label>
+        <label>{words("贴边位置", "Screen edge")}<select value={side} onChange={event => update({ sidebarSide: event.target.value as WidgetPreferences["sidebarSide"] })}><option value="right">{words("右侧", "Right")}</option><option value="left">{words("左侧", "Left")}</option><option value="top">{words("顶部", "Top")}</option></select></label>
+        <label className="sidebar-opacity">{words("侧边栏大小", "Sidebar size")}<output>{Math.round(scaleChoice * 100)}%</output><input aria-label={words("侧边栏大小", "Sidebar size")} type="range" min="80" max="130" step="10" value={Math.round(scaleChoice * 100)} onChange={event => { const value = Number(event.target.value) / 100; setScaleChoice(value); update({ sidebarScale: value }); }} /></label>
+        {scaleLimited && <small className="sidebar-scale-note">{words("已缩小以适应当前屏幕", "Reduced to fit the current screen")}</small>}
         <fieldset className="sidebar-services"><legend>{words("显示服务", "Visible services")}</legend>
           <label>Codex<input type="checkbox" role="switch" aria-label={words("显示 Codex", "Show Codex")} checked={showCodex} onChange={event => update({ sidebarShowCodex: event.target.checked })} /></label>
           <label>DeepSeek<input type="checkbox" role="switch" aria-label={words("显示 DeepSeek", "Show DeepSeek")} checked={showDeepseek} onChange={event => update({ sidebarShowDeepseek: event.target.checked })} /></label>

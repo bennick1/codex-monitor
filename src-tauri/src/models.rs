@@ -47,6 +47,7 @@ pub struct WidgetPreferences {
     pub display_mode: String,
     pub sidebar_side: String,
     pub sidebar_opacity: f64,
+    pub sidebar_scale: f64,
     pub sidebar_show_codex: bool,
     pub sidebar_show_deepseek: bool,
     pub locked: bool,
@@ -83,6 +84,7 @@ impl Default for WidgetPreferences {
             display_mode: "floating".into(),
             sidebar_side: "right".into(),
             sidebar_opacity: 0.9,
+            sidebar_scale: 1.0,
             sidebar_show_codex: true,
             sidebar_show_deepseek: true,
             locked: false,
@@ -105,13 +107,18 @@ impl WidgetPreferences {
             // A sidebar is the only visible way back when its tray is hidden.
             self.locked = false;
         }
-        if self.sidebar_side != "left" {
+        if !matches!(self.sidebar_side.as_str(), "right" | "left" | "top") {
             self.sidebar_side = "right".into();
         }
         self.sidebar_opacity = if self.sidebar_opacity.is_finite() {
             self.sidebar_opacity.clamp(0.2, 1.0)
         } else {
             0.9
+        };
+        self.sidebar_scale = if self.sidebar_scale.is_finite() {
+            self.sidebar_scale.clamp(0.8, 1.3)
+        } else {
+            1.0
         };
         self.auto_rotate_seconds = self.auto_rotate_seconds.clamp(5, 300);
         if self.pinned_provider.as_deref() != Some("codex") {
@@ -139,6 +146,7 @@ mod sidebar_preference_tests {
             serde_json::from_str(r#"{"locked":true,"selectedSkin":"blur"}"#).unwrap();
         assert_eq!(legacy.display_mode, "floating");
         assert_eq!(legacy.sidebar_side, "right");
+        assert_eq!(legacy.sidebar_scale, 1.0);
         assert!(legacy.sidebar_show_codex && legacy.sidebar_show_deepseek);
         assert!(legacy.locked);
         let next = WidgetPreferences {
@@ -152,6 +160,52 @@ mod sidebar_preference_tests {
         assert_eq!(next.sidebar_opacity, 0.2);
         assert_eq!(next.sidebar_side, "right");
         assert_eq!(next.selected_skin, "blur");
+    }
+
+    #[test]
+    fn sidebar_edges_survive_round_trip_and_unknown_edges_use_the_default() {
+        for (side, expected) in [
+            ("right", "right"),
+            ("left", "left"),
+            ("top", "top"),
+            ("bottom", "right"),
+            ("", "right"),
+        ] {
+            let preferences = WidgetPreferences {
+                display_mode: "sidebar".into(),
+                sidebar_side: side.into(),
+                ..Default::default()
+            }
+            .normalized();
+            assert_eq!(preferences.sidebar_side, expected);
+            let saved = serde_json::to_string(&preferences).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            assert_eq!(restored.normalized().sidebar_side, expected);
+        }
+    }
+
+    #[test]
+    fn sidebar_scale_is_bounded_and_non_finite_values_use_the_default() {
+        for (scale, expected) in [
+            (0.0, 0.8),
+            (0.8, 0.8),
+            (1.1, 1.1),
+            (1.3, 1.3),
+            (2.0, 1.3),
+            (f64::NAN, 1.0),
+            (f64::INFINITY, 1.0),
+            (f64::NEG_INFINITY, 1.0),
+        ] {
+            let preferences = WidgetPreferences {
+                sidebar_scale: scale,
+                ..Default::default()
+            }
+            .normalized();
+            assert_eq!(preferences.sidebar_scale, expected);
+            let saved = serde_json::to_string(&preferences).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            assert_eq!(restored.sidebar_scale, expected);
+        }
     }
 
     #[test]
