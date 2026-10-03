@@ -4,6 +4,8 @@ A lightweight, local-first desktop resource monitor for Codex. See your remainin
 
 Current release: **v1.3.0**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.3.0-feature-validation-report.md) for the current status.
 
+Development candidate: **v1.3.1**, with supplemental Turn-bound Fast request evidence. See the [candidate validation record](docs/fast-request-metadata-validation.md). Candidate code does not update an installed v1.3.0 app; installation and human acceptance remain separate.
+
 ## Features
 
 - **Lightweight floating widget:** collapses into an orb, expands on hover, with pinning and tray controls.
@@ -11,7 +13,7 @@ Current release: **v1.3.0**, officially released. Updates are manual: Codex Moni
 - **Token usage statistics (Overview):** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
 - **Per-model Token Statistics (By Model):** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
 - **Quota Week (额度周):** completed Turns in the current valid quota week, newest first, showing Model, Effort, Token, and Weekly Remaining. Without a reliable historical quota observation, Weekly Remaining shows `—`; historical quota is not estimated or backfilled.
-- **Fast lightning indicator:** appears beside Effort when persisted local metadata indicates Fast selection/request (`priority` or `fast`); explicit `default` means Standard. This release fixes known compaction, repeated-context, and metadata-recovery omissions. Selection evidence persists across restarts and does not independently confirm the server processing tier. Records without trustworthy evidence remain Unknown, including the two originally reported historical records.
+- **Fast lightning indicator:** appears beside Effort when persisted local metadata indicates Fast selection/request (`priority` or `fast`); explicit `default` means Standard. The v1.3.1 candidate adds matching request metadata from the specific local `CODEX_HOME/logs_2.sqlite` diagnostic source. `feature.fast_mode=true` alone is insufficient; missing, mismatched, or conflicting evidence remains Unknown. Evidence persists across restarts but does not prove the server execution tier or the tier of every request in the Turn. Historical v1.3.0 conclusions remain in its original release report.
 - **Four free built-in skins:** Default (Follow system, Dark, or Light), Blur, Computer, and Mecha Light. Mecha Light adds silver-white armor and blue, amber, and red quota states across expanded and collapsed views. Skin selection is local, persists across restarts, and has no activation step.
 - **Overall widget opacity:** 60%–100% in 5% steps, default 100%. Background, text, icons, and decorations fade together across all four skins; the preference is restored after restart.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
@@ -40,7 +42,7 @@ The v1.3.0 macOS App and DMG are **Unsigned / Not Notarized**; the Windows insta
 
 For an existing Quota Float installation, quit the old app and preserve its application data before installing. V1 retains the old application identifier to keep settings and token history accessible. After upgrading, verify that the renamed installer and login/startup entry point to Codex Monitor; see the [migration inventory](docs/v1.0.0-name-migration-inventory.md). Do not run both copies together.
 
-v1.3.0 retains Token Statistics SQLite **schema 4** and existing Token accounting. Schema 4 was introduced in v1.2.1 for persisted Fast selection metadata while preserving existing accounting data through migration. Downgrading the upgraded Token database is not supported.
+v1.3.0 retains Token Statistics SQLite **schema 4** and existing Token accounting. Schema 4 was introduced in v1.2.1 for persisted Fast selection metadata while preserving existing accounting data through migration. The v1.3.1 candidate keeps application compatibility version **4** and adds a supplemental request-evidence table; existing core tables, accounting, and statistical rules are unchanged. Compatibility is checked using isolated fixtures, not by downgrading a production database.
 
 ## Usage
 
@@ -51,13 +53,13 @@ v1.3.0 retains Token Statistics SQLite **schema 4** and existing Token accountin
 
 On macOS the app is a menu-bar accessory: it intentionally has no Dock or Command-Tab entry. Fullscreen Spaces and sleep/wake behavior must pass the tests in the release report.
 
-Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. An initial scan may take time. Deleted logs cannot be recovered, but previously collected statistics remain in the local database.
+Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. Fast can also use the narrowly scoped diagnostic metadata described above, through a read-only connection; an unavailable source does not block accounting. Initial scans and bounded historical request replay may take time. Cleaned logs without other trustworthy evidence can leave historical Turns Unknown, while previously collected statistics and request evidence remain in the local database.
 
 ## Privacy
 
 Codex Monitor does not collect or retain prompts, chat history, source code, or account credentials in its statistics database, logs, or telemetry. Statistics stay on this machine.
 
-To read quota, the app accesses the existing local `auth.json` and uses its access token only for the required ChatGPT quota requests. It does not copy credentials to its own storage. The independent token collector reads structured usage records from local session files, skips message bodies, and stores only counters and the minimal timestamps, hashed identities, source references, and checkpoints needed for reliable local statistics.
+To read quota, the app accesses the existing local `auth.json` and uses its access token only for the required ChatGPT quota requests. It does not copy credentials to its own storage. The independent token collector reads structured usage records from local session files, skips message bodies, and stores only counters and the minimal timestamps, hashed identities, source references, and checkpoints needed for reliable local statistics. The supplemental Fast source retains only hashed root/thread/Turn keys and tier flags, never raw diagnostic records, `tags_json`, or credentials.
 
 There is no analytics, tracking, account system, or cloud sync. See [PRIVACY.md](PRIVACY.md) for network and storage details and [SECURITY.md](SECURITY.md) for reporting guidance.
 
