@@ -2,9 +2,7 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-Current release: **v1.3.0**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.3.0-feature-validation-report.md) for the current status.
-
-Development candidate: **v1.3.1**, with supplemental Turn-bound Fast request evidence. See the [candidate validation record](docs/fast-request-metadata-validation.md). Candidate code does not update an installed v1.3.0 app; installation and human acceptance remain separate.
+Current release: **v1.3.1**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1). See the [release validation report](docs/fast-request-metadata-validation.md) for the current status.
 
 ## Features
 
@@ -13,7 +11,7 @@ Development candidate: **v1.3.1**, with supplemental Turn-bound Fast request evi
 - **Token usage statistics (Overview):** today, this week, this month, and the total collected on this machine. Summaries use `万` / `亿`; hover or focus a value for its full comma-separated count.
 - **Per-model Token Statistics (By Model):** Today, Quota Period, 7 Days, 30 Days, and Total with model, Token count, and share. Today follows the local calendar day; Quota Period follows the valid Codex weekly quota window; 7 Days and 30 Days are exact rolling 7×24-hour and 30×24-hour windows rather than a natural week or current month; Total covers valid local history. Uncertain historical attribution appears as Unidentified.
 - **Quota Week (额度周):** completed Turns in the current valid quota week, newest first, showing Model, Effort, Token, and Weekly Remaining. Without a reliable historical quota observation, Weekly Remaining shows `—`; historical quota is not estimated or backfilled.
-- **Fast lightning indicator:** appears beside Effort when persisted local metadata indicates Fast selection/request (`priority` or `fast`); explicit `default` means Standard. The v1.3.1 candidate adds matching request metadata from the specific local `CODEX_HOME/logs_2.sqlite` diagnostic source. `feature.fast_mode=true` alone is insufficient; missing, mismatched, or conflicting evidence remains Unknown. Evidence persists across restarts but does not prove the server execution tier or the tier of every request in the Turn. Historical v1.3.0 conclusions remain in its original release report.
+- **Fast lightning indicator:** appears beside Effort when persisted local metadata indicates Fast selection/request (`priority` or `fast`); explicit `default` means Standard. v1.3.1 adds matching request metadata from the specific local `CODEX_HOME/logs_2.sqlite` diagnostic source. `feature.fast_mode=true` alone is insufficient; missing, mismatched, or conflicting evidence remains Unknown. Evidence persists across restarts but does not prove the server execution tier or the tier of every request in the Turn. Historical v1.3.0 conclusions remain in its original release report.
 - **Four free built-in skins:** Default (Follow system, Dark, or Light), Blur, Computer, and Mecha Light. Mecha Light adds silver-white armor and blue, amber, and red quota states across expanded and collapsed views. Skin selection is local, persists across restarts, and has no activation step.
 - **Overall widget opacity:** 60%–100% in 5% steps, default 100%. Background, text, icons, and decorations fade together across all four skins; the preference is restored after restart.
 - **Local-first:** incremental session scanning and a local SQLite database; no cloud synchronization or telemetry.
@@ -33,16 +31,16 @@ Rendered from the current components with synthetic `CODEX · TEST` data. No per
 
 Download only from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). Do not use the upstream project's installers for this fork.
 
-| Platform | v1.3.0 installer | Install |
+| Platform | v1.3.1 installer | Install |
 | --- | --- | --- |
-| macOS | `Codex-Monitor-1.3.0.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
-| Windows | `Codex-Monitor-1.3.0.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
+| macOS | `Codex-Monitor-1.3.1.dmg` | Open the disk image and drag **Codex Monitor.app** to Applications. |
+| Windows | `Codex-Monitor-1.3.1.exe` | Run the installer as your normal user, then use the **Codex Monitor** Start menu entry. |
 
-The v1.3.0 macOS App and DMG are **Unsigned / Not Notarized**; the Windows installer is **Unsigned**. The macOS executable has only a linker ad-hoc signature; strict App bundle signature verification does not pass. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. The macOS app is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
+The v1.3.1 macOS App and DMG are **Unsigned / Not Notarized**; the Windows installer is **Unsigned**. The macOS executable has only a linker ad-hoc signature; strict App bundle signature verification does not pass. macOS may show a Gatekeeper warning and Windows may show an unknown-publisher or SmartScreen warning. The macOS app is not Apple verified, notarized, or signed with an Apple Developer ID. Compare the download with the release's `SHA256SUMS` before installing.
 
 For an existing Quota Float installation, quit the old app and preserve its application data before installing. V1 retains the old application identifier to keep settings and token history accessible. After upgrading, verify that the renamed installer and login/startup entry point to Codex Monitor; see the [migration inventory](docs/v1.0.0-name-migration-inventory.md). Do not run both copies together.
 
-v1.3.0 retains Token Statistics SQLite **schema 4** and existing Token accounting. Schema 4 was introduced in v1.2.1 for persisted Fast selection metadata while preserving existing accounting data through migration. The v1.3.1 candidate keeps application compatibility version **4** and adds a supplemental request-evidence table; existing core tables, accounting, and statistical rules are unchanged. Compatibility is checked using isolated fixtures, not by downgrading a production database.
+v1.3.1 keeps application compatibility version **4** and adds a supplemental request-evidence table; existing core tables, accounting, and statistical rules are unchanged. Schema 4 was introduced in v1.2.1 for persisted Fast selection metadata while preserving existing accounting data through migration. Compatibility is checked using isolated fixtures, not by downgrading a production database.
 
 ## Usage
 

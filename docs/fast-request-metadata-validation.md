@@ -1,4 +1,47 @@
-# v1.3.1 Fast 请求元数据补丁：Candidate 验证记录
+# v1.3.1 Fast 请求元数据补丁：验证与发布归档
+
+## Final Closure（2026-10-04）
+
+本节记录 v1.3.1 的正式发布与 docs-only 归档。**最终人工验收：Passed — 用户明确确认「人工验收通过」。** 确认对象是下列固定 Candidate 与原 CI 安装包；具体平台和场景沿用实际验收记录，不据此补写全量历史、Windows 缺少真实样本的 Fast 场景、读屏器或 WCAG 全通过。
+
+| 项目 | 最终事实 |
+| --- | --- |
+| Accepted Candidate / Release Source | `0bce678f28d2123361a97d4fcdfaf1b69420fb2f` |
+| 人工验收安装包来源 | [GitHub Actions Run 37084876209](https://github.com/bennick1/codex-monitor/actions/runs/37084876209)，两个原 artifact ZIP 的大小、SHA-256 和 CRC 重新核验通过。 |
+| main 发布前 / 发布源码 | `58e14c488670f661406dc459fb3a2e8657f59db6` → `0bce678f28d2123361a97d4fcdfaf1b69420fb2f`；干净独立 worktree 执行 ff-only，普通 push 后经 ls-remote 与 GitHub API 独立确认。 |
+| Annotated Tag | `v1.3.1`；object `0dcfaa2567ef4d373eccd10b15a1ec13127c36a8`；peeled target `0bce678f28d2123361a97d4fcdfaf1b69420fb2f`；message `Codex Monitor v1.3.1`。 |
+| 正式 Release | [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1)；ID `403027234`；`draft=false`、`prerelease=false`。 |
+| 发布时间 | `2026-10-04 21:17:31 CST`（Asia/Shanghai）；UTC `2026-10-04T13:17:31Z`。 |
+| 任务出处 | `7a6333f66b0d10bf14f7f69969dafcb5a2017e6f` 的 [任务书](TASK-V1.3.1-FINAL-RELEASE-CLOSURE.md)，原文逐字节纳入本次归档；该 docs-only 任务提交不是新 Candidate。 |
+
+正式 Release 仅含以下三份资产。两份安装包均只复制、重命名自已验收文件；原 CI ZIP 内 installer、用户验收副本与正式命名文件逐字节一致。三份正式资产已在发布后从 GitHub 回下载，大小、摘要及与发布暂存原件的逐字节比较全部通过；`SHA256SUMS` 为 UTF-8 无 BOM、LF、末尾换行，仅含两份安装包。
+
+| Release 资产 | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `Codex-Monitor-1.3.1.dmg` | 15075069 | `5610ce3ba2719982b1ae0adf49c75c87802cdd7ab1259c23bb53ed3c4a45c012` |
+| `Codex-Monitor-1.3.1.exe` | 4951618 | `e59db1cdaee1f6ab83349aed6bea541cc90cfa1cd2684da624f37215ab3f56e9` |
+| `SHA256SUMS` | 180 | `f4d9101d68fdfa8f2eb2675728021d1cb6e494b7e86f2ad9bc84d142e0344466` |
+
+| CI | Run | head_branch | 结果 |
+| --- | --- | --- | --- |
+| Accepted Candidate | [37084876209](https://github.com/bennick1/codex-monitor/actions/runs/37084876209) | `codex/fast-request-evidence` | Success；Frontend / macOS / Windows 均成功，Windows GUI subsystem 通过；attempt 1。 |
+| main 快进 | [37203785177](https://github.com/bennick1/codex-monitor/actions/runs/37203785177) | `main` | Success；Frontend / macOS / Windows 均成功，Windows GUI subsystem 通过；attempt 1。 |
+| v1.3.1 Tag | [37204598030](https://github.com/bennick1/codex-monitor/actions/runs/37204598030) | `v1.3.1` | Success；Frontend / macOS / Windows 均成功，Windows GUI subsystem 通过；attempt 1。 |
+
+以上 Run 的 `head_sha` 均为固定 Release Source。本次记录的成功结果不将已有 readiness 时序隐患写成已修复。docs-only closure 推送后自然产生的 CI 由该提交的检查结果与发布执行回执记录；main、Tag、文档 CI 新产生的安装包均不替代 Run `37084876209` 的验收包。未运行历史 v1.1.0 专用 `release.yml`，未修改 CI、测试 timeout 或生产代码。
+
+签名按本次实际 artifact 核验：Windows NSIS 安装包 PE certificate table 为空，未签名；macOS Universal 包包含 x86_64 与 arm64，版本 `1.3.1`、identifier `app.quotafloat.desktop`、product `Codex Monitor`。可执行文件仅有 `adhoc,linker-signed` 签名，`TeamIdentifier` 未设置，Info.plist 未绑定，无 Developer ID、未公证；原 CI artifact App 的严格签名验证返回 `code object is not signed at all`，不称完整 App 包严格签名通过。未重新编译、打包、签名、公证或修理本机 hdiutil。
+
+**应用兼容版本保持4；新增附加请求证据表；既有核心表、accounting和统计口径不变。** Fast 仅为本地 selected/requested 请求证据，不证明服务端最终执行档位或整轮所有请求档位；`feature.fast_mode=true` 不能单独证明 Fast。有可信新证据的历史记录可以恢复，缺证据或冲突的记录仍可能 Unknown，未宣称所有历史漏标全部恢复。未重新扫描用户历史或打开生产/诊断数据库。
+
+Mecha、其他皮肤、中文字图、整体不透明度、窗口与 Branding 保持 Candidate 的已验收状态。手动更新、现有隐私限制、无云同步/遥测的边界不变。旧版本报告和当时的 Unknown、Pending、失败及未测结论保留，不能倒改成当时已通过。
+
+本次 closure 仅纳入 `README.md`、本报告和任务书原文；从 Candidate 到归档 HEAD 的生产文件无差异，Tag 保持固定 Candidate。原工作区与 Fast 补丁工作区的 HEAD、分支、status、全部已跟踪/未跟踪文件指纹均核验保持，519 个历史预览/诊断文件保留；不删除补丁分支，不清理、reset、stash 或覆盖旧 Tag/Release/资产。
+
+## Candidate 阶段历史记录（原文保留）
+
+以下 Pending、未测与阶段停止点描述原 Candidate 交付时的状态；本轮最终人工验收与正式发布事实以上面的 Final Closure 为准。
+
 
 工程验证完成。包含本补丁、测试、文档与五处版本化的最终完整 HEAD 定义为 **v1.3.1 Candidate Build Source**。最终源码 SHA、同一 SHA 的 CI 与安装包核验记录在独立交付目录的 `BUILD-INFO.txt`；只有这些全部通过后，交接状态才为 **Ready for v1.3.1 Human Acceptance**。Mac 与 Windows 人工验收仍 Pending。
 
