@@ -47,6 +47,7 @@ pub struct WidgetPreferences {
     pub display_mode: String,
     pub sidebar_side: String,
     pub sidebar_opacity: f64,
+    pub sidebar_glass_enabled: bool,
     pub sidebar_scale: f64,
     pub sidebar_show_codex: bool,
     pub sidebar_show_deepseek: bool,
@@ -84,6 +85,7 @@ impl Default for WidgetPreferences {
             display_mode: "floating".into(),
             sidebar_side: "right".into(),
             sidebar_opacity: 0.9,
+            sidebar_glass_enabled: true,
             sidebar_scale: 1.0,
             sidebar_show_codex: true,
             sidebar_show_deepseek: true,
@@ -147,6 +149,7 @@ mod sidebar_preference_tests {
         assert_eq!(legacy.display_mode, "floating");
         assert_eq!(legacy.sidebar_side, "right");
         assert_eq!(legacy.sidebar_scale, 1.0);
+        assert!(legacy.sidebar_glass_enabled);
         assert!(legacy.sidebar_show_codex && legacy.sidebar_show_deepseek);
         assert!(legacy.locked);
         let next = WidgetPreferences {
@@ -181,6 +184,24 @@ mod sidebar_preference_tests {
             let saved = serde_json::to_string(&preferences).unwrap();
             let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
             assert_eq!(restored.normalized().sidebar_side, expected);
+        }
+    }
+
+    #[test]
+    fn glass_choice_round_trips_without_rewriting_opacity_or_theme() {
+        for enabled in [false, true] {
+            let value = WidgetPreferences {
+                sidebar_glass_enabled: enabled,
+                sidebar_opacity: 0.7,
+                appearance: "system".into(),
+                ..Default::default()
+            };
+            let saved = serde_json::to_string(&value).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            let restored = restored.normalized();
+            assert_eq!(restored.sidebar_glass_enabled, enabled);
+            assert_eq!(restored.sidebar_opacity, 0.7);
+            assert_eq!(restored.appearance, "system");
         }
     }
 

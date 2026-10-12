@@ -381,6 +381,7 @@ pub fn apply_mode(
                 .map_err(|_| "could not restore tray")?;
         }
         if previous.display_mode == "sidebar" {
+            crate::sidebar_glass::clear_on_main(app);
             window
                 .set_ignore_cursor_events(false)
                 .map_err(|_| "widget input unavailable")?;
@@ -482,6 +483,7 @@ pub fn recover(app: &AppHandle) -> Result<(), String> {
             .map_err(|_| "sidebar unavailable")? = None;
         resize(app, &preferences, "rail")?;
         let _ = app.emit_to("widget", "sidebar-recover", ());
+        let _ = app.emit_to("widget", "sidebar-glass-invalidated", ());
     } else if let Some(window) = app.get_webview_window("widget") {
         let monitor = window.current_monitor().ok().flatten();
         if monitor.is_none() {

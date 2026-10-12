@@ -1,11 +1,13 @@
 .sidebar {
   --sidebar-enter: 220ms; --sidebar-exit: 150ms;
   --sidebar-ease: cubic-bezier(.18,.8,.22,1); --sidebar-edge: 1;
+  --sidebar-action-ease: cubic-bezier(.4,0,.2,1);
   color-scheme: dark;
   --sidebar-surface: rgb(18 18 20 / var(--sidebar-opacity, .9));
   --sidebar-text: #f5f5f7; --sidebar-muted: #bcbcc4; --sidebar-value: #d9d9df;
-  --sidebar-handle: #161618; --sidebar-border: rgb(255 255 255 / .17);
+  --sidebar-handle: #161618; --sidebar-border: rgb(255 255 255 / .17); --sidebar-handle-border: rgb(255 255 255 / .17);
   --sidebar-track: #49494f; --sidebar-arc: #73737b; --sidebar-chart: #c1c1c7;
+  --sidebar-action-border: rgb(255 255 255 / .17);
   --sidebar-accent: #ae4aff; --sidebar-deepseek: #ff662d; --sidebar-focus: #c787ff;
   --sidebar-control: #303034; --sidebar-hover: rgb(255 255 255 / .09);
   --sidebar-warning: #f0bf83; --sidebar-warning-bg: #392c26; --sidebar-danger: #f0b8b6;
@@ -15,13 +17,21 @@
   color-scheme: light;
   --sidebar-surface: rgb(250 250 252 / var(--sidebar-opacity, .9));
   --sidebar-text: #202024; --sidebar-muted: #50505a; --sidebar-value: #373740;
-  --sidebar-handle: #ededf1; --sidebar-border: rgb(0 0 0 / .18);
+  --sidebar-handle: #ededf1; --sidebar-border: rgb(0 0 0 / .18); --sidebar-handle-border: rgb(0 0 0 / .18);
   --sidebar-track: #c5c5ce; --sidebar-arc: #666670; --sidebar-chart: #62626d;
+  --sidebar-action-border: rgb(0 0 0 / .18);
   --sidebar-accent: #8128c7; --sidebar-deepseek: #c3430a; --sidebar-focus: #8128c7;
   --sidebar-control: #e5e5ec; --sidebar-hover: rgb(0 0 0 / .07);
   --sidebar-warning: #854200; --sidebar-warning-bg: #fff0de; --sidebar-danger: #a52825;
   --sidebar-logo: brightness(0);
 }
+/* Native blur stays behind these tint layers; the slider remains the tint alpha. */
+.sidebar[data-glass=active] { --sidebar-surface: rgb(25 27 33 / var(--sidebar-opacity, .9)); --sidebar-border: rgb(255 255 255 / .2); }
+.sidebar--theme-light[data-glass=active] { --sidebar-surface: rgb(241 244 249 / var(--sidebar-opacity, .9)); --sidebar-border: rgb(255 255 255 / .6); }
+.sidebar[data-glass=active] .sidebar-panel { box-shadow: inset 0 1px 0 rgb(255 255 255 / .08); }
+.sidebar[data-glass=reducedTransparency], .sidebar[data-glass=unavailable] { --sidebar-surface: #121214; }
+.sidebar--theme-light[data-glass=reducedTransparency], .sidebar--theme-light[data-glass=unavailable] { --sidebar-surface: #fafafc; }
+.sidebar-glass-note { color: var(--sidebar-muted); font-size: 10px; line-height: 1.45; }
 .sidebar { --sidebar-panel-offset: calc(60px * var(--sidebar-scale, 1) + 12px); position: absolute; left: 0; top: 0; width: 100%; height: 100%; color: var(--sidebar-text); font: 12px/1.45 "Quota Sans", system-ui, sans-serif; background: transparent; user-select: none; }
 .sidebar button, .sidebar select, .sidebar input { font: inherit; }
 .sidebar button { cursor: pointer; color: inherit; border: 0; }
@@ -29,7 +39,7 @@
 .sidebar button:hover, .sidebar-provider[data-native-hover=true] { background-color: var(--sidebar-hover); }
 .sidebar button:disabled { opacity: .5; cursor: default; }
 .sidebar--left { --sidebar-edge: -1; }
-.sidebar .sidebar-handle { position: absolute; right: 0; top: 50%; width: 6px; height: 48px; padding: 0; border-radius: 4px 0 0 4px; background: var(--sidebar-handle); box-shadow: inset 0 0 0 1px var(--sidebar-border); transform: translateY(-50%) scale(var(--sidebar-scale, 1)); transform-origin: right center; transition: opacity 90ms ease, transform var(--sidebar-exit) var(--sidebar-ease); }
+.sidebar .sidebar-handle { position: absolute; right: 0; top: 50%; width: 6px; height: 48px; padding: 0; border-radius: 4px 0 0 4px; background: var(--sidebar-handle); box-shadow: inset 0 0 0 1px var(--sidebar-handle-border); transform: translateY(-50%) scale(var(--sidebar-scale, 1)); transform-origin: right center; transition: opacity 90ms ease, transform var(--sidebar-exit) var(--sidebar-ease); }
 .sidebar .sidebar-handle[aria-hidden=true] { opacity: 0; transform: translateY(-50%) scale(var(--sidebar-scale, 1)) scaleY(.7); pointer-events: none; }
 .sidebar .sidebar-handle:hover { background: var(--sidebar-handle); }
 .sidebar--left .sidebar-handle { right: auto; left: 0; border-radius: 0 4px 4px 0; transform-origin: left center; }
@@ -59,14 +69,14 @@
 .sidebar-direction { bottom: calc(100% + 6px); }
 /* One continuous stroke grows from a quarter arc into the button perimeter. */
 .sidebar-action-arc { position: absolute; inset: 0; width: 48px; height: 48px; pointer-events: none; }
-.sidebar-action-arc circle { fill: transparent; stroke: var(--sidebar-arc); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 25 75; transition: stroke-dasharray 260ms var(--sidebar-ease), stroke-width 220ms ease, stroke 220ms ease, fill 220ms ease; }
+.sidebar-action-arc circle { fill: transparent; stroke: var(--sidebar-arc); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 25 75; transition: stroke-dasharray 300ms var(--sidebar-action-ease), stroke-width 300ms var(--sidebar-action-ease), stroke 300ms var(--sidebar-action-ease), fill 180ms ease; }
 .sidebar-direction .sidebar-action-arc { transform: scaleY(-1); }
 .sidebar--left .sidebar-gear .sidebar-action-arc { transform: scaleX(-1); }
 .sidebar--left .sidebar-direction .sidebar-action-arc { transform: scale(-1); }
-.sidebar-action-icon { display: grid; place-items: center; opacity: 0; transform: scale(.65) rotate(-35deg); transition: opacity 130ms ease, transform 230ms var(--sidebar-ease); pointer-events: none; }
+.sidebar-action-icon { display: grid; place-items: center; opacity: 0; transform: scale(.65) rotate(-35deg); transition: opacity 140ms ease, transform 240ms var(--sidebar-action-ease); pointer-events: none; }
 .sidebar-direction .sidebar-action-icon { transform: scale(.65); }
-.sidebar-action:is(:hover, [data-native-hover=true], :focus-visible, [aria-expanded=true]) .sidebar-action-arc circle { stroke-dasharray: 100 0; stroke-width: 1; stroke: var(--sidebar-border); fill: var(--sidebar-surface); }
-.sidebar-action:is(:hover, [data-native-hover=true], :focus-visible, [aria-expanded=true]) .sidebar-action-icon { opacity: 1; transform: scale(1) rotate(0deg); transition-delay: 40ms; }
+.sidebar-action:is(:hover, [data-native-hover=true], :focus-visible, [aria-expanded=true]) .sidebar-action-arc circle { stroke-dasharray: 100 0; stroke-width: 1; stroke: var(--sidebar-action-border); fill: var(--sidebar-surface); transition-delay: 0ms, 0ms, 0ms, 60ms; }
+.sidebar-action:is(:hover, [data-native-hover=true], :focus-visible, [aria-expanded=true]) .sidebar-action-icon { opacity: 1; transform: scale(1) rotate(0deg); transition-delay: 60ms; }
 .sidebar-action:active .sidebar-action-icon { transform: scale(.9); }
 .sidebar-panel { position: absolute; right: var(--sidebar-panel-offset); top: 50%; width: 272px; max-width: calc(100% - var(--sidebar-panel-offset)); min-width: 0; max-height: calc(100% - 12px); padding: 12px; border-radius: 20px; background: var(--sidebar-surface); border: 1px solid var(--sidebar-border); overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--sidebar-arc) transparent; opacity: 1; transform: translateY(-50%); transform-origin: right center; transition: opacity var(--sidebar-enter) ease, transform var(--sidebar-enter) var(--sidebar-ease); }
 .sidebar--left .sidebar-panel { left: var(--sidebar-panel-offset); right: auto; transform-origin: left center; }

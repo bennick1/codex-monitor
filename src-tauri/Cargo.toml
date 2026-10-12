@@ -36,8 +36,15 @@ tokio = { version = "1", features = ["macros", "sync"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 # Reuse the exact AppKit bindings already locked by Tauri; no window framework.
 objc2 = "0.6.4"
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSWindow", "NSApplication", "NSEvent", "block2"] }
+objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSWindow", "NSApplication", "NSEvent", "block2", "NSVisualEffectView", "NSView", "NSResponder", "NSImage", "NSBezierPath", "NSColor", "NSGraphics", "NSAppearance", "NSWorkspace", "NSAccessibility"] }
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSGeometry", "NSNotification", "NSOperation", "NSString", "block2"] }
 block2 = "0.6.2"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+# Reuse Tauri's locked WinRT bindings for local, clipped desktop material.
+windows = { version = "0.61.3", features = ["Foundation", "Graphics", "Graphics_Effects", "System", "UI_Composition", "UI_Composition_Desktop", "UI_ViewManagement", "Wdk_System_SystemServices", "Win32_Foundation", "Win32_Graphics_Direct2D", "Win32_Graphics_Direct2D_Common", "Win32_Graphics_Dwm", "Win32_System_SystemInformation", "Win32_System_WinRT", "Win32_System_WinRT_Composition", "Win32_System_WinRT_Graphics_Direct2D"] }
+windows-core = "0.61.2"
+windows-numerics = "0.2.0"
 
 [dev-dependencies]
 tempfile = "3"

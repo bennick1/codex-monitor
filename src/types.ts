@@ -28,6 +28,7 @@ export interface WidgetPreferences {
   displayMode?: "floating" | "sidebar";
   sidebarSide?: "left" | "right" | "top";
   sidebarOpacity?: number;
+  sidebarGlassEnabled?: boolean;
   sidebarScale?: number;
   sidebarShowCodex?: boolean;
   sidebarShowDeepseek?: boolean;

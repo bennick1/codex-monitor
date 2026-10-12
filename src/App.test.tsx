@@ -11,6 +11,7 @@ vi.mock("./lib/bridge", () => ({
   getTokenStatistics: api.get, listenTokenStatisticsUpdated: api.tokenListen, refreshTokenStatistics: api.refreshTokens,
   fetchSnapshots: api.quota, getPreferences: api.preferences, listenDesktopEvents: api.desktopListen,
   setSidebarPhase: api.phase, syncSidebarRegions: api.regions, getAccountUsage: api.account, getDeepSeekUsage: api.deepseek, listenSidebarRecovery: api.sideListen, listenSidebarDismiss: api.sideListen, listenSidebarPointer: api.sideListen, listenDeepSeekReady: api.sideListen,
+  syncSidebarGlass: vi.fn(async () => "active"), listenSidebarGlassInvalidated: vi.fn(async () => () => {}),
   isTauri: api.desktop, getAutostart: api.autostart, setWidgetExpanded: api.expand, syncWidgetAppearance: vi.fn(async () => {}), startDragging: vi.fn(), updatePreferences: api.save, setAlwaysOnTop: vi.fn(),
 }));
 vi.mock("./lib/releasePage", () => ({ openReleasePage: vi.fn() }));
@@ -166,6 +167,17 @@ async function preferenceEvent(value: WidgetPreferences) {
   act(() => api.desktopListen.mock.calls.at(-1)![0].onPreferences(value));
   await flush();
 }
+
+it("migrates missing glass preferences to enabled and retains an explicitly disabled saved value", async () => {
+  api.preferences.mockResolvedValue({ ...prefs, displayMode: "sidebar", stayExpanded: true });
+  render(<App />); await flush();
+  fireEvent.contextMenu(screen.getByRole("main")); await flush();
+  expect((screen.getByRole("switch", { name: "毛玻璃效果" }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(screen.getByRole("switch", { name: "毛玻璃效果" })); await flush();
+  expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarGlassEnabled: false, sidebarOpacity: .9 }));
+  await preferenceEvent(api.save.mock.calls.at(-1)![0]);
+  expect((screen.getByRole("switch", { name: "毛玻璃效果" }) as HTMLInputElement).checked).toBe(false);
+});
 
 it("applies the native size during a held drag before releasing the pointer", async () => {
   const pending = pendingSaves();

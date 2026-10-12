@@ -7,9 +7,10 @@ import { EMPTY_DEEPSEEK } from "../lib/sidebarData";
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 import type { SidebarPointer } from "../lib/bridge";
 
-const api = vi.hoisted(() => ({ phase: vi.fn(), regions: vi.fn(), account: vi.fn(), deepseek: vi.fn(), session: vi.fn(), action: vi.fn(), recovery: vi.fn(), dismiss: vi.fn(), pointer: vi.fn(), hit: vi.fn() }));
+const api = vi.hoisted(() => ({ phase: vi.fn(), regions: vi.fn(), glass: vi.fn(), glassInvalidated: vi.fn(), account: vi.fn(), deepseek: vi.fn(), session: vi.fn(), action: vi.fn(), recovery: vi.fn(), dismiss: vi.fn(), pointer: vi.fn(), hit: vi.fn() }));
 vi.mock("../lib/bridge", () => ({
   setSidebarPhase: api.phase, syncSidebarRegions: api.regions, getAccountUsage: api.account, getDeepSeekUsage: api.deepseek,
+  syncSidebarGlass: api.glass, listenSidebarGlassInvalidated: api.glassInvalidated,
   setAlwaysOnTop: vi.fn(), sidebarAction: api.action, getAutostart: vi.fn(async () => false), deepSeekSession: api.session,
   listenDeepSeekReady: vi.fn(async () => () => {}), listenSidebarRecovery: api.recovery, listenSidebarDismiss: api.dismiss, listenSidebarPointer: api.pointer,
 }));
@@ -32,8 +33,59 @@ beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks(); api.phase.mockResolvedValue(undefined); api.regions.mockResolvedValue(undefined); api.recovery.mockResolvedValue(() => {}); api.dismiss.mockResolvedValue(() => {}); api.pointer.mockResolvedValue(() => {});
   api.account.mockResolvedValue({ lifetimeTokens: "9007199254740993", peakDailyTokens: "1234", longestRunningTurnSeconds: 11460, currentStreakDays: 18, longestStreakDays: 25, daily: [], updatedAt: "2026-10-01T00:00:00Z" });
   api.deepseek.mockResolvedValue({ ...EMPTY_DEEPSEEK, status: "ok", balance: 8.89, spent: 21.11 });
+  api.glass.mockResolvedValue("active"); api.glassInvalidated.mockResolvedValue(() => {});
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it("defaults glass on, saves the switch independently and clears the native layer when disabled", async () => {
+  function Harness() {
+    const [value, save] = useState<WidgetPreferences>(prefs);
+    return <Sidebar snapshot={quota} preferences={value} theme="light" onPreferences={next => { update(next); save(next); }} onRefresh={vi.fn()} notice={null} />;
+  }
+  render(<Harness />); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  expect((screen.getByRole("switch", { name: "毛玻璃效果" }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(screen.getByRole("switch", { name: "毛玻璃效果" }));
+  await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ sidebarGlassEnabled: false, sidebarOpacity: .9 }));
+  expect(screen.getByRole("main").dataset.glass).toBe("disabled");
+  expect(api.glass).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false, regions: [] }));
+  expect(screen.getByRole("dialog", { name: "侧边栏菜单" })).toBeTruthy();
+});
+
+it("explains the solid accessibility fallback and refreshes after native invalidation", async () => {
+  api.glass.mockResolvedValue("reducedTransparency");
+  mount(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+  expect(screen.getByRole("main").dataset.glass).toBe("reducedTransparency");
+  expect(screen.getByText("系统已减少透明度，当前使用实色背景。")).toBeTruthy();
+  api.glass.mockResolvedValue("active");
+  act(() => api.glassInvalidated.mock.calls[0][0]());
+  await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+  expect(screen.getByRole("main").dataset.glass).toBe("active");
+  expect(screen.queryByText("系统已减少透明度，当前使用实色背景。")).toBeNull();
+});
+
+it("honors system transparency requirements while glass is disabled and retains the user's choice after recovery", async () => {
+  api.glass.mockResolvedValue("reducedTransparency");
+  mount({ sidebarGlassEnabled: false }); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+  expect(screen.getByRole("main").dataset.glass).toBe("reducedTransparency");
+  expect(screen.getByText("系统已减少透明度，当前使用实色背景。")).toBeTruthy();
+  expect((screen.getByRole("switch", { name: "毛玻璃效果" }) as HTMLInputElement).checked).toBe(false);
+  expect(api.glass).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false, regions: [] }));
+  expect(update).not.toHaveBeenCalled();
+  api.glass.mockResolvedValue("disabled");
+  act(() => api.glassInvalidated.mock.calls[0][0]());
+  await act(async () => { await vi.advanceTimersByTimeAsync(40); });
+  expect(screen.getByRole("main").dataset.glass).toBe("disabled");
+  expect(screen.queryByText("系统已减少透明度，当前使用实色背景。")).toBeNull();
+  expect((screen.getByRole("switch", { name: "毛玻璃效果" }) as HTMLInputElement).checked).toBe(false);
+  expect(api.glass).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false, regions: [] }));
+  expect(update).not.toHaveBeenCalled();
+});
 
 it("updates sidebar size during input without waiting for release and avoids duplicate saves", async () => {
   api.phase.mockResolvedValue({ width: 394, height: 580, scale: 1.3 });
@@ -427,7 +479,7 @@ it("closes detail earlier on native exit without postponing the whole sidebar's 
 it("uses WebView mouse movement to close detail, preserves keyboard focus, and cancels work on unmount", async () => {
   const view = mount(); await expand(); hover("Codex 剩余 74%"); await flush();
   const root = screen.getByRole("main");
-  const pin = screen.getByRole("button", { name: "保持展开" });
+  const pin = screen.getByRole("button", { name: "保持侧边栏展开" });
   fireEvent.keyDown(root, { key: "Tab" }); act(() => pin.focus());
   fireEvent.mouseMove(root, { screenX: 1870, screenY: 540 });
   await act(async () => { await vi.advanceTimersByTimeAsync(500); });
@@ -681,24 +733,60 @@ it("ignores stationary pointer enters after resize settles, including keyboard e
   hover("DeepSeek 剩余 30%", 530); await flush();
   expect(screen.getByText("29.6% 剩余")).toBeTruthy();
 });
-it("dismisses settings on native focus loss or a click outside the panel, even when pinned", async () => {
-  mount({ stayExpanded: true }); await flush();
+it.each([true, false])("protects settings controls and provider hover regardless of stayExpanded=%s", async stayExpanded => {
+  mount({ stayExpanded }); await flush(); await expand();
   fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
   fireEvent.pointerDown(screen.getByRole("slider", { name: "背景不透明度" })); await flush();
   expect(screen.getByRole("dialog")).toBeTruthy();
   // Hovering another service must not replace a settings menu in use.
   fireEvent.mouseEnter(screen.getByRole("button", { name: "Codex 剩余 74%" })); await flush();
+  fireEvent.mouseLeave(screen.getByRole("main"));
+  await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+  expect(screen.getByRole("dialog")).toBeTruthy();
+});
+
+it.each([true, false].flatMap(stayExpanded => ["native-dismiss", "outside-panel", "window-blur", "close-button", "escape"].map(action => ({ stayExpanded, action }))))(
+  "dismisses settings using $action while respecting stayExpanded=$stayExpanded", async ({ stayExpanded, action }) => {
+    mount({ stayExpanded }); await flush(); await expand();
+    const root = screen.getByRole("main");
+    fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+    if (action === "native-dismiss") act(() => api.dismiss.mock.calls[0][0]());
+    else if (action === "outside-panel") fireEvent.pointerDown(root);
+    else if (action === "window-blur") fireEvent.blur(window);
+    else if (action === "close-button") fireEvent.click(screen.getByRole("button", { name: "关闭菜单" }));
+    else fireEvent.keyDown(root, { key: "Escape" });
+    await flush();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(root.className).toContain(stayExpanded ? "sidebar--rail" : "sidebar--handle");
+    await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+    expect(api.phase).toHaveBeenLastCalledWith(stayExpanded ? "rail" : "handle");
+    expect(root.className).toContain(stayExpanded ? "sidebar--rail" : "sidebar--handle");
+  },
+);
+
+it("applies the saved rail pin immediately when closing settings and leaving the sidebar", async () => {
+  function Harness() {
+    const [value, save] = useState<WidgetPreferences>(prefs);
+    return <Sidebar snapshot={quota} preferences={value} theme="light" onPreferences={next => { update(next); save(next); }} onRefresh={vi.fn()} notice={null} />;
+  }
+  render(<Harness />); await flush(); await expand();
+  const root = screen.getByRole("main");
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  fireEvent.click(screen.getByRole("checkbox", { name: "保持侧边栏展开" })); await flush();
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ stayExpanded: true }));
   expect(screen.getByRole("dialog")).toBeTruthy();
   act(() => api.dismiss.mock.calls[0][0]()); await flush();
-  expect(screen.getByRole("button", { name: "展开侧边栏" })).toBeTruthy();
-  await expand(); fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
-  fireEvent.pointerDown(screen.getByRole("main")); await flush();
+  fireEvent.mouseLeave(root);
+  await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+  expect(root.className).toContain("sidebar--rail");
   expect(screen.queryByRole("dialog")).toBeNull();
-  await act(async () => { await vi.advanceTimersByTimeAsync(150); });
-  expect(api.phase).toHaveBeenLastCalledWith("handle");
-  await expand(); fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
-  fireEvent.blur(window); await flush();
-  expect(screen.getByRole("button", { name: "展开侧边栏" })).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  expect((screen.getByRole("checkbox", { name: "保持侧边栏展开" }) as HTMLInputElement).checked).toBe(true);
+  fireEvent.click(screen.getByRole("checkbox", { name: "保持侧边栏展开" })); await flush();
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ stayExpanded: false }));
+  act(() => api.dismiss.mock.calls[0][0]()); await flush();
+  await act(async () => { await vi.advanceTimersByTimeAsync(700); });
+  expect(root.className).toContain("sidebar--handle");
 });
 it("uses only the weekly quota for Pro and does not substitute a short window when weekly is missing", async () => {
   const view = mount({}, { ...quota, plan: "PRO", weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 } });

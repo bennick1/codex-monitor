@@ -23,6 +23,17 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it("uses the private glass command without changing the window phase", async () => {
+  const { syncSidebarGlass } = await import("./bridge");
+  const frame = { sequence: 1, width: 376, height: 580, theme: "light" as const, enabled: true, regions: [] };
+  api.invoke.mockResolvedValueOnce("active");
+  expect(await syncSidebarGlass(frame)).toBe("active");
+  expect(api.invoke).toHaveBeenCalledExactlyOnceWith("sync_sidebar_glass", { frame });
+  vi.stubGlobal("window", {});
+  expect(await syncSidebarGlass(frame)).toBe("unsupported");
+  expect(api.invoke).toHaveBeenCalledTimes(1);
+});
+
 it("reports sidebar hit regions through the existing command without a viewport wait", async () => {
   const { syncSidebarRegions } = await import("./bridge");
   const regions = [{ x: 0, y: 262, width: 8, height: 56 }];

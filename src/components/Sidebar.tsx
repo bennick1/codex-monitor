@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProp
 import type { ProviderSnapshot, WidgetPreferences, WidgetTheme } from "../types";
 import { deepSeekSession, getAccountUsage, getAutostart, getDeepSeekUsage, listenDeepSeekReady, listenSidebarRecovery, listenSidebarDismiss, listenSidebarPointer, setAlwaysOnTop, setSidebarPhase, syncSidebarRegions, sidebarAction, type SidebarPhase, type SidebarPointer } from "../lib/bridge";
 import { sidebarInputRegions } from "../lib/widgetGeometry";
+import { useSidebarGlass } from "../hooks/useSidebarGlass";
 import { accountDays, formatMoney, durationText, EMPTY_DEEPSEEK, formatTokenCount, formatTokenCountExact, remainingFunds, sidebarQuotaWindows, sumTokens, type AccountUsage, type DeepSeekUsage } from "../lib/sidebarData";
 import { formatDateTime, formatResetTime } from "../lib/format";
 import codexLogo from "../../assets/codex-mark.svg";
@@ -90,6 +91,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   const synchronizeViewport = useRef<() => void>(() => {});
   const pointerPosition = useRef<{ x: number; y: number } | null>(null);
   const resizePointer = useRef<{ x: number; y: number } | null>(null);
+  const glassStatus = useSidebarGlass(root, { theme, enabled: preferences.sidebarGlassEnabled !== false, side, dockHeight, surfaceOpacity: opacity }, `${phase}:${panelPhase}:${provider}:${layoutRevision}:${scale}`);
   const words = (cn: string, en: string) => zh ? cn : en;
   const cancelCollapse = useCallback(() => { if (timer.current !== null) window.clearTimeout(timer.current); timer.current = null; }, []);
   const cancelDetailCollapse = useCallback(() => { if (detailTimer.current !== null) window.clearTimeout(detailTimer.current); detailTimer.current = null; }, []);
@@ -238,7 +240,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
     if (phaseRef.current !== "menu") return;
     inside.current = false; focused.current = false;
     (document.activeElement as HTMLElement)?.blur();
-    changePhase("handle");
+    changePhase(pinned.current ? "rail" : "handle");
   }, [changePhase]);
   const showDetail = useCallback((id: "codex" | "deepseek", pointer?: { screenX: number; screenY: number }) => {
     if (phaseRef.current === "menu") return;
@@ -409,7 +411,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   const sideName = { right: words("右侧", "right"), left: words("左侧", "left"), top: words("顶部", "top") };
   const directionLabel = words(`贴靠${sideName[side]}，切换到${sideName[nextSide]}`, `Docked ${sideName[side]}, switch to ${sideName[nextSide]}`);
 
-  return <main ref={root} className={`sidebar sidebar--theme-${theme} sidebar--${preferences.sidebarSide ?? "right"} sidebar--${phase}`} style={style} aria-label={words("侧边栏", "Sidebar")}
+  return <main ref={root} className={`sidebar sidebar--theme-${theme} sidebar--${preferences.sidebarSide ?? "right"} sidebar--${phase}`} data-glass={glassStatus} style={style} aria-label={words("侧边栏", "Sidebar")}
     onMouseEnter={event => { pointerPosition.current = { x: event.screenX, y: event.screenY }; if (nativeTracking.current) return; inside.current = true; cancelCollapse(); if (phaseRef.current === "handle") changePhase("rail"); }}
     onMouseMoveCapture={event => {
       pointerPosition.current = { x: event.screenX, y: event.screenY };
@@ -468,7 +470,9 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
           <label>DeepSeek<input type="checkbox" role="switch" aria-label={words("显示 DeepSeek", "Show DeepSeek")} checked={showDeepseek} onChange={event => update({ sidebarShowDeepseek: event.target.checked })} /></label>
         </fieldset>
         <label className="sidebar-opacity">{words("背景不透明度", "Background opacity")}<output>{Math.round(opacity * 100)}%</output><input aria-label={words("背景不透明度", "Background opacity")} type="range" min="20" max="100" value={Math.round(opacity * 100)} onChange={event => setOpacity(Number(event.target.value) / 100)} onPointerUp={() => update({ sidebarOpacity: opacity })} onKeyUp={() => update({ sidebarOpacity: opacity })} onBlur={() => { if (opacity !== preferences.sidebarOpacity) update({ sidebarOpacity: opacity }); }} /></label>
-        <label><span>{words("保持展开", "Keep open")}</span><input type="checkbox" checked={preferences.stayExpanded} onChange={event => update({ stayExpanded: event.target.checked })} /></label>
+        <label>{words("毛玻璃效果", "Frosted glass")}<input type="checkbox" role="switch" aria-label={words("毛玻璃效果", "Frosted glass")} checked={preferences.sidebarGlassEnabled !== false} onChange={event => update({ sidebarGlassEnabled: event.target.checked })} /></label>
+        {(glassStatus === "reducedTransparency" || glassStatus === "unavailable") && <small className="sidebar-glass-note">{glassStatus === "reducedTransparency" ? words("系统已减少透明度，当前使用实色背景。", "System transparency is reduced; using a solid background.") : words("毛玻璃暂不可用，当前使用实色背景。", "Frosted glass is unavailable; using a solid background.")}</small>}
+        <label><span>{words("保持侧边栏展开", "Keep sidebar expanded")}</span><input type="checkbox" checked={preferences.stayExpanded} onChange={event => update({ stayExpanded: event.target.checked })} /></label>
         <label><span>{words("窗口置顶", "Always on top")}</span><input type="checkbox" checked={preferences.alwaysOnTop} onChange={event => { const checked = event.target.checked; void run(async () => onPreferences(await setAlwaysOnTop(checked))); }} /></label>
         <label>{words("语言", "Language")}<select value={preferences.language} onChange={event => update({ language: event.target.value as "zh-CN" | "en" })}><option value="zh-CN">中文</option><option value="en">English</option></select></label>
         <label>{words("悬浮窗皮肤", "Floating skin")}<select value={preferences.selectedSkin} onChange={event => update({ selectedSkin: event.target.value as WidgetPreferences["selectedSkin"] })}><option value="default">Default</option><option value="blur">Blur</option><option value="computer">Computer</option></select></label>
@@ -481,7 +485,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
         <button className="sidebar-quit" onClick={() => void run(() => sidebarAction("quit"))}>{words("退出 Codex Monitor", "Quit Codex Monitor")}</button>
       </section> : panelPhase === "detail" ? <section ref={panel} className={`sidebar-panel sidebar-detail sidebar-detail--${provider}`} data-visible={phase === "detail"} data-parked={phase !== "detail" && nativePhase.current !== "detail"} aria-hidden={phase !== "detail"} inert={phase !== "detail"} aria-label={provider === "codex" ? words("Codex 用量详情", "Codex usage details") : words("DeepSeek 用量详情", "DeepSeek usage details")}>
         <div className="sidebar-detail-content">
-        <header><div className="sidebar-detail-title"><img src={provider === "codex" ? codexLogo : deepSeekLogo} alt="" /><div><h2>{provider === "codex" ? "Codex" : "DeepSeek"} {words("用量", "usage")}</h2><small>{provider === "codex" ? snapshot.plan ?? "—" : words("开放平台账户", "Platform account")}</small></div></div><button aria-label={words("保持展开", "Keep open")} aria-pressed={preferences.stayExpanded} onClick={() => update({ stayExpanded: !preferences.stayExpanded })}><PushPin weight={preferences.stayExpanded ? "fill" : "regular"} size={16} /></button></header>
+        <header><div className="sidebar-detail-title"><img src={provider === "codex" ? codexLogo : deepSeekLogo} alt="" /><div><h2>{provider === "codex" ? "Codex" : "DeepSeek"} {words("用量", "usage")}</h2><small>{provider === "codex" ? snapshot.plan ?? "—" : words("开放平台账户", "Platform account")}</small></div></div><button aria-label={words("保持侧边栏展开", "Keep sidebar expanded")} title={words("保持侧边栏展开", "Keep sidebar expanded")} aria-pressed={preferences.stayExpanded} onClick={() => update({ stayExpanded: !preferences.stayExpanded })}><PushPin weight={preferences.stayExpanded ? "fill" : "regular"} size={16} /></button></header>
         {provider === "codex" ? <>
           {snapshot.status !== "ok" && <p className="sidebar-status">{snapshot.status === "stale" ? words("额度数据未更新", "Quota data is stale") : words("额度暂不可用，请检查 Codex 登录", "Quota unavailable. Check Codex sign-in.")}</p>}
           {quotaWindows.length === 0 && <p className="sidebar-status">{words("额度暂不可用", "Quota unavailable")}</p>}

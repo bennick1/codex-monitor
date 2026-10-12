@@ -3,6 +3,7 @@ import { EMPTY_DEEPSEEK, type AccountUsage, type DeepSeekUsage } from "./sidebar
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 import type { TokenStatisticsSnapshot, TokenStatisticsNotification, TokenStatisticsRefresh } from "./tokenStatistics";
 import type { SidebarInputRect } from "./widgetGeometry";
+import type { SidebarGlassFrame, SidebarGlassStatus } from "./sidebarGlass";
 
 const defaultPreferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 
@@ -69,6 +70,18 @@ export async function syncSidebarRegions(phase: SidebarPhase, interactiveRegions
   const { invoke } = await import("@tauri-apps/api/core");
   // Region updates use the existing command but never resize or take focus.
   await invoke("set_sidebar_phase", { phase, interactiveRegions });
+}
+
+export async function syncSidebarGlass(frame: SidebarGlassFrame): Promise<SidebarGlassStatus> {
+  if (!isTauri()) return "unsupported";
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<SidebarGlassStatus>("sync_sidebar_glass", { frame });
+}
+
+export async function listenSidebarGlassInvalidated(handler: () => void): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { listen } = await import("@tauri-apps/api/event");
+  return listen("sidebar-glass-invalidated", handler);
 }
 
 export async function sidebarAction(action: "refresh" | "releases" | "quit" | "autostart"): Promise<boolean> {

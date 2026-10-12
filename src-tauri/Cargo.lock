@@ -518,6 +518,7 @@ dependencies = [
  "libc",
  "objc2",
  "objc2-app-kit",
+ "objc2-foundation",
  "reqwest 0.12.28",
  "rusqlite",
  "same-file",
@@ -532,6 +533,9 @@ dependencies = [
  "tauri-plugin-window-state",
  "tempfile",
  "tokio",
+ "windows",
+ "windows-core 0.61.2",
+ "windows-numerics",
 ]
 
 [[package]]

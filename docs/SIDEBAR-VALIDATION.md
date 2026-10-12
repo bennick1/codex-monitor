@@ -352,3 +352,103 @@ env CODEX_HOME=/private/tmp/codex-monitor-sidebar-home \
 - 自动检查：`cargo test --manifest-path src-tauri/Cargo.toml --locked --offline` 为 152 项通过、2 项既有忽略；Clippy `--all-targets --locked --offline -- -D warnings`、rustfmt 和 `git diff --check` 通过。独立 Mac debug 合成包构建通过，包含 TypeScript／Vite；本轮前端未修改，未重跑前端测试。
 - 可执行文件 SHA-256：`26661a048302634a3c9c341fcc9b5c4762ce31ab480eb64447731e18045c7861`。原生工具确认启动拉手、点击打开设置、再次点击只关闭面板、重新打开和 Escape 收起可用。没有修改偏好或真实账户数据。
 - **后台首击仍待人工验收：** 已请求用户先点击其他应用，再悬停进入，分别只点一次齿轮和方向按钮。当前工具操作可能激活目标应用，不将普通点击、配置检查或编译通过记为后台首击实测通过。透明区域穿透及其他未覆盖平台／硬件项目仍待复测。新包保持运行，未提交或发布。
+
+
+### 局部均衡磨砂（2026-10-03）
+
+本轮实现已选定的第三种材质方案，覆盖栏体、Codex／DeepSeek 详情、设置与展开的两个快捷按钮。`sidebarGlassEnabled` 缺失时默认开启；关闭后恢复原半透明底色。保留原不透明度，100% 为实色，小拉手保持独立底色。未更改额度、统计、登录、图标资产或鼠标命中规则。
+
+- 前端：`sidebarGlass.ts`、`useSidebarGlass.ts` 按实际绘制矩形、轮廓、主题及动画透明度同步；动画期间采样，稳定后停止。队列只保留最新待处理帧，卸载发送更高序号的清空帧。`Sidebar.tsx`／CSS 增加开关、底色与系统回退说明。
+- 原生：`sidebar_glass.rs` 验证序号、几何与画布尺寸；Mac 使用裁剪后的 `NSVisualEffectView`（Popover／BehindWindow／Active），Windows 11 使用 WebView 下方的 HostBackdrop 合成层与独立几何裁剪。每个区域复用，不重建窗口、不激活或改变命中区域。切换模式、关闭效果及退出时清理；屏幕、主题、系统无障碍及唤醒事件触发重同步。
+- 配置：`models.rs`、`types.ts`、`App.tsx` 与桥接同步默认值、持久化和实际状态。使用已有锁定版本的系统 bindings，未引入 WinUI 或业务公开 API。
+
+本轮环境为 macOS 27.0.1（26A434），Apple Silicon；使用现有 Node.js 24.21.0、隔离 Rust 1.98.1。仅运行 `app.codexmonitor.sidebar.validation` 合成实例，未访问真实账号或改变已安装应用。Windows 交付要求仍为 Windows 11 x64／Node.js 22。
+
+| 验收层级／项目 | 操作与预期 | 实际结果与证据 | 状态 |
+| --- | --- | --- | --- |
+| 前端自动检查 | 旧配置默认、显式关闭、开关保存、局部形状、左右／顶部、缩放、帧合并、反向退出及清理 | `npm test`：18 个文件、312 项通过；`npm run build` 通过。包含既有交互回归，不能证明原生动画无闪烁 | 通过（自动检查） |
+| Rust 自动检查 | 偏好迁移、过期帧、画布尺寸、非法几何、AppKit 坐标和遮罩复用 | `cargo test --manifest-path src-tauri/Cargo.toml --locked --offline`：159 项通过、2 项既有忽略；rustfmt 与 Clippy `--all-targets --locked --offline -- -D warnings` 通过 | 通过（自动检查） |
+| 策略及启动器 | 手动更新策略、隔离启动器与补丁格式 | `npm run check:updater-policy`、`node --test scripts/acceptance/run.check.mjs`（2 项）、`git diff --check` 通过 | 通过（自动检查） |
+| Mac 包构建 | 独立 debug `.app`，锁定离线依赖 | `npm run tauri -- build --debug --bundles app --config /private/tmp/codex-monitor-sidebar-validation.json -- --locked --offline` 成功，包含 TypeScript／Vite | 通过（构建） |
+| Mac 真实背景模糊 | 合成棋盘格置于组件后，70% 下对比开／关 | 实屏区域截图：关闭时色块边界清楚；开启后仅组件内模糊，面板圆角、间隙和外部空白仍清晰。仅使用合成额度与背景 | 通过（工具操作及实屏截图） |
+| Mac 主题与面板 | 浅色设置、两种详情、深色设置和顶部设置 | 实屏截图确认文字清晰，栏体／面板／展开按钮局部裁剪；详情内容及字号保留，顶部向下展开 | 通过（工具操作及实屏截图） |
+| Mac 齿轮与详情切换 | 键盘打开两个详情，再次激活齿轮关闭设置 | 设置消失后栏体保留，详情可切换；键盘结果不代替真实鼠标悬停或后台首击 | 通过（工具操作） |
+| Windows API 编译 | 使用 Windows MSVC 目标检查新增模块和测试代码 | 隔离 harness 的 `cargo check`、`cargo clippy --tests --offline -- -D warnings` 通过；公共桥接使用同等线程边界的 Tauri stub。未构建完整 Tauri 应用，测试仅编译未执行 | 通过（模块目标编译） |
+| 快速悬停／拖动 | 从其他应用进入，拉手→Codex→DeepSeek→从上方移出再移入，拖动滑条 | 用户反馈“流畅，没有上述问题”；收尾回退优先级修正后未再次请求鼠标复测 | 通过（人工反馈，修正前实例） |
+| 空白点击穿透 | 收起时拉手旁空白、展开时详情上方空白 | 用户反馈“两处都正常响应”；输入区域实现未修改 | 通过（人工反馈，修正前实例） |
+| Mac 开关冷启动 | 保存关闭后完整退出、启动；再保存开启并装入最终包 | 两次旧进程退出码均为0；原生设置分别显示关闭／开启。最终包保留左侧、大小100%、不透明度100%、跟随系统与双服务 | 通过（工具操作，两次应用冷启动） |
+| 最终包材质复核 | 开启毛玻璃，合成棋盘格下对比100%与70% | `final-light-menu-100.png` 显示实色；`final-light-menu-70.png` 显示局部模糊。完成后恢复100%并收回拉手 | 通过（工具操作及实屏截图） |
+| 系统回退与硬件 | 减少透明度／高对比度、双屏、DPI、全屏 Space、睡眠唤醒 | 有代码分支和恢复监听；本轮未操作相应系统设置或硬件 | 待测 |
+| Windows 完整构建及运行 | 按源码包步骤构建、安装，验证透明 WebView 合成、后台悬停、DPI、冷启动 | 尚无 Windows 11 设备反馈；Mac 与模块编译结果不能替代 | 待测 |
+
+实屏证据位于 `outputs/sidebar-glass-20261003/`：`light-menu-off.png`、`light-menu-on.png`、`light-codex.png`、`light-deepseek.png`、`dark-menu.png`、`top-dark-menu.png`。这些文件不含真实账号；合成背景窗口已退出，未修改桌面背景或系统显示设置。
+
+收尾复核发现：手动关闭毛玻璃时，前端曾覆盖系统减少透明度状态，Windows 也先返回关闭状态。现已让系统实色要求优先，系统恢复后仍保留用户关闭选择；新增回归及 Windows 目标检查通过。系统无障碍设置本身未进行人工切换，不将回归测试记作系统实测。
+
+包与证据对应：首轮主题／详情／顶部截图使用可执行文件 SHA-256 `f54b1c4810e4c3cc735592aa81bd79463141f6e597d8cbfcc8838e096af4e7da`；中间冷启动关闭验证为 `e3863b21032d4bb38e4694b07a8388e259af9615f807a42f204bf61c81c62ddc`。最终包为 `7aa56939ac3784bff71f897c8888542e4426aa57e704b34dcfd482c3baba65ec`，已核对开启恢复及100%／70%实屏效果；人工快速交互反馈收于最终回退修正之前，不冒充最终包逐项重测。
+
+最终 `.app` 位于 `src-tauri/target/debug/bundle/macos/Codex Monitor Sidebar Test.app`；可传输 ZIP、环境记录、测试／构建日志与摘要在 `outputs/sidebar-glass-20261003/`。源码快照按 `scripts/acceptance/package-source.py` 生成，包含未提交实现和锁文件，排除凭据、数据库、缓存和 Mac 构建产物；Windows 构建／安装／交互仍须在目标设备完成。
+
+本轮保持**部分验收**。未提交、推送或发布；未修改另一个会话的图标草稿。平台验收操作步骤见 [SIDEBAR-REAL-ACCEPTANCE.md](SIDEBAR-REAL-ACCEPTANCE.md#毛玻璃追加验收2026-10-03)。
+
+### 保持侧边栏展开的关闭语义（2026-10-03）
+
+修正设置关闭时绕过 `stayExpanded` 的问题：外部点击、失焦、关闭按钮和 Esc 统一在开启时返回栏体，关闭时返回小拉手。设置本身仍可正常关闭；详情保持原有悬停收起规则，齿轮再次点击仍仅收回面板。设置文案与详情图钉提示统一为“保持侧边栏展开”。
+
+- 修改仅限 `Sidebar.tsx`、`Sidebar.test.tsx` 与本记录；保留当前未提交的毛玻璃实现及图标草稿，不改 Rust、原生事件、尺寸、动画或账户逻辑。
+- 先运行新增关闭矩阵：旧代码在开启状态下的原生关闭通知、面板外点击、窗口失焦、关闭按钮、Esc 共5项全部失败，均为预期栏体却得到小拉手；关闭状态5项通过。修复后 `npm test` 为18个文件、324项通过，覆盖开关实际保存、关闭后的鼠标离开及菜单内部操作保护。`npm run build`、`git diff --check` 通过。本轮未修改 Rust，未重跑 Rust 检查。
+- 独立 Mac debug 合成包构建通过，命令为 `npm run tauri -- build --debug --bundles app --config /private/tmp/codex-monitor-sidebar-validation.json -- --locked --offline`。应用路径仍为 `src-tauri/target/debug/bundle/macos/Codex Monitor Sidebar Test.app`，标识为 `app.codexmonitor.sidebar.validation`；可执行文件 SHA-256：`63fc6e768111dd1c6d76389854dbddadbdaca3e389a9c3bf55b2d1ad6fd88a17`。
+- Mac 工具操作：勾选后点击关闭按钮，设置消失、两个服务和齿轮保留；稍后再读状态仍为栏体。重新打开后按 Esc，仍仅关闭设置。取消勾选再关闭设置，恢复小拉手。该项记为**通过（原生工具操作）**，不代替真实鼠标外部点击验证。
+- 已恢复测试前的关闭选项，左侧、大小100%、不透明度100%、跟随系统、双服务与毛玻璃开启均保留。已请求用户验证真实外部点击后“设置关闭、栏体保留”，当前待反馈；Windows 本轮未实测。
+
+新包保持运行。未读取真实账号、修改已安装应用、提交、推送或发布；此前 Windows 源码 ZIP 和 Mac ZIP 仍是上轮快照，不包含本节修复。
+
+### 清理测试实例与安装候选包（2026-10-04）
+
+按用户要求退出测试应用，生成当前工作区的普通 Release 安装候选。保留毛玻璃与“保持侧边栏展开”修复，沿用版本 `1.2.1`、产品名 `Codex Monitor` 和标识 `app.quotafloat.desktop`；本轮未修改产品代码、提交、推送或发布。
+
+- 已正常退出运行中的 `app.codexmonitor.sidebar.validation`。两个独立 Sidebar 测试 `.app` 已注销 Launch Services 登记，并连同五个旧测试／源码 ZIP 移至废纸篓。精确路径见 `outputs/install-test-20261004/CLEANUP.json`；保留正式应用、验收配置、独立网站会话、账号凭据和既有证据。
+- 构建环境：macOS 27.0.1（26A434）／arm64，临时隔离 Node.js 22.23.3 与 Rust 1.98.1；不改全局工具链。源码为 `codex/side-dock-analysis` 的 `969ceb6f2ddbd029105adcc8746d9a0bf5adce66` 加当前未提交改动，不能把基准提交当作完整包源码。
+- 交付目录：`outputs/install-test-20261004/`。`ENVIRONMENT.json`、`MAC-PACKAGE.json`、`SHA256SUMS` 与 `logs/` 记录环境、包摘要和实际检查；源码快照包含当前改动与锁文件，排除凭据、数据库、缓存及平台构建产物。没有运行或安装普通 Release 应用，本轮不读取真实账户。
+
+| 层级／项目 | 实际结果与证据 | 状态 |
+| --- | --- | --- |
+| 前端检查 | Node.js 22 下 `npm test`：18 个文件、324 项通过；Release 构建内 TypeScript／Vite 通过 | 通过（自动检查／构建） |
+| Rust 检查 | `cargo test --manifest-path src-tauri/Cargo.toml --locked --offline`：159 项通过、2 项既有忽略；rustfmt 与 Clippy `--all-targets --locked --offline -- -D warnings` 通过 | 通过（自动检查） |
+| 策略及依赖 | 手动更新策略、`git diff --check` 通过；`npm audit --audit-level=high` 报告0项漏洞 | 通过（自动检查） |
+| Mac Release 包 | `npm run tauri -- build --bundles app,dmg --ci -- --locked --offline` 成功；补全签名后用 `APPLE_SIGNING_IDENTITY=- npm run tauri -- bundle --bundles app,dmg --ci` 重新打包 | 通过（构建） |
+| Mac 包完整性 | `hdiutil verify` 通过；只读挂载后确认正式标识、版本、arm64 架构，包内二进制与构建输出 SHA-256 一致；挂载已卸载 | 通过（包检查） |
+| Mac 本地签名 | 首次候选仅有链接器签名，完整目录校验失败，未交付；最终应用补全 ad-hoc 签名，`codesign --verify --deep --strict` 通过。无 Developer ID 签名，未公证 | 通过（本地签名完整性）；公证未执行 |
+| Windows 连接 | 用户指定的 `jaygoaler-rog` Tailscale 在线，Mac ping 成功；默认 SSH 22端口超时。用户在设备执行检查，回传结果为无 sshd 服务、22端口监听数0 | 待完成（远程入口） |
+| Windows 诊断脚本 | `scripts/install-test/check-windows-build.ps1` 已经 Mac PowerShell 7.6.6 语法解析，并由用户在 Windows PowerShell 7 实际执行。终端显示检查完成，当前终端未提权；Rust 工具、MSVC 和 Windows SDK 未检测到 | 通过（脚本实机执行）；构建条件未齐备 |
+| Windows 完整目标静态检查 | `cargo xwin clippy --manifest-path src-tauri/Cargo.toml --all-targets --target x86_64-pc-windows-msvc --locked -- -D warnings` 通过，覆盖完整应用及测试代码；Windows 测试未执行 | 通过（静态检查），不代替测试运行 |
+| Windows Release 安装包 | 用户明确选择改用 Mac 交叉构建。`cargo-xwin` runner、`x86_64-pc-windows-msvc`、Release 与 NSIS 构建成功；没有在 Windows 安装编译工具、启用 SSH 或调整防火墙 | 通过（交叉构建） |
+| Windows 安装包检查 | 7-Zip 识别 NSIS-3 Unicode，压缩数据测试与解压通过；应用 PE32+／x86-64，安装器为常规 x86 NSIS stub。核对正式标识、1.2.1、`currentUser` 和默认 WebView2 bootstrapper | 通过（包检查），不代替安装运行 |
+| Windows 文件交付 | `tailscale file cp` 已向 `jaygoaler-rog` 发送安装包和 SHA-256 文件，两次退出码均为0；接收设备的文件摘要和安装结果尚未回传 | 通过（发送）；接收校验／安装待测 |
+| 实际安装及既有人工项目 | Mac／Windows 的安装、真实鼠标、账户恢复、系统显示和硬件项目仍按原清单逐项验证 | 待测 |
+
+最终 Mac 安装包为 `Codex-Monitor-1.2.1.dmg`，SHA-256：`81eca2778fe9d1992435d78d0b7f83cf7be776eaa6e79b1b6fda5a94dad7c666`；其中可执行文件 SHA-256：`f1a13908bcc4b4ffde403b071ba2c5735bef46eb4712efd764b65707f4442692`。保持部分验收状态。
+
+Windows 诊断证据来自用户回传的终端摘要，报告生成路径为 `C:\Users\JayGoaler\Downloads\outputs\windows-build-check-20261004-204439.json`；尚未取得完整 JSON。摘要未报告 Node.js／npm／WebView2 缺项，但未提供版本号及详细防火墙规则，不将其记为完整工具链或跨设备访问验收通过。遵守此前“不自动修改全局环境”的要求，尚未安装 Windows 工具、启用服务或修改防火墙。
+
+Windows 构建方式调整已经用户明确同意。交叉工具均在临时目录：`cargo-xwin 0.23.1`、LLVM／LLD 23.1.2、NSIS 3.13、Microsoft CRT 14.44.35220.0 和 SDK；官方发行文件及 Homebrew bottle 已核对摘要，只下载／解压，没有执行 `brew install`。临时 `bundle.useLocalToolsDir=true` 覆盖仅让 NSIS 插件缓存留在仓库 `target/.tauri/`，没有改仓库配置。构建复现命令、配置及工具摘要见交付目录的 `reproduce-windows-cross-build.sh`、`tooling/` 与 `ENVIRONMENT.json`。
+
+首次交叉尝试暴露临时 LLVM 动态库路径被 Cargo 子进程覆盖，第二次 NSIS 打包因 Tauri 清除 `NSISDIR` 而引用 Homebrew 固定资源路径；均以临时工具启动器恢复路径，未修改产品代码。最终 Release 构建仍报告 Microsoft CRT 的 `LNK4099`（SDK 未下载可选调试 PDB），以及 Mac NSIS 不支持 `-OUTPUTCHARSET` 的提示；完整构建成功，Clippy 为零警告通过，不将这些提示伪装成 Windows 运行结果。
+
+Windows 安装包 `Codex-Monitor-1.2.1.exe` 为4843375字节，SHA-256：`be722722461ff8020193b17f23436d76567630d138731815b20b73c47d32ae75`。包内应用 SHA-256 为 `77f79d373a113102d7eb70d35de0de085a10f49a7f3f69194328269a7580d189`；与静态检查后的构建输出仅有 Tauri 安装包标记 `UNK → NSS` 的3字节差异，规范化该标记后逐字节相同。标记含义已核对锁定的 `tauri-utils 2.9.3`，记录见 `WINDOWS-PACKAGE.json`。Windows 应用和安装器均未签 Authenticode。
+
+Taildrop 发送名为 `Codex-Monitor-1.2.1-Windows-x64-20261004.exe`，校验文件为 `Codex-Monitor-20261004-Windows-SHA256SUMS.txt`；接收可在 Windows 执行 `tailscale file get "$env:USERPROFILE\Downloads"`。`WINDOWS-TRANSFER.json` 只证明发送命令成功，不证明接收路径、摘要一致、安装、首次启动或交互正常。普通用户安装、玻璃合成、后台悬停、首次点击、DPI、重开、主题、账户会话和硬件项目仍保留**待测**。
+
+### 快捷弧线过渡辨识度（2026-10-04）
+
+用户反馈安装后上下快捷按钮的动画不明显。核对已安装二进制，确认与上一节交付包一致；系统“减少动态效果”为关闭。提供的录屏与独立 WebKit 采样显示过渡仍存在：旧样式约70ms 已补至圆周的83%–84%，浅色毛玻璃又把展开描边替换为白色，补圆过程不易辨认。这是本轮修正依据，最终观感仍需人工复测。
+
+- 产品修改仅 `src/components/sidebar.css`：按钮使用独立描边变量，浅色保留黑色18%描边，不再复用面板的白色高光；补圆、变细及描边过渡统一为300ms，底色和图标延后60ms显现。保留同一SVG、反向过渡及减少动态效果规则；不改几何、原生玻璃、命中、点击或账户逻辑。
+- 自动检查：`npm test -- src/components/Sidebar.test.tsx src/lib/sidebarGlass.test.ts src/lib/widgetGeometry.test.ts src/lib/bridge.test.ts` 为4个文件、101项通过；`npm run build`、`npm run check:updater-policy`、`git diff --check` 通过。本轮未修改Rust，未重复Rust测试。
+- Mac渲染采样：独立透明、无焦点的 `WKWebView` 只加载合成快捷按钮；两种主题、两个按钮共4组展开、收回及中途反转通过。修改后70ms 圆周约35%–38%，340ms 完成；反向时不跳至端点，最终恢复四分之一弧线。该检查不是正式应用真实鼠标验收，也未覆盖原生背景合成。
+- Chromium渲染：两种主题、三个方向、毛玻璃开关及80%／130%大小共24组、48个按钮样本通过；覆盖70%／100%底色、几何稳定、反向连续、移出恢复。模拟减少动态效果时无运行中的动画，按钮直接显示完整状态。不代替Windows WebView2实机验证。
+- Mac候选包已构建、完整ad-hoc签名校验及DMG完整性检查通过。首次构建的应用编译／签名成功，DMG步骤失败；随后调用 `APPLE_SIGNING_IDENTITY=- npm run tauri -- bundle --bundles app,dmg --ci` 完成打包。证据位于 `outputs/action-motion-20261004/`，只包含合成采样和构建日志，不含真实账号截图或录屏帧。
+
+新包为 `Codex-Monitor-1.2.1-action-motion.dmg`，SHA-256：`49a06cfc988d19fe4563d95aeaa1aa08c770dc14ffceaa1d127937623200de4d`；可执行文件SHA-256：`cff47788801e00e356de112746efbf1b0cc68425b15be94738473f6a7d1d6c3a`。沿用正式标识与1.2.1版本，未公证。未替换或重启已安装应用，未创建或启动侧边栏测试包；临时WebKit诊断进程已退出。未提交、推送或发布。
+
+**待测：** 安装新Mac包后，用真实鼠标验证上下弧线补圆、移出回弧线及快速反向的观感。此前Windows安装包未重打，不含本次CSS调整；Windows原生行为仍待测。本轮保持部分验收。

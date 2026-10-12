@@ -7,6 +7,11 @@ mod models;
 mod sidebar;
 #[cfg(debug_assertions)]
 mod sidebar_fixtures;
+mod sidebar_glass;
+#[cfg(target_os = "macos")]
+mod sidebar_glass_macos;
+#[cfg(target_os = "windows")]
+mod sidebar_glass_windows;
 mod token_stats;
 
 use std::{
@@ -440,10 +445,11 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 15);
+                assert_eq!(saved.as_object().unwrap().len(), 16);
                 assert_eq!(saved["displayMode"], "floating");
                 assert_eq!(saved["sidebarSide"], "right");
                 assert_eq!(saved["sidebarScale"], 1.0);
+                assert_eq!(saved["sidebarGlassEnabled"], true);
                 assert_eq!(saved["deepseekEnabled"], false);
                 assert_eq!(saved["sidebarShowCodex"], true);
                 assert_eq!(saved["sidebarShowDeepseek"], true);
@@ -1351,6 +1357,10 @@ fn set_preferences(
         return Err(error);
     }
     *preferences_lock(&state) = preferences.clone();
+    if preferences.display_mode != "sidebar" || !preferences.sidebar_glass_enabled {
+        sidebar_glass::clear_on_main(&app);
+    }
+    let _ = app.emit_to("widget", "sidebar-glass-invalidated", ());
     let _ = app.emit_to("widget", "preferences-changed", preferences);
     Ok(())
 }
@@ -2045,6 +2055,8 @@ pub fn run() {
             // A fresh launch is an explicit recovery entry, including when the
             // last process saved a hidden or click-through floating window.
             sidebar::recover(app.handle()).map_err(std::io::Error::other)?;
+            #[cfg(target_os = "windows")]
+            sidebar_glass::watch_system_settings(app.handle());
             #[cfg(all(debug_assertions, not(target_os = "macos")))]
             {
                 let handle = app.handle().clone();
@@ -2073,6 +2085,7 @@ pub fn run() {
                 deepseek::disconnect_deepseek,
                 deepseek::get_deepseek_usage,
                 sidebar::set_sidebar_phase,
+                sidebar_glass::sync_sidebar_glass,
                 sidebar::sidebar_action,
                 sidebar::get_autostart,
                 token_stats::service::get_token_statistics,
@@ -2116,6 +2129,12 @@ pub fn run() {
             if window.label() != "widget" {
                 return;
             }
+            if matches!(
+                event,
+                WindowEvent::ScaleFactorChanged { .. } | WindowEvent::ThemeChanged(_)
+            ) {
+                let _ = window.emit("sidebar-glass-invalidated", ());
+            }
             if matches!(event, WindowEvent::Focused(false)) {
                 sidebar::dismiss_menu(window.app_handle());
             }
@@ -2150,6 +2169,7 @@ pub fn run() {
             let _ = app_handle.emit_to("widget", "refresh-requested", ());
         }
         if matches!(event, tauri::RunEvent::Exit) {
+            sidebar_glass::shutdown(app_handle);
             #[cfg(target_os = "macos")]
             macos_widget::stop_pointer_monitors();
             if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {

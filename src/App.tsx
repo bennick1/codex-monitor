@@ -11,7 +11,7 @@ import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const DEFAULT_PREFS: WidgetPreferences = { displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, sidebarGlassEnabled: true, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
 const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
   ...DEFAULT_PREFS,
@@ -22,6 +22,7 @@ const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferen
   sidebarSide: value.sidebarSide === "left" || value.sidebarSide === "top" ? value.sidebarSide : "right",
   sidebarShowCodex: value.sidebarShowCodex !== false,
   sidebarShowDeepseek: value.sidebarShowDeepseek !== false,
+  sidebarGlassEnabled: value.sidebarGlassEnabled !== false,
   sidebarOpacity: typeof value.sidebarOpacity === "number" && Number.isFinite(value.sidebarOpacity) ? Math.min(1, Math.max(.2, value.sidebarOpacity)) : .9,
   sidebarScale: typeof value.sidebarScale === "number" && Number.isFinite(value.sidebarScale) ? Math.min(1.3, Math.max(.8, value.sidebarScale)) : 1,
   locked: value.displayMode === "sidebar" ? false : value.locked ?? false,
