@@ -2,7 +2,7 @@ import { expandedHeightMode } from "../lib/widgetGeometry";
 import { quotaAvailable } from "../lib/quotaWeek";
 import { TokenUsage } from "./TokenUsage";
 import type { TokenStatisticsView } from "../lib/tokenStatisticsController";
-import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
+import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, ClockCounterClockwise, CloudSlash, GearSix, PushPin, PushPinSlash, SignIn, WarningCircle } from "@phosphor-icons/react";
 import { memo, type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { clampPercent, formatDateTime, formatResetDate, formatResetTime, quotaTier } from "../lib/format";
 import { copy, normalizeLanguage } from "../lib/i18n";
@@ -33,6 +33,7 @@ interface Props {
   onDrag: () => void;
   onHover: (hovered: boolean) => void;
   onRefresh?: () => void;
+  onMenu?: () => void;
   isConsuming?: boolean;
   notice?: ReactNode;
   initialShowCreditTip?: boolean;
@@ -106,7 +107,7 @@ export const QuotaCard = memo(function QuotaCard({
   onToggleStayExpanded,
   onDrag,
   onHover,
-  onRefresh,
+  onRefresh, onMenu,
   isConsuming = false,
   notice = null,
   initialShowCreditTip = false,
@@ -162,6 +163,7 @@ export const QuotaCard = memo(function QuotaCard({
         </div>
         {!preferences.locked ? (
           <nav className="card-actions" aria-label={t.controls} onMouseDown={(event) => event.stopPropagation()}>
+            {onMenu && <button type="button" onClick={onMenu} aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} title={language === "zh-CN" ? "展示模式" : "Display mode"}><GearSix /></button>}
             {providerCount > 1 ? <button onClick={onPrevious} aria-label={t.servicePrevious}><ArrowUp /></button> : null}
             {providerCount > 1 ? <button onClick={onNext} aria-label={t.serviceNext}><ArrowDown /></button> : null}
             <span className={`usage-indicator usage-indicator--${indicatorState}`} role="status" aria-label={indicatorLabel} title={indicatorLabel}><i /></span>

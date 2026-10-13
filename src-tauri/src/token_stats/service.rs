@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
     sync::{
         atomic::{AtomicBool, Ordering},
-        Arc, Condvar, Mutex,
+        Arc, Condvar, Mutex, RwLock,
     },
     time::Duration,
 };
@@ -75,6 +75,9 @@ struct Inner {
     path: Option<PathBuf>,
     runtime: Mutex<Runtime>,
     trigger: Trigger,
+    transactions: RwLock<()>,
+    paused: AtomicBool,
+    worker: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
 
 #[derive(Clone)]
@@ -99,6 +102,9 @@ impl TokenStatisticsService {
                 ..Runtime::default()
             }),
             trigger: Trigger::default(),
+            transactions: RwLock::new(()),
+            paused: AtomicBool::new(false),
+            worker: Mutex::new(None),
         });
         let service = Self {
             inner: inner.clone(),
@@ -112,6 +118,14 @@ impl TokenStatisticsService {
                 loop {
                     if inner.trigger.stop.load(Ordering::Relaxed) {
                         break;
+                    }
+                    let transaction = inner.transactions.read().unwrap_or_else(|e| e.into_inner());
+                    if inner.paused.load(Ordering::SeqCst) {
+                        drop(transaction);
+                        if !inner.trigger.wait(Duration::from_secs(15)) {
+                            break;
+                        }
+                        continue;
                     }
                     if let Ok(mut state) = inner.runtime.lock() {
                         state.scanning = true;
@@ -173,12 +187,19 @@ impl TokenStatisticsService {
                         failures = 0;
                         Duration::from_secs(15)
                     };
+                    drop(transaction);
                     if !inner.trigger.wait(timeout) {
                         break;
                     }
                 }
             });
-        if spawned.is_err() {
+        if let Ok(worker) = spawned {
+            *service
+                .inner
+                .worker
+                .lock()
+                .unwrap_or_else(|e| e.into_inner()) = Some(worker);
+        } else {
             if let Ok(mut state) = service.inner.runtime.lock() {
                 state.error = Some("workerUnavailable");
                 state.scanning = false;
@@ -193,6 +214,14 @@ impl TokenStatisticsService {
         weekly: Option<&crate::models::UsageWindow>,
         observed_at: chrono::DateTime<chrono::Utc>,
     ) -> std::result::Result<bool, String> {
+        let _transaction = self
+            .inner
+            .transactions
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
+        if self.inner.paused.load(Ordering::SeqCst) {
+            return Ok(false);
+        }
         let root = self
             .inner
             .runtime
@@ -219,8 +248,37 @@ impl TokenStatisticsService {
         }
     }
 
+    /// Pause new work and wait until every scan/query/write transaction has finished.
+    pub fn pause_and_wait(&self) {
+        self.inner.paused.store(true, Ordering::SeqCst);
+        let _transaction = self
+            .inner
+            .transactions
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
+    }
+
+    pub fn resume(&self) {
+        self.inner.paused.store(false, Ordering::SeqCst);
+        self.inner.trigger.request();
+    }
+
     pub fn stop(&self) {
         self.inner.trigger.cancel();
+        let worker = self
+            .inner
+            .worker
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take();
+        if let Some(worker) = worker {
+            let _ = worker.join();
+        }
+        let _transaction = self
+            .inner
+            .transactions
+            .write()
+            .unwrap_or_else(|e| e.into_inner());
     }
 
     #[cfg(test)]
@@ -229,6 +287,14 @@ impl TokenStatisticsService {
     }
 
     fn query_with_quota(&self, quota: Option<aggregate::QuotaWindow>) -> Snapshot {
+        let _transaction = self
+            .inner
+            .transactions
+            .read()
+            .unwrap_or_else(|e| e.into_inner());
+        if self.inner.paused.load(Ordering::SeqCst) {
+            return aggregate::unavailable("statisticsPaused");
+        }
         let (root, scanning, error, last) = {
             let state = self.inner.runtime.lock().unwrap_or_else(|e| e.into_inner());
             (
@@ -314,4 +380,34 @@ pub fn refresh_token_statistics(
     service: tauri::State<'_, TokenStatisticsService>,
 ) -> RefreshResult {
     service.refresh()
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    use super::*;
+    #[test]
+    fn pause_waits_for_transaction_and_failure_can_resume() {
+        let service =
+            TokenStatisticsService::start_source(None, Err("fixtureUnavailable".into()), |_| {});
+        let inner = service.inner.clone();
+        let transaction = inner.transactions.read().unwrap();
+        let paused = service.clone();
+        let (send, receive) = std::sync::mpsc::channel();
+        let thread = std::thread::spawn(move || {
+            paused.pause_and_wait();
+            send.send(()).unwrap();
+        });
+        assert!(receive.recv_timeout(Duration::from_millis(30)).is_err());
+        drop(transaction);
+        receive.recv_timeout(Duration::from_secs(2)).unwrap();
+        thread.join().unwrap();
+        assert!(service.inner.paused.load(Ordering::SeqCst));
+        assert!(!service.refresh().generation.is_empty());
+        service.resume();
+        assert!(!service.inner.paused.load(Ordering::SeqCst));
+        service.stop();
+        assert!(service.inner.worker.lock().unwrap().is_none());
+        assert!(service.inner.trigger.stop.load(Ordering::Relaxed));
+        service.stop();
+    }
 }

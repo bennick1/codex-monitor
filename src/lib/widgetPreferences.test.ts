@@ -15,8 +15,8 @@ describe("widget opacity normalization", () => {
   it("upgrades older preferences and keeps every existing preference", () => {
     const old = { locked: true, alwaysOnTop: false, stayExpanded: true, pinnedProvider: "codex" as const,
       autoRotateSeconds: 42, language: "en" as const, appearance: "system" as const, selectedSkin: "computer" as const };
-    expect(normalizePreferences(old)).toEqual({ ...old, opacityPercent: 100 });
-    expect(normalizePreferences({ ...old, opacityPercent: 82 })).toEqual({ ...old, opacityPercent: 80 });
+    expect(normalizePreferences(old)).toEqual({ ...DEFAULT_PREFERENCES, ...old, opacityPercent: 100 });
+    expect(normalizePreferences({ ...old, opacityPercent: 82 })).toEqual({ ...DEFAULT_PREFERENCES, ...old, opacityPercent: 80 });
     expect(normalizePreferences(DEFAULT_PREFERENCES)).toEqual(DEFAULT_PREFERENCES);
   });
 });
@@ -29,5 +29,23 @@ describe("built-in skin normalization", () => {
 
   it.each([undefined, null, "mecha-dark", "Mecha Light", "unknown", 1])("rejects unsupported skin %s", (skin) => {
     expect(normalizePreferences({ selectedSkin: skin as WidgetSkin }).selectedSkin).toBe("default");
+  });
+});
+
+describe("merged floating and sidebar preferences", () => {
+  it("retains independent opacity, skin, scale, glass and updater choices in both modes", () => {
+    const saved = { ...DEFAULT_PREFERENCES, opacityPercent: 75, selectedSkin: "mecha-light" as const,
+      sidebarSide: "top" as const, sidebarOpacity: .35, sidebarScale: 1.2,
+      sidebarGlassEnabled: false, autoCheckUpdates: false, locked: true };
+    expect(normalizePreferences(saved)).toEqual(saved);
+    expect(normalizePreferences({ ...saved, displayMode: "sidebar" })).toEqual({ ...saved, displayMode: "sidebar", locked: false });
+  });
+
+  it("normalizes malformed sidebar values without affecting floating preferences", () => {
+    const result = normalizePreferences({ ...DEFAULT_PREFERENCES, displayMode: "sidebar", opacityPercent: 75,
+      sidebarOpacity: Number.NaN, sidebarScale: Number.POSITIVE_INFINITY, selectedSkin: "mecha-light", locked: true });
+    expect(result).toMatchObject({ displayMode: "sidebar", sidebarOpacity: .9, sidebarScale: 1,
+      opacityPercent: 75, selectedSkin: "mecha-light", locked: false });
+    expect(normalizePreferences({ sidebarOpacity: .05, sidebarScale: 3 })).toMatchObject({ sidebarOpacity: .2, sidebarScale: 1.3 });
   });
 });

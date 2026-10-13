@@ -1,8 +1,11 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
+import { useUpdater } from "./hooks/useUpdater";
+import { openUpdateWindow } from "./lib/updater";
+import { Sidebar } from "./components/Sidebar";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
-import { fetchSnapshots, getPreferences, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
+import { fetchSnapshots, getPreferences, isTauri, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
 import { needsFastRefresh, quotaTier } from "./lib/format";
 import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
@@ -25,13 +28,23 @@ const INITIAL_SNAPSHOT: ProviderSnapshot = {
 };
 
 export default function App() {
+  const { state: updater } = useUpdater();
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
+  const confirmedPreferences = useRef(DEFAULT_PREFS);
+  const preferenceSaveSequence = useRef(0);
+  const preferenceSavePending = useRef(false);
+  const preferenceEventVersion = useRef(0);
+  const acceptPreferences = useCallback((value: WidgetPreferences) => {
+    const normalized = normalizePreferences(value);
+    confirmedPreferences.current = normalized;
+    setPreferences(normalized);
+  }, []);
   useLayoutEffect(() => {
     // Keep the existing host/main composition intact. Applying the single
     // opacity factor to the host also leaves each skin's child animation alone.
     const root = document.getElementById("root");
-    if (!root) return;
+    if (!root || preferences.displayMode === "sidebar") return;
     const previousOpacity = root.style.opacity;
     const previousTransform = root.style.transform;
     const hadVisualRootClass = root.classList.contains("widget-visual-root");
@@ -46,22 +59,25 @@ export default function App() {
       root.style.transform = previousTransform;
       if (!hadVisualRootClass) root.classList.remove("widget-visual-root");
     };
-  }, [preferences.opacityPercent]);
+  }, [preferences.opacityPercent, preferences.displayMode]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [compact, setCompact] = useState(true);
+  const previousMode = useRef(preferences.displayMode);
   const [consumingProviders, setConsumingProviders] = useState<Set<string>>(() => new Set());
   const [operationError, setOperationError] = useState<string | null>(null);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false);
   const current = preferences.pinnedProvider
     ? snapshots.find((item) => item.provider === preferences.pinnedProvider) ?? snapshots[0] ?? INITIAL_SNAPSHOT
     : snapshots[activeIndex % Math.max(1, snapshots.length)] ?? INITIAL_SNAPSHOT;
-  const tokens = useTokenStatistics(!compact, current);
+  const tokens = useTokenStatistics(preferences.displayMode !== "sidebar" && !compact, current);
   const failures = useRef(0);
   const previousPrimary = useRef(new Map<string, number>());
   const consumptionTimers = useRef(new Map<string, number>());
   const collapseTimer = useRef<number | null>(null);
   const hoverSequence = useRef(0);
+  const menuOpen = useRef(false);
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
   const language = normalizeLanguage(preferences.language);
   const t = copy[language];
   const operation = language === "zh-CN" ? {
@@ -83,11 +99,12 @@ export default function App() {
   const skin: WidgetSkin = preferences.selectedSkin;
   const heightMode = expandedHeightMode(current);
   useEffect(() => {
+    if (preferences.displayMode === "sidebar") return;
     // This only reconciles the transparent-window safety inset after a theme
     // change. A platform refusal is non-fatal: the current widget geometry is
     // still usable and users should never see an internal resize error.
     void syncWidgetAppearance(theme, heightMode).catch(() => undefined);
-  }, [theme, heightMode]);
+  }, [theme, heightMode, preferences.displayMode]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -130,6 +147,7 @@ export default function App() {
 
   useEffect(() => {
     void refresh(true);
+    const sequence = preferenceSaveSequence.current;
     void (async () => {
       const value = await getPreferences().catch(async () => {
         // A WebView can occasionally issue its first invoke while it is
@@ -138,19 +156,20 @@ export default function App() {
         await new Promise((resolve) => window.setTimeout(resolve, 120));
         return getPreferences().catch(() => DEFAULT_PREFS);
       });
-      setPreferences(normalizePreferences(value));
+      if (sequence !== preferenceSaveSequence.current) return;
+      acceptPreferences(value);
       // Window-state may restore the last expanded footprint while React starts
       // as an orb. Reconcile once, unless the user has already begun hovering.
-      if (!value.stayExpanded && hoverSequence.current === 0) {
+      if (value.displayMode !== "sidebar" && !value.stayExpanded && hoverSequence.current === 0) {
         void setWidgetExpanded(false).catch(() => undefined);
       }
-    })().catch(() => setPreferences(DEFAULT_PREFS));
+    })().catch(() => { if (sequence === preferenceSaveSequence.current) acceptPreferences(DEFAULT_PREFS); });
     return () => {
       for (const timer of consumptionTimers.current.values()) window.clearTimeout(timer);
       consumptionTimers.current.clear();
       if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
     };
-  }, [refresh]);
+  }, [refresh, acceptPreferences]);
 
   const refreshAll = useCallback(() => {
     void refresh(true);
@@ -161,14 +180,19 @@ export default function App() {
     let cancelled = false;
     let cleanup: () => void = () => {};
     void listenDesktopEvents({
-      onPreferences: (value) => setPreferences(normalizePreferences(value)),
+      onPreferences: (value) => {
+        preferenceEventVersion.current++;
+        // Older save acknowledgements must not replace a newer local edit.
+        // The final save reads back all preferences, including external changes.
+        if (!preferenceSavePending.current) acceptPreferences(value);
+      },
       onRefresh: refreshAll,
       onRelease: () => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed)),
     }).then((value) => {
       if (cancelled) value(); else cleanup = value;
     }).catch(() => setOperationError(operation.listenerFailed));
     return () => { cancelled = true; cleanup(); };
-  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll]);
+  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll, acceptPreferences]);
 
   const refreshMs = useMemo(() => {
     const backoff = failures.current === 0 ? 5 * 60_000 : Math.min(30 * 60_000, 30_000 * 2 ** (failures.current - 1));
@@ -208,11 +232,34 @@ export default function App() {
   const cardStyle = paletteName ? DESKTOP_PALETTES[theme][paletteName] : undefined;
 
   const savePreferences = useCallback((next: WidgetPreferences) => {
-    const previous = preferences;
+    const sequence = ++preferenceSaveSequence.current;
+    preferenceSavePending.current = true;
     setPreferences(next);
     setOperationError(null);
-    void updatePreferences(next).catch(() => { setPreferences(previous); setOperationError(operation.settingsFailed); });
-  }, [operation.settingsFailed, preferences]);
+    const reconcile = async (failed: boolean) => {
+      if (sequence !== preferenceSaveSequence.current) return;
+      let saved = failed ? confirmedPreferences.current : next;
+      if (isTauri()) {
+        // Re-read if an external preference event arrives while the read is in
+        // flight. A newer local save owns its own reconciliation and rollback.
+        let eventVersion: number;
+        do {
+          eventVersion = preferenceEventVersion.current;
+          saved = await getPreferences().catch(() => saved);
+          if (sequence !== preferenceSaveSequence.current) return;
+        } while (eventVersion !== preferenceEventVersion.current);
+      }
+      acceptPreferences(saved);
+      preferenceSavePending.current = false;
+      if (failed) setOperationError(operation.settingsFailed);
+    };
+    void updatePreferences(next).then(() => {
+      // Saves are serialized by the bridge, so this is a confirmed fallback
+      // even if a later save fails and its reconciliation read is unavailable.
+      confirmedPreferences.current = normalizePreferences(next);
+      return reconcile(false);
+    }, () => reconcile(true));
+  }, [operation.settingsFailed, acceptPreferences]);
 
   const handleHover = useCallback((value: boolean) => {
     if (collapseTimer.current !== null) {
@@ -220,7 +267,7 @@ export default function App() {
       collapseTimer.current = null;
     }
     setHovered(value);
-    if (!value && preferences.stayExpanded) return;
+    if (!value && (preferences.stayExpanded || menuOpen.current)) return;
     if (value) void refresh(true);
     if (value) {
       const sequence = ++hoverSequence.current;
@@ -241,17 +288,51 @@ export default function App() {
   }, [operation.collapseFailed, operation.expandFailed, preferences.stayExpanded, refresh]);
 
   useEffect(() => {
-    if (!preferences.stayExpanded) return;
+    if (preferences.displayMode === "sidebar" || !preferences.stayExpanded) return;
     if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
     setCompact(false);
     void setWidgetExpanded(true).catch(() => setOperationError(operation.expandFailed));
-  }, [operation.expandFailed, preferences.stayExpanded]);
+  }, [operation.expandFailed, preferences.stayExpanded, preferences.displayMode]);
+
+  useEffect(() => {
+    if (previousMode.current !== preferences.displayMode) {
+      previousMode.current = preferences.displayMode;
+      ++hoverSequence.current;
+      if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+      if (preferences.displayMode !== "sidebar") {
+        setCompact(!preferences.stayExpanded);
+        void setWidgetExpanded(preferences.stayExpanded).catch(() => setOperationError(operation.expandFailed));
+      }
+    }
+  }, [preferences.displayMode, preferences.stayExpanded, operation.expandFailed]);
+
+  const showMenu = () => {
+    if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
+    menuOpen.current = true;
+    setModeMenuOpen(true);
+  };
+  const closeMenu = () => { menuOpen.current = false; setModeMenuOpen(false); };
+
+  if (preferences.displayMode === "sidebar") {
+    return <Sidebar snapshot={snapshots.find(value => value.provider === "codex") ?? INITIAL_SNAPSHOT}
+      preferences={preferences} theme={theme} onPreferences={savePreferences} onRefresh={refreshAll}
+      notice={operationError} />;
+  }
 
   if (compact) {
     return <QuotaOrb snapshot={current} language={language} onDrag={() => startDragging()} onHover={handleHover} theme={theme} skin={skin} style={cardStyle} />;
   }
 
   return (
+    <>
+    {modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
+      <strong>{language === "zh-CN" ? "展示模式" : "Display mode"}</strong>
+      <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "sidebar" }); }}>{language === "zh-CN" ? "切换到侧边栏" : "Switch to sidebar"}</button>
+      <button onClick={() => { void openUpdateWindow().catch(error => setOperationError(String(error))); }}>{language === "zh-CN" ? "检查更新" : "Check for updates"}{updater.version ? ` · ${updater.version}` : ""}</button>
+      <label>{language === "zh-CN" ? "自动检查更新" : "Automatically check for updates"}<input type="checkbox" checked={preferences.autoCheckUpdates !== false} onChange={event => savePreferences({ ...preferences, autoCheckUpdates: event.target.checked })} /></label>
+      <button onClick={() => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed))}>{language === "zh-CN" ? "打开版本下载页" : "Release downloads"}</button>
+      <button onClick={closeMenu}>{language === "zh-CN" ? "保留悬浮窗" : "Keep floating widget"}</button>
+    </div>}
     <QuotaCard
       snapshot={current}
       preferences={preferences}
@@ -264,12 +345,13 @@ export default function App() {
       onDrag={() => startDragging()}
       onHover={handleHover}
       onRefresh={refreshAll}
+      onMenu={showMenu}
       tokens={tokens}
       isConsuming={consumingProviders.has(current.provider)}
       theme={theme}
       skin={skin}
       style={cardStyle}
       notice={operationError}
-    />
+    /></>
   );
 }

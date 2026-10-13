@@ -1,20 +1,206 @@
 //! macOS Spaces policy for a tray accessory's Tauri NSWindow.
 //! Never activate the app or change keyboard focus to maintain visibility.
-use std::{fs, path::Path, sync::mpsc};
-
-use objc2::{available, MainThreadMarker};
-use objc2_app_kit::{
-    NSApplication, NSApplicationActivationPolicy, NSFloatingWindowLevel, NSNormalWindowLevel,
-    NSWindow, NSWindowCollectionBehavior as Behavior,
+use std::{
+    cell::{Cell, RefCell},
+    fs,
+    path::Path,
+    ptr::NonNull,
+    sync::mpsc,
 };
-use tauri::{Manager, WebviewWindow};
+
+use block2::RcBlock;
+use objc2::{available, rc::Retained, runtime::AnyObject, MainThreadMarker};
+use objc2_app_kit::{
+    NSApplication, NSApplicationActivationPolicy, NSEvent, NSEventMask, NSEventType,
+    NSFloatingWindowLevel, NSNormalWindowLevel, NSWindow, NSWindowCollectionBehavior as Behavior,
+};
+use tauri::{Emitter, Manager, WebviewWindow};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt, DEFAULT_FILENAME};
+
+thread_local! {
+    static POINTER_MONITORS: RefCell<Vec<Retained<AnyObject>>> = const { RefCell::new(Vec::new()) };
+    static POINTER_INSIDE: Cell<Option<bool>> = const { Cell::new(None) };
+    static POINTER_POSITION: Cell<Option<(f64, f64)>> = const { Cell::new(None) };
+    static POINTER_MOVEMENT: Cell<u64> = const { Cell::new(0) };
+}
+
+#[derive(Clone, serde::Serialize)]
+struct SidebarPointerPosition {
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+    movement: u64,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct SidebarPointer {
+    inside: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    position: Option<SidebarPointerPosition>,
+}
+
+fn pointer_in_bounds(point: (f64, f64), origin: (f64, f64), size: (f64, f64)) -> bool {
+    point.0 >= origin.0
+        && point.0 < origin.0 + size.0
+        && point.1 >= origin.1
+        && point.1 < origin.1 + size.1
+}
+
+fn local_pointer_position(
+    point: (f64, f64),
+    origin: (f64, f64),
+    size: (f64, f64),
+    movement: u64,
+) -> Option<SidebarPointerPosition> {
+    pointer_in_bounds(point, origin, size).then_some(SidebarPointerPosition {
+        x: point.0 - origin.0,
+        // AppKit is bottom-up; WebView hit testing uses a top-left origin.
+        y: origin.1 + size.1 - point.1,
+        width: size.0,
+        height: size.1,
+        movement,
+    })
+}
+
+fn sidebar_pointer(
+    position: Option<SidebarPointerPosition>,
+    regions: &[crate::sidebar::SidebarInputRect],
+) -> SidebarPointer {
+    let inside = position
+        .as_ref()
+        .is_some_and(|point| regions.iter().any(|rect| rect.contains(point.x, point.y)));
+    SidebarPointer { inside, position }
+}
+
+pub fn track_sidebar_pointer(app: &tauri::AppHandle) {
+    if !crate::sidebar::enabled(app) {
+        POINTER_INSIDE.with(|inside| inside.set(None));
+        POINTER_POSITION.with(|position| position.set(None));
+        return;
+    }
+    let Some(window) = app.get_webview_window("widget") else {
+        return;
+    };
+    let handle = app.clone();
+    let pointer = on_main(&window, move |native| {
+        let point = NSEvent::mouseLocation();
+        let frame = native.frame();
+        let previous = POINTER_POSITION.with(|value| value.replace(Some((point.x, point.y))));
+        let movement = POINTER_MOVEMENT.with(|value| {
+            if previous != Some((point.x, point.y)) {
+                value.set(value.get().wrapping_add(1));
+            }
+            value.get()
+        });
+        let position = if native.isVisible() && native.isOnActiveSpace() {
+            local_pointer_position(
+                (point.x, point.y),
+                (frame.origin.x, frame.origin.y),
+                (frame.size.width, frame.size.height),
+                movement,
+            )
+        } else {
+            None
+        };
+        let regions = crate::sidebar::input_regions(&handle, (frame.size.width, frame.size.height));
+        let pointer = sidebar_pointer(position, &regions);
+        // CSS pointer-events cannot make a transparent NSWindow pass a click
+        // to another application. The global monitor re-enables input as soon
+        // as the pointer reaches a live control, including the folded handle.
+        if native.ignoresMouseEvents() == pointer.inside {
+            native.setIgnoresMouseEvents(!pointer.inside);
+        }
+        pointer
+    });
+    if let Ok(pointer) = pointer {
+        let previous = POINTER_INSIDE.with(|value| value.replace(Some(pointer.inside)));
+        // Only window-local coordinates cross the bridge, never outside positions.
+        if pointer.position.is_some() || previous != Some(false) {
+            let _ = window.emit("sidebar-pointer", pointer);
+        }
+    }
+}
+
+fn watch_pointer_events(window: &WebviewWindow) -> Result<(), String> {
+    let app = window.app_handle().clone();
+    on_main(window, move |native| {
+        let widget_pointer = native as *const NSWindow as usize;
+        let global_app = app.clone();
+        let global = RcBlock::new(move |event: NonNull<NSEvent>| {
+            // AppKit lends the event for this callback only.
+            if matches!(
+                unsafe { event.as_ref() }.r#type(),
+                NSEventType::MouseMoved | NSEventType::LeftMouseDragged
+            ) {
+                track_sidebar_pointer(&global_app);
+            } else {
+                crate::sidebar::dismiss_menu(&global_app);
+            }
+        });
+        let local = RcBlock::new(move |event: NonNull<NSEvent>| {
+            // AppKit invokes monitor blocks on the main thread and lends a live event.
+            if let Some(main) = MainThreadMarker::new() {
+                if matches!(
+                    unsafe { event.as_ref() }.r#type(),
+                    NSEventType::MouseMoved | NSEventType::LeftMouseDragged
+                ) {
+                    track_sidebar_pointer(&app);
+                    return event.as_ptr();
+                }
+                let event_window = unsafe { event.as_ref() }.window(main);
+                if event_window
+                    .is_some_and(|window| &*window as *const NSWindow as usize != widget_pointer)
+                {
+                    crate::sidebar::dismiss_menu(&app);
+                }
+            }
+            event.as_ptr()
+        });
+        let mask = NSEventMask::LeftMouseDown
+            | NSEventMask::RightMouseDown
+            | NSEventMask::OtherMouseDown
+            | NSEventMask::MouseMoved
+            | NSEventMask::LeftMouseDragged;
+        POINTER_MONITORS.with(|monitors| {
+            let mut monitors = monitors.borrow_mut();
+            if !monitors.is_empty() {
+                return;
+            }
+            if let Some(monitor) =
+                NSEvent::addGlobalMonitorForEventsMatchingMask_handler(mask, &global)
+            {
+                monitors.push(monitor);
+            }
+            // Return the original event unchanged; no input is intercepted or retained.
+            if let Some(monitor) =
+                unsafe { NSEvent::addLocalMonitorForEventsMatchingMask_handler(mask, &local) }
+            {
+                monitors.push(monitor);
+            }
+        });
+    })
+}
+
+pub fn stop_pointer_monitors() {
+    POINTER_INSIDE.with(|inside| inside.set(None));
+    POINTER_POSITION.with(|position| position.set(None));
+    POINTER_MONITORS.with(|monitors| {
+        for monitor in monitors.borrow_mut().drain(..) {
+            // Each token was returned by AppKit's monitor registration above.
+            unsafe {
+                NSEvent::removeMonitor(&monitor);
+            }
+        }
+    });
+}
 
 // The plugin's VISIBLE restore calls show() + set_focus(). Restore geometry
 // separately; visibility is applied once, without activation, after AppKit setup.
 pub fn state_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     tauri_plugin_window_state::Builder::default()
         .with_state_flags(saved_flags())
+        .with_denylist(&["deepseek-login", "updater"])
         .skip_initial_state("widget")
         .build()
 }
@@ -31,6 +217,9 @@ pub fn prepare_config(config: &mut tauri::Config) {
         widget.visible = false;
         widget.focus = false;
         widget.fullscreen = false;
+        // Hover never activates this accessory. Deliver its first real click
+        // to WebKit instead of consuming that click only to activate the app.
+        widget.accept_first_mouse = true;
     }
 }
 
@@ -137,6 +326,7 @@ pub fn initialize(window: &WebviewWindow, always_on_top: bool) -> Result<(), Str
         native.setHidesOnDeactivate(false);
     })?;
     set_always_on_top(window, always_on_top)?;
+    watch_pointer_events(window)?;
     if visible {
         show(window)?;
     }
@@ -164,15 +354,136 @@ pub fn show(window: &WebviewWindow) -> Result<(), String> {
     })
 }
 
+fn resized_origin(
+    origin: (f64, f64),
+    old_height: f64,
+    new_height: f64,
+    top_left_delta: (f64, f64),
+) -> (f64, f64) {
+    (
+        origin.0 + top_left_delta.0,
+        origin.1 + old_height - new_height - top_left_delta.1,
+    )
+}
+
+pub fn set_sidebar_rect(
+    window: &WebviewWindow,
+    rect: crate::WidgetRect,
+    scale: f64,
+) -> Result<(), String> {
+    let current = window.outer_position().map_err(|e| e.to_string())?;
+    on_main(window, move |native| {
+        let mut frame = native.frame();
+        let height = f64::from(rect.size.height) / scale;
+        let (x, y) = resized_origin(
+            (frame.origin.x, frame.origin.y),
+            frame.size.height,
+            height,
+            (
+                f64::from(rect.position.x - current.x) / scale,
+                f64::from(rect.position.y - current.y) / scale,
+            ),
+        );
+        frame.origin.x = x;
+        frame.origin.y = y;
+        frame.size.width = f64::from(rect.size.width) / scale;
+        frame.size.height = height;
+        // Position and size land in one AppKit update. Web content animates
+        // within that footprint, avoiding a transient frame at the old size.
+        native.setFrame_display(frame, true);
+    })
+}
+
 pub fn save_visibility(app: &tauri::AppHandle) {
-    if app.save_window_state(saved_flags()).is_err() {
-        eprintln!("failed to save widget visibility");
+    // The window-state plugin holds its cache lock while querying NSWindow.
+    // Saving from a worker can deadlock a pending resize event on the main
+    // thread, which also needs that lock. Keep both operations on the UI thread.
+    let save = |handle: &tauri::AppHandle| {
+        if handle.save_window_state(saved_flags()).is_err() {
+            eprintln!("failed to save widget visibility");
+        }
+    };
+    if MainThreadMarker::new().is_some() {
+        save(app);
+    } else {
+        let handle = app.clone();
+        if app.run_on_main_thread(move || save(&handle)).is_err() {
+            eprintln!("failed to schedule widget visibility save");
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn combined_sidebar_frame_preserves_center_and_negative_screen_coordinates() {
+        // A 2x display expands 8x56 points to 64x288, keeping its right edge
+        // and vertical center stationary. AppKit uses a bottom-left origin.
+        let origin = resized_origin((-8.0, -200.0), 56.0, 288.0, (-56.0, -116.0));
+        assert_eq!(origin, (-64.0, -316.0));
+        assert_eq!(
+            resized_origin(origin, 288.0, 56.0, (56.0, 116.0)),
+            (-8.0, -200.0)
+        );
+        assert_eq!(
+            resized_origin((-1440.0, -200.0), 56.0, 288.0, (0.0, -116.0)),
+            (-1440.0, -316.0)
+        );
+    }
+
+    #[test]
+    fn native_pointer_becomes_local_top_left_points_without_exposing_outside_coordinates() {
+        let position =
+            local_pointer_position((-1420.0, -700.0), (-1440.0, -900.0), (64.0, 288.0), 7).unwrap();
+        assert_eq!((position.x, position.y), (20.0, 88.0));
+        assert_eq!(
+            (position.width, position.height, position.movement),
+            (64.0, 288.0, 7)
+        );
+        let position = local_pointer_position((100.0, 100.0), (-1440.0, -900.0), (64.0, 288.0), 8);
+        assert!(position.is_none());
+        assert_eq!(
+            serde_json::to_value(SidebarPointer {
+                inside: false,
+                position
+            })
+            .unwrap(),
+            serde_json::json!({"inside": false})
+        );
+    }
+
+    #[test]
+    fn transparent_canvas_keeps_local_coordinates_without_claiming_an_input_hit() {
+        let regions = serde_json::from_str::<Vec<crate::sidebar::SidebarInputRect>>(
+            r#"[{"x":0,"y":262,"width":8,"height":56}]"#,
+        )
+        .unwrap();
+        let position = local_pointer_position((4.0, 290.0), (0.0, 0.0), (376.0, 580.0), 1);
+        assert!(sidebar_pointer(position, &regions).inside);
+        let position = local_pointer_position((4.0, 500.0), (0.0, 0.0), (376.0, 580.0), 2);
+        let pointer = sidebar_pointer(position, &regions);
+        assert!(!pointer.inside);
+        let local = pointer.position.unwrap();
+        assert_eq!((local.x, local.y, local.movement), (4.0, 80.0, 2));
+        let position = local_pointer_position((500.0, 500.0), (0.0, 0.0), (376.0, 580.0), 3);
+        let pointer = sidebar_pointer(position, &regions);
+        assert!(!pointer.inside);
+        assert!(pointer.position.is_none());
+    }
+
+    #[test]
+    fn pointer_hit_test_uses_appkit_points_and_supports_negative_monitor_origins() {
+        let origin = (-1440.0, -900.0);
+        let size = (8.0, 56.0);
+        assert!(pointer_in_bounds((-1440.0, -900.0), origin, size));
+        assert!(pointer_in_bounds((-1432.5, -844.5), origin, size));
+        assert!(!pointer_in_bounds((-1432.0, -870.0), origin, size));
+        assert!(!pointer_in_bounds((-1440.5, -870.0), origin, size));
+        assert!(!pointer_in_bounds((-1436.0, -844.0), origin, size));
+        assert!(!pointer_in_bounds((-1436.0, -900.5), origin, size));
+    }
 
     #[test]
     fn space_flags_replace_conflicts_and_preserve_unrelated_flags() {
@@ -221,6 +532,7 @@ mod tests {
         assert_eq!(widget.label, "widget");
         assert!(!widget.create && !widget.visible && !widget.focus && !widget.fullscreen);
         assert!(widget.focusable && widget.always_on_top);
+        assert!(widget.accept_first_mouse);
         assert_eq!(widget.width, 80.0);
         assert_eq!(widget.height, 80.0);
     }

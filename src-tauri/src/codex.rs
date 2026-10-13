@@ -308,6 +308,25 @@ async fn limited_json(mut response: reqwest::Response) -> Result<Value, ()> {
     serde_json::from_slice(&bytes).map_err(|_| ())
 }
 
+pub async fn fetch_account_usage(
+    client: &reqwest::Client,
+) -> Result<crate::account_usage::AccountUsage, String> {
+    let auth = load_auth()?;
+    let response = client
+        .get("https://chatgpt.com/backend-api/wham/profiles/me")
+        .headers(headers(&auth)?)
+        .send()
+        .await
+        .map_err(|_| "account statistics unavailable")?;
+    if !response.status().is_success() {
+        return Err("account statistics unavailable".into());
+    }
+    let value = limited_json(response)
+        .await
+        .map_err(|_| "account statistics unavailable")?;
+    crate::account_usage::parse(&value)
+}
+
 pub async fn fetch_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
     let auth = match load_auth() {
         Ok(value) => value,

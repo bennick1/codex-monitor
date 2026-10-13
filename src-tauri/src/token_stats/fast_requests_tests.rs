@@ -627,12 +627,30 @@ fn fast_request_metadata_service_refresh_emits_committed_quota_snapshot() {
     let checkpoints = metadata_table_dump(&h.db, "source_files");
     let quotas = metadata_table_dump(&h.db, "quota_snapshots");
     let jsonl = fs::read(h.log()).unwrap();
+    service.pause_and_wait();
+    assert_eq!(service.query().quality.warning_codes, ["statisticsPaused"]);
+    assert!(!service
+        .record_quota_observation(
+            Some(&crate::models::UsageWindow {
+                remaining_percent: 50.0,
+                resets_at: Some("2026-09-10T00:00:00Z".into()),
+                window_seconds: 604800,
+            }),
+            DateTime::parse_from_rfc3339("2026-09-05T01:04:00Z")
+                .unwrap()
+                .with_timezone(&Utc),
+        )
+        .unwrap());
     add(
         &diagnostics(&h),
         THREAD,
         &diagnostic(THREAD, TURN, json!({"service_tier":"priority"})),
     );
     assert!(service.refresh().queued);
+    assert!(receive.recv_timeout(Duration::from_millis(30)).is_err());
+    assert_eq!(snapshot(&mut h.db), before);
+    assert_eq!(metadata_table_dump(&h.db, "quota_snapshots"), quotas);
+    service.resume();
     let event = completed();
     let after = snapshot(&mut h.db);
     service.stop();

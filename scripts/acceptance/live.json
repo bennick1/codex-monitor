@@ -1,0 +1,5 @@
+{
+  "identifier": "app.codexmonitor.sidebar.acceptance",
+  "productName": "Codex Monitor Sidebar Acceptance",
+  "bundle": { "createUpdaterArtifacts": false }
+}

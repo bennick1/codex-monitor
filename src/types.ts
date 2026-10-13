@@ -24,6 +24,15 @@ export interface ProviderSnapshot {
 }
 
 export interface WidgetPreferences {
+  autoCheckUpdates?: boolean;
+  deepseekEnabled?: boolean;
+  displayMode?: "floating" | "sidebar";
+  sidebarSide?: "left" | "right" | "top";
+  sidebarOpacity?: number;
+  sidebarGlassEnabled?: boolean;
+  sidebarScale?: number;
+  sidebarShowCodex?: boolean;
+  sidebarShowDeepseek?: boolean;
   locked: boolean;
   alwaysOnTop: boolean;
   stayExpanded: boolean;

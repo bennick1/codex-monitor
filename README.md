@@ -2,7 +2,8 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-Current release: **v1.3.1**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1). See the [release validation report](docs/fast-request-metadata-validation.md) for the current status.
+当前已发布版本为 **v1.3.1**，下载见 [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1)，原版本状态见 [Fast 恢复验收报告](docs/fast-request-metadata-validation.md)。当前功能分支已合入该版本，并新增可关闭的后台更新检查；下载、验签与安装需要用户操作。普通开发构建未配置公钥时提供手动下载页。新增功能尚未正式发布，进度见 [发布流程](docs/RELEASE.md) 与 [主分支合并验收](docs/MAIN-MERGE-VALIDATION.md)。
+
 
 ## Features
 
@@ -21,7 +22,19 @@ Quota comes from the Codex service. Local token counts are a separate measuremen
 
 Mecha Light's three fixed Chinese Tab labels use approved-reference-derived image patches with real buttons, accessible names, and text fallback. Font substitution, text-only enlargement, and custom foreground colors have known limits; enlarged labels interpolate 1× bitmaps. Native screen-reader and complete WCAG acceptance are not claimed. The recorded zero-pixel-difference result is limited to the documented 258×36, DPR1, 100% conditions and direct-reference states. Manual Reset still has no observable success signal. See the [validation report](docs/v1.3.0-feature-validation-report.md) for the full evidence boundaries.
 
-## Screenshots
+## 侧边栏模式
+
+从菜单的“展示模式”选择“侧边栏”；原有悬浮窗模式继续保留。侧边栏默认贴右侧，菜单栏图标随之隐藏。移入 6×48 像素的实色小拉手展开圆角竖条，悬停额度圆环查看详情；底部圆弧悬停后平滑展开为齿轮，点击进入设置。上方对称圆弧悬停后显示当前贴靠方向，点击按“右侧 → 左侧 → 顶部 → 右侧”切换，也可在设置中选择。顶部贴靠沿屏幕可用区域上沿居中，服务横向排列，方向和设置按钮分列左右，详情向下展开。拉手不受透明度设置影响。详情始终向屏幕内展开；操作菜单或键盘焦点位于组件内时保持展开，点击设置外部会收起，其余情况离开 450 毫秒后收起。再次打开应用会显示窗口并解除鼠标穿透。
+
+- **外观：** 侧边栏支持浅色、深色和跟随系统，与悬浮窗共用已有外观偏好。跟随系统时，背景、文字、图表和图标同步切换，无需重启；拉手随主题切换，但保持实色。macOS 通过原生鼠标监听补充 WebView 悬停事件，让未激活的侧边栏也能响应移入。
+- **侧边栏大小：** 齿轮菜单支持 80%–130% 缩放，拖动时实时调整，默认 100%，重启后保留。仅拉手、栏体和两端快捷按钮缩放，鼠标命中区域同步调整；详情与设置保持原字号和尺寸，随栏宽向内平移。工作区不足时限制栏体大小，并保留所选比例；面板按可见空间限制宽高。系统启用减少动态效果时，弧线与按钮直接切换。
+- **剩余口径：** Pro 系列的侧边栏只显示每周额度，周数据缺失时显示 `—`；这是展示选择，未改变接口采集或悬浮模式。其他订阅优先显示 5 小时剩余额度，缺失时使用周额度。DeepSeek 显示 `余额 ÷（余额 + 累计费用）`，不是套餐配额或充值记录，分母为零时显示 `—`。
+- **账户与本机分开：** 侧边栏仅展示账户累计、单日峰值、最长对话、连续天数和每日 Token；本机 SQLite 统计保留在悬浮模式。缺失账户数据不补零，也不用 Token 推算额度。
+- **DeepSeek：** 通过齿轮中的“登录 / 管理 DeepSeek”打开独立的开放平台窗口；登录后读取余额、费用、请求数、API 密钥数量及近 30 个自然日统计。退出登录会清理此窗口的网站数据。网站接口可能变化，读取失败会明确显示未更新状态。
+- **验证范围：** 见 [侧边栏验收记录](docs/SIDEBAR-VALIDATION.md)；侧边栏代码不代表既有 v1.3.1 安装包已包含此功能。
+
+## 界面预览
+
 
 ![Codex Monitor quota and Token Statistics, using synthetic data](docs/images/codex-monitor-v1-token-preview.png)
 
@@ -49,7 +62,7 @@ v1.3.1 keeps application compatibility version **4** and adds a supplemental req
 3. Hover or focus each Token value to see the exact count, such as `12,685,398` for `1268.54万`.
 4. Use the tray menu to refresh, open the manual release download page, switch among the Default, Blur, Computer, and Mecha Light skins, set overall opacity, change language/appearance, show or hide the widget, or quit.
 
-On macOS the app is a menu-bar accessory: it intentionally has no Dock or Command-Tab entry. Fullscreen Spaces and sleep/wake behavior must pass the tests in the release report.
+macOS 应用没有 Dock 或 Command-Tab 入口。悬浮窗模式显示菜单栏图标，侧边栏模式从齿轮进入菜单；悬浮卡片也提供菜单按钮。全屏 Space 和睡眠唤醒需单独完成实机验收。
 
 Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. Fast can also use the narrowly scoped diagnostic metadata described above, through a read-only connection; an unavailable source does not block accounting. Initial scans and bounded historical request replay may take time. Cleaned logs without other trustworthy evidence can leave historical Turns Unknown, while previously collected statistics and request evidence remain in the local database.
 
@@ -57,7 +70,8 @@ Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.co
 
 Codex Monitor does not collect or retain prompts, chat history, source code, or account credentials in its statistics database, logs, or telemetry. Statistics stay on this machine.
 
-To read quota, the app accesses the existing local `auth.json` and uses its access token only for the required ChatGPT quota requests. It does not copy credentials to its own storage. The independent token collector reads structured usage records from local session files, skips message bodies, and stores only counters and the minimal timestamps, hashed identities, source references, and checkpoints needed for reliable local statistics. The supplemental Fast source retains only hashed root/thread/Turn keys and tier flags, never raw diagnostic records, `tags_json`, or credentials.
+读取 Codex 额度和账户统计时，应用复用本机 `auth.json`，仅向所需 ChatGPT 接口发送已有凭据，不复制保存 Codex 凭据。本机 Token 采集器跳过消息正文，只存储计数、时间、哈希身份、来源引用及检查点。补充的 Fast 证据仅保存哈希 root/thread/Turn 键及 tier 标志，不保存原始诊断记录、`tags_json` 或凭据。可选 DeepSeek 登录使用独立网站数据容器，由系统 WebView 管理会话，详情见 [隐私说明](PRIVACY.md)。
+
 
 There is no analytics, tracking, account system, or cloud sync. See [PRIVACY.md](PRIVACY.md) for network and storage details and [SECURITY.md](SECURITY.md) for reporting guidance.
 
@@ -91,7 +105,7 @@ Run in PowerShell on Windows for an NSIS installer:
 npm run tauri -- build --bundles nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
-These commands produce release-mode installers with application updater artifacts disabled. Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
+这些普通本地构建命令不生成 updater 制品；正式在线升级仅通过经过门禁的手动发布 workflow，使用独立签名配置生成制品。 Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
 
 The frozen Branding sources are in [docs/branding/v1.2](docs/branding/v1.2/); production icons generated from them are in [src-tauri/icons](src-tauri/icons/).
 

@@ -592,3 +592,7 @@ button { font: inherit; }
 .token-turn-row .token-exact { text-align: left; }
 /* Decorative aurora overflow must never make focus scroll the outer card. */
 .quota-card--tokens { overflow: clip; }
+
+.display-mode-menu { position: absolute; z-index: 20; top: 70px; left: 18px; right: 18px; display: grid; gap: 8px; padding: 16px; color: #f5f5f7; background: #1a1a1e; border: 1px solid #62626a; border-radius: 12px; box-shadow: 0 8px 24px #0006; font-size: 13px; }
+.display-mode-menu button { min-height: 34px; padding: 6px; border: 1px solid #62626a; border-radius: 7px; background: #303034; color: inherit; cursor: pointer; }
+.display-mode-menu button:focus-visible { outline: 2px solid #c787ff; }

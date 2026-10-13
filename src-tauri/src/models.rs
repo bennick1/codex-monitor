@@ -43,6 +43,15 @@ impl ProviderSnapshot {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default, rename_all = "camelCase")]
 pub struct WidgetPreferences {
+    pub deepseek_enabled: bool,
+    pub auto_check_updates: bool,
+    pub display_mode: String,
+    pub sidebar_side: String,
+    pub sidebar_opacity: f64,
+    pub sidebar_glass_enabled: bool,
+    pub sidebar_scale: f64,
+    pub sidebar_show_codex: bool,
+    pub sidebar_show_deepseek: bool,
     pub locked: bool,
     #[serde(default = "default_always_on_top")]
     pub always_on_top: bool,
@@ -100,6 +109,15 @@ where
 impl Default for WidgetPreferences {
     fn default() -> Self {
         Self {
+            deepseek_enabled: false,
+            auto_check_updates: true,
+            display_mode: "floating".into(),
+            sidebar_side: "right".into(),
+            sidebar_opacity: 0.9,
+            sidebar_glass_enabled: true,
+            sidebar_scale: 1.0,
+            sidebar_show_codex: true,
+            sidebar_show_deepseek: true,
             locked: false,
             always_on_top: true,
             stay_expanded: false,
@@ -115,6 +133,25 @@ impl Default for WidgetPreferences {
 
 impl WidgetPreferences {
     pub fn normalized(mut self) -> Self {
+        if self.display_mode != "sidebar" {
+            self.display_mode = "floating".into();
+        } else {
+            // A sidebar is the only visible way back when its tray is hidden.
+            self.locked = false;
+        }
+        if !matches!(self.sidebar_side.as_str(), "right" | "left" | "top") {
+            self.sidebar_side = "right".into();
+        }
+        self.sidebar_opacity = if self.sidebar_opacity.is_finite() {
+            self.sidebar_opacity.clamp(0.2, 1.0)
+        } else {
+            0.9
+        };
+        self.sidebar_scale = if self.sidebar_scale.is_finite() {
+            self.sidebar_scale.clamp(0.8, 1.3)
+        } else {
+            1.0
+        };
         self.opacity_percent = normalize_opacity_percent(f64::from(self.opacity_percent));
         self.auto_rotate_seconds = self.auto_rotate_seconds.clamp(5, 300);
         if self.pinned_provider.as_deref() != Some("codex") {
@@ -133,6 +170,135 @@ impl WidgetPreferences {
             self.selected_skin = default_skin();
         }
         self
+    }
+}
+
+#[cfg(test)]
+mod sidebar_preference_tests {
+    use super::*;
+    #[test]
+    fn old_preferences_keep_floating_mode_and_sidebar_is_always_reachable() {
+        let legacy: WidgetPreferences =
+            serde_json::from_str(r#"{"locked":true,"selectedSkin":"blur"}"#).unwrap();
+        assert_eq!(legacy.display_mode, "floating");
+        assert_eq!(legacy.sidebar_side, "right");
+        assert_eq!(legacy.sidebar_scale, 1.0);
+        assert!(legacy.sidebar_glass_enabled);
+        assert!(legacy.sidebar_show_codex && legacy.sidebar_show_deepseek);
+        assert!(legacy.locked);
+        let next = WidgetPreferences {
+            display_mode: "sidebar".into(),
+            sidebar_side: "invalid".into(),
+            sidebar_opacity: 0.0,
+            ..legacy
+        }
+        .normalized();
+        assert!(!next.locked);
+        assert_eq!(next.sidebar_opacity, 0.2);
+        assert_eq!(next.sidebar_side, "right");
+        assert_eq!(next.selected_skin, "blur");
+    }
+
+    #[test]
+    fn sidebar_edges_survive_round_trip_and_unknown_edges_use_the_default() {
+        for (side, expected) in [
+            ("right", "right"),
+            ("left", "left"),
+            ("top", "top"),
+            ("bottom", "right"),
+            ("", "right"),
+        ] {
+            let preferences = WidgetPreferences {
+                display_mode: "sidebar".into(),
+                sidebar_side: side.into(),
+                ..Default::default()
+            }
+            .normalized();
+            assert_eq!(preferences.sidebar_side, expected);
+            let saved = serde_json::to_string(&preferences).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            assert_eq!(restored.normalized().sidebar_side, expected);
+        }
+    }
+
+    #[test]
+    fn glass_choice_round_trips_without_rewriting_opacity_or_theme() {
+        for enabled in [false, true] {
+            let value = WidgetPreferences {
+                sidebar_glass_enabled: enabled,
+                sidebar_opacity: 0.7,
+                appearance: "system".into(),
+                ..Default::default()
+            };
+            let saved = serde_json::to_string(&value).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            let restored = restored.normalized();
+            assert_eq!(restored.sidebar_glass_enabled, enabled);
+            assert_eq!(restored.sidebar_opacity, 0.7);
+            assert_eq!(restored.appearance, "system");
+        }
+    }
+
+    #[test]
+    fn sidebar_scale_is_bounded_and_non_finite_values_use_the_default() {
+        for (scale, expected) in [
+            (0.0, 0.8),
+            (0.8, 0.8),
+            (1.1, 1.1),
+            (1.3, 1.3),
+            (2.0, 1.3),
+            (f64::NAN, 1.0),
+            (f64::INFINITY, 1.0),
+            (f64::NEG_INFINITY, 1.0),
+        ] {
+            let preferences = WidgetPreferences {
+                sidebar_scale: scale,
+                ..Default::default()
+            }
+            .normalized();
+            assert_eq!(preferences.sidebar_scale, expected);
+            let saved = serde_json::to_string(&preferences).unwrap();
+            let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+            assert_eq!(restored.sidebar_scale, expected);
+        }
+    }
+
+    #[test]
+    fn sidebar_visibility_survives_round_trip_without_changing_login_state() {
+        for codex in [true, false] {
+            for deepseek in [true, false] {
+                let value = WidgetPreferences {
+                    sidebar_show_codex: codex,
+                    sidebar_show_deepseek: deepseek,
+                    deepseek_enabled: true,
+                    ..Default::default()
+                };
+                let saved = serde_json::to_string(&value).unwrap();
+                let restored: WidgetPreferences = serde_json::from_str(&saved).unwrap();
+                let restored = restored.normalized();
+                assert_eq!(restored.sidebar_show_codex, codex);
+                assert_eq!(restored.sidebar_show_deepseek, deepseek);
+                assert!(restored.deepseek_enabled);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod updater_preferences_tests {
+    use super::*;
+    #[test]
+    fn updates_default_on_and_false_survives_roundtrip() {
+        let legacy: WidgetPreferences = serde_json::from_str("{}").unwrap();
+        assert!(legacy.auto_check_updates);
+        let disabled: WidgetPreferences =
+            serde_json::from_str(r#"{"autoCheckUpdates":false}"#).unwrap();
+        let saved = serde_json::to_string(&disabled.normalized()).unwrap();
+        assert!(
+            !serde_json::from_str::<WidgetPreferences>(&saved)
+                .unwrap()
+                .auto_check_updates
+        );
     }
 }
 

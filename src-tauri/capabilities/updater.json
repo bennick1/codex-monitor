@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "updater-window",
+  "description": "更新窗口仅访问本地更新命令与固定下载页",
+  "windows": ["updater"],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    { "identifier": "opener:allow-open-url", "allow": [{ "url": "https://github.com/bennick1/codex-monitor/releases" }] }
+  ]
+}

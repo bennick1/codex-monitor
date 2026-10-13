@@ -1,52 +1,32 @@
-# Codex Monitor 发布准备
+# 在线更新发布流程
 
-V1.1.0 目标：`Codex-Monitor-1.1.0.dmg`、`Codex-Monitor-1.1.0.exe`、`SHA256SUMS`。最终结论以 [验收报告](v1.1.0-release-validation-report.md) 为准。
+本流程尚未在 GitHub 执行。当前分支已合入 main 的 1.3.1 版本；它与本轮核对的已发布版本相同，发布门禁会阻止重复发布。正式发布前须重新核对远程状态，由维护者选择更高的稳定版本，同时更新 package.json、Cargo.toml、tauri.conf.json。不得把本轮本地准备描述成已上线。
 
-## 构建与制品
+## 一次性维护者配置
 
-macOS 在 Mac 上构建，Windows 在 Windows MSVC 环境构建。统一 Node 22、Rust stable，使用已提交的 npm/Cargo lockfile；记录实际版本，不能只写 stable。本机 arm64 包不等于 Universal 包或 Intel 验收。
+在规范仓库 bennick1/codex-monitor 创建 `release` environment，只允许 main，配置 required reviewers，并禁止自我批准（组织/套餐支持时）。保护 main，禁止绕过 PR 审核。当前操作者没有 admin 权限，本轮不配置这些设置；未配置审核不能宣称发布流程已受人工门禁保护。
 
-```sh
-npm ci
-npm test
-cargo test --manifest-path src-tauri/Cargo.toml --locked
-npm run check:updater-policy
-npm run tauri -- build --bundles app,dmg --config '{"bundle":{"createUpdaterArtifacts":false}}'
-node scripts/prepare-release-artifacts.mjs src-tauri/target/release/bundle outputs/v1.1.0
-```
+维护者在可信离线环境执行官方 `npx tauri signer generate` 生成正式 updater 密钥。将公钥写入 release environment variable `CODEX_MONITOR_UPDATER_PUBLIC_KEY`，私钥和密码分别写入 environment secrets `TAURI_SIGNING_PRIVATE_KEY`、`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。密钥不得进入仓库、日志、安装包或工单；保存可恢复的离线备份。普通开发无公钥时显示“未配置”并提供 Release 下载页。正式构建缺公钥、存在 QA 标志或测试 endpoint 时失败。不要把独立 QA 密钥设为正式密钥。
 
-Windows PowerShell 把构建参数换成 `--bundles nsis`，同样使用命名脚本。Windows NSIS 配置为 `currentUser`，但 WebView2/运行时存在性和普通用户实际使用仍需实机确认。
+Tauri updater 签名仅验证更新包来源与完整性，与 Apple Developer ID / notarization、Windows Authenticode 是不同机制。当前 OS 证书未配置；Gatekeeper/SmartScreen 与安装提示仍需真实设备验收，Release Notes 必须披露。
 
-Universal Mac 先安装 `aarch64-apple-darwin`、`x86_64-apple-darwin`，构建追加 `--target universal-apple-darwin`，命名脚本输入目录改为 `src-tauri/target/universal-apple-darwin/release/bundle`。
+## 手动发布
 
-脚本以 package.json 当前稳定版本为唯一版本源，只接受该版本的一个 DMG 和/或 NSIS setup.exe，拒绝同平台多个候选或覆盖不同内容。它把制品复制为目标名称，并对输出目录已有的最终安装包重算 `SHA256SUMS`。只有一个平台时这是部分清单；合并两平台后必须重新执行，不能直接拼接未知来源的校验文件。构建时间、来源 commit、源码差异和工具版本随构建证据保存到 ignored 的 outputs，不能把工作区构建写成已提交 SHA 的无差异产物。
+1. 完成 [隔离升级验收](UPDATER-QA.md)，维护者确认两平台结果和版本；Windows 缺设备时保持待测。合并授权与正式发布授权分别处理。
+2. 只在规范仓库 main 手动 dispatch `Signed Release`。普通 push/PR 仅执行 CI，不发布。
+3. gate 固定触发时 source SHA，检查事件、仓库、main、三处版本一致、稳定 SemVer、高于最新 published Release、tag 不存在；GitHub 查询失败直接失败。所有 job checkout 同一 SHA。
+4. release environment 审核后，GitHub macOS runner 构建 Universal（arm64+x86_64），Windows runner 构建 x64 NSIS。正式公钥编译进后端；安全 Node JSON 脚本生成临时 overlay 供 CLI 打包读取相同公钥和固定 endpoint，基础 tauri.conf 不持久化测试 key/endpoint。CLI 使用私钥签 updater 产物。
+5. 两平台收集前读取实际 Mac Info.plist / Windows binary VERSIONINFO 与冻结正式 config，确认正式标识、名称和版本；拒绝 QA 名称/标记。验签后从实际 Mac updater tar archive 的唯一 Info.plist 和主程序读取身份与 SHA256；Windows 使用 runner 7-Zip 只向 stdout 解出 NSIS 中唯一主程序并比较其 SHA256。必须与已验证的构建二进制完全相同，不能以新版旁边的报告为旧更新包背书。解包检查不运行安装器、不将 archive 路径写入工作区。使用与官方 updater 同源的成熟 minisign-verify 库，对原始 updater 字节及 .sig 使用客户端公钥验证，错 key、错签名失败。两平台都成功才组装唯一 latest.json，复核来源 SHA、安装包、更新包、对应 .sig、公钥摘要与 SHA256。清单提供 darwin-aarch64、darwin-x86_64、windows-x86_64；Mac 两架构共享 Universal archive。
+6. 再检查远程版本/tag，创建 draft 并一次上传全部资产，核对 draft 完整资产数量与大小，并重新下载逐项比较 SHA256 后才 publish/latest。任一步失败不公开半份 manifest。失败 draft 留待维护者检查；不要手动公开不完整 draft，也不要自动删已有 tag 后重跑。
 
-## GitHub Actions
+源 SHA、实际 Node/npm/Rust/Tauri 版本、run URL、构建时间记录在各平台 build-environment.json；安装包和更新签名保留在同一 Release，SHA256SUMS 包括 manifest 和来源记录。SHA256 供下载校验，不替代 updater 公钥验签。
 
-CI 在 push/PR 上验证前端与 Windows/macOS 编译。`release.yml` 为手动 Release Preparation，只有 read 权限，构建并上传 Actions artifacts，不创建 tag、draft Release 或 public Release。准备结果仍需下载到真实双平台验收。
+本地验证：`node --test scripts/release-updater.node-test.mjs`、`npm run check:updater-policy`。Mac CI 还构建 `verify_updater_signature` example，再设置 `CODEX_MONITOR_SIGNATURE_VERIFY_BIN` 运行同套 Node 测试：官方 CLI 对每个 tar fixture 生成有效签名，成熟库确认签名有效后，包内部旧版本、旧二进制和 QA 身份仍须被拒绝。原 `prepare-release-artifacts.mjs` 仍可准备手动分发安装包；不生成在线升级 manifest，不能把其单平台校验文件直接发布为完整在线升级集合。
 
-V1 正式采用手动 GitHub Release 更新。运行时不注册 Tauri updater、不查询或安装上游版本；托盘下载入口只打开本项目 Releases。`npm run check:updater-policy` 在 CI 与 Release Preparation 中防止上游 updater 地址或 updater 依赖回归。
+## 数据和回退
 
-V1.1.0 的分发边界为 **Unsigned / Not Notarized**。Windows Authenticode、Apple Developer ID 和 notarization 均未配置，不能声称 Apple verified、notarized 或已解决 Gatekeeper/SmartScreen；这些状态必须在 README、报告和 Release Notes 中如实披露。
+正式标识保持 app.quotafloat.desktop。升级前退出旧进程并备份配置与 SQLite；不覆盖活跃数据库，不删统计数据。在线更新不会证明旧版数据库降级兼容性；遇到旧 schema 不兼容使用已记录的恢复方式。不要自动降级，也不要将 token 数量解释为额度。
 
-## 升级与数据
+## 官方依据
 
-V1 保留 `app.quotafloat.desktop`，配置与统计目录继续使用它。productName、binary 改名不保证旧安装升级、开始菜单和开机启动项自动迁移；参见 [原名称迁移清单](v1.0.0-name-migration-inventory.md)。退出旧实例并做一致性备份；不得覆盖活跃 SQLite 或删除旧统计，需验证重启后四周期统计和检查点仍在。
-
-## 人工确认后的发布
-
-只有 [发布检查清单](GITHUB-RELEASE-CHECKLIST.md) 全部满足、报告 Ready、用户明确批准后，才允许创建 `v1.1.0` Release，标题 `Codex Monitor v1.1.0`，使用 [Release 文案模板](RELEASE_TEMPLATE.md) 和两份验收过的最终安装包加完整校验文件。
-
-本次准备不自动创建 Release，也不把本机数据库、会话、真实账号截图或安装包提交到 Git。
-
-## v1.1.0 候选来源与验收
-
-发布基础设施提交先完成本地 npm ci、updater-policy、npm test/build、全依赖与 omit=dev 两项 high audit（均须 0 vulnerabilities），以及 cargo fmt/test/clippy 和 git diff --check；不修改业务代码、SQLite schema 或统计口径；本轮仅额外授权 Vitest 4.1.11 安全修复，禁止无关依赖更新。提交信息为 `release: prepare Codex Monitor v1.1.0`，普通 fast-forward 推送 main 后锁定 Release Build Source SHA。手动 dispatch release.yml 并核验 run head_sha 等于该 SHA。
-
-下载同一成功 run 的 `codex-monitor-v1.1.0-macos-universal-unsigned` 和 `codex-monitor-v1.1.0-windows-x64-unsigned`，本地 outputs/v1.1.0 只保留 Codex-Monitor-1.1.0.dmg、Codex-Monitor-1.1.0.exe、SHA256SUMS 和必要脱敏证据。分别重算摘要、对比 Actions 内部 SHA，执行 `shasum -a 256 -c SHA256SUMS`。macOS 从实际下载的 DMG 执行 hdiutil verify，挂载检查名称、版本、identifier、file/lipo 架构与实际签名；不拿 debug 或旧本地包替代。
-
-v1.1.0 将 Token Statistics SQLite 从 schema 1 升级为 schema 2。保留迁移、总量/accounting 不变、model backfill、restart、incremental 和完整 rollback 自动测试。v1.0.0 不支持读升级后的 Token database；已验证拒绝路径不破坏数据，重新运行 v1.1.0 可读取。前期证据见 [功能验收报告](v1.1.0-feature-validation-report.md)，不把它改写为本轮 Actions 安装包人工验收。
-
-macOS 最终 Actions DMG 须人工确认安装、启动、Quota、Overview、By Model、默认 Quota Period、Today / Quota Period / 7 Days / 30 Days / Total、historical model data、Hover、Full-screen Space。Windows 按 [人工验收清单](v1.1.0-windows-human-acceptance-checklist.md) 单独验收。最终状态只能是 Awaiting Human Acceptance 或 Blocked；两平台人工通过后再单独 Closure。
-
-构建后可用 docs-only evidence commit 回填 Run ID、SHA256 和状态。报告必须区分 Release Build Source SHA 与 Latest Documentation SHA；未来 v1.1.0 Tag 必须指向实际生成最终制品的 Release Build Source SHA，不指向后续文档提交。即使所有验收通过，仍需用户明确“可以发布”，本任务不得创建 Tag 或任何 GitHub Release。
+[Tauri v2 Updater](https://v2.tauri.app/plugin/updater/) 描述签名、静态 manifest 与更新安装行为；[GitHub deployment environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments) 描述 environment 审核和分支保护。流程尚需规范仓库维护者配置以及 Windows/macOS 实机验收。
