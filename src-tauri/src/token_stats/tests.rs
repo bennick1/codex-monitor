@@ -957,7 +957,7 @@ fn abrupt_process_exit_recovers_wal_before_after_commit_and_replacement() {
 fn concurrent_refresh_is_coalesced_and_queries_use_committed_generation() {
     use super::service::{TokenStatisticsService, Trigger};
     use std::{
-        sync::Arc,
+        sync::{mpsc, Arc},
         time::{Duration, Instant},
     };
     let trigger = Arc::new(Trigger::default());
@@ -981,24 +981,51 @@ fn concurrent_refresh_is_coalesced_and_queries_use_committed_generation() {
     assert!(!trigger.wait(Duration::ZERO));
     let h = Harness::new();
     write(&h.log(), &[meta("main"), modern("main", "r1", 120, 120)]);
-    let service =
-        TokenStatisticsService::start_source(Some(h.path.clone()), Ok(h.source.clone()), |_| {});
-    let begin = Instant::now();
-    loop {
-        let s = service.query();
-        if s.status == "ready" {
-            assert_eq!(s.total.unwrap().total_tokens, "120");
-            break;
+    let (send, receive) = mpsc::channel();
+    let service = TokenStatisticsService::start_source(
+        Some(h.path.clone()),
+        Ok(h.source.clone()),
+        move |event| {
+            let _ = send.send(serde_json::to_value(event).unwrap());
+        },
+    );
+    struct StopOnDrop(TokenStatisticsService);
+    impl Drop for StopOnDrop {
+        fn drop(&mut self) {
+            self.0.stop();
         }
-        assert!(
-            begin.elapsed() < Duration::from_secs(5),
-            "startup readiness deadline exceeded: status={}, generation={}, warnings={:?}",
-            s.status,
-            s.generation,
-            s.quality.warning_codes
-        );
-        std::thread::sleep(Duration::from_millis(5));
     }
+    let _stop = StopOnDrop(service.clone());
+    // Startup is not a performance assertion: wait for the worker's completion
+    // event instead of repeatedly opening SQLite while it initializes on CI.
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let completed = loop {
+        let event = receive
+            .recv_timeout(deadline.saturating_duration_since(Instant::now()))
+            .unwrap_or_else(|error| {
+                let snapshot = service.query();
+                panic!(
+                    "startup completion not received ({error}): status={}, generation={}, warnings={:?}",
+                    snapshot.status, snapshot.generation, snapshot.quality.warning_codes
+                );
+            });
+        if event["scanning"] == false {
+            break event;
+        }
+    };
+    let initial = service.query();
+    assert_eq!(
+        initial.status, "ready",
+        "{:?}",
+        initial.quality.warning_codes
+    );
+    assert_eq!(
+        initial.generation,
+        completed["generation"].as_str().unwrap()
+    );
+    assert!(initial.generation.parse::<u64>().unwrap() > 0);
+    assert_eq!(initial.source_id.as_deref(), completed["sourceId"].as_str());
+    assert_eq!(initial.total.unwrap().total_tokens, "120");
     let mut joins = Vec::new();
     for _ in 0..8 {
         let s = service.clone();
@@ -1013,7 +1040,6 @@ fn concurrent_refresh_is_coalesced_and_queries_use_committed_generation() {
     for j in joins {
         j.join().unwrap();
     }
-    service.stop();
 }
 
 #[test]
