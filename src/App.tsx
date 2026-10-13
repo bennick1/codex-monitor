@@ -1,6 +1,8 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
+import { useUpdater } from "./hooks/useUpdater";
+import { openUpdateWindow } from "./lib/updater";
 import { Sidebar } from "./components/Sidebar";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
 import { fetchSnapshots, getPreferences, isTauri, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
@@ -11,7 +13,7 @@ import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, sidebarGlassEnabled: true, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const DEFAULT_PREFS: WidgetPreferences = { autoCheckUpdates: true, displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, sidebarGlassEnabled: true, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
 const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
   ...DEFAULT_PREFS,
@@ -22,6 +24,7 @@ const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferen
   sidebarSide: value.sidebarSide === "left" || value.sidebarSide === "top" ? value.sidebarSide : "right",
   sidebarShowCodex: value.sidebarShowCodex !== false,
   sidebarShowDeepseek: value.sidebarShowDeepseek !== false,
+  autoCheckUpdates: value.autoCheckUpdates !== false,
   sidebarGlassEnabled: value.sidebarGlassEnabled !== false,
   sidebarOpacity: typeof value.sidebarOpacity === "number" && Number.isFinite(value.sidebarOpacity) ? Math.min(1, Math.max(.2, value.sidebarOpacity)) : .9,
   sidebarScale: typeof value.sidebarScale === "number" && Number.isFinite(value.sidebarScale) ? Math.min(1.3, Math.max(.8, value.sidebarScale)) : 1,
@@ -41,6 +44,7 @@ const INITIAL_SNAPSHOT: ProviderSnapshot = {
 };
 
 export default function App() {
+  const { state: updater } = useUpdater();
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
   const confirmedPreferences = useRef(DEFAULT_PREFS);
@@ -320,6 +324,9 @@ export default function App() {
     {modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
       <strong>{language === "zh-CN" ? "展示模式" : "Display mode"}</strong>
       <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "sidebar" }); }}>{language === "zh-CN" ? "切换到侧边栏" : "Switch to sidebar"}</button>
+      <button onClick={() => { void openUpdateWindow().catch(error => setOperationError(String(error))); }}>{language === "zh-CN" ? "检查更新" : "Check for updates"}{updater.version ? ` · ${updater.version}` : ""}</button>
+      <label>{language === "zh-CN" ? "自动检查更新" : "Automatically check for updates"}<input type="checkbox" checked={preferences.autoCheckUpdates !== false} onChange={event => savePreferences({ ...preferences, autoCheckUpdates: event.target.checked })} /></label>
+      <button onClick={() => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed))}>{language === "zh-CN" ? "打开版本下载页" : "Release downloads"}</button>
       <button onClick={closeMenu}>{language === "zh-CN" ? "保留悬浮窗" : "Keep floating widget"}</button>
     </div>}
     <QuotaCard

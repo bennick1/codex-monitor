@@ -1,0 +1,10 @@
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { dirname } from "node:path";
+import { endpoint } from "./release-gate.mjs";
+const output = process.argv[2];
+const publicKey = process.env.CODEX_MONITOR_UPDATER_PUBLIC_KEY?.trim();
+if (!output || !publicKey || process.env.CODEX_MONITOR_RELEASE_BUILD !== "1" || process.env.CODEX_MONITOR_UPDATER_TEST_BUILD || process.env.CODEX_MONITOR_UPDATER_TEST_ENDPOINT) throw new Error("Production build overlay requires public key and no QA config");
+const config = JSON.parse(await readFile("src-tauri/tauri.conf.json", "utf8"));
+if (config.identifier !== "app.quotafloat.desktop" || config.productName !== "Codex Monitor") throw new Error("Unexpected production application identity");
+await mkdir(dirname(output), { recursive: true });
+await writeFile(output, JSON.stringify({ bundle: { createUpdaterArtifacts: true }, plugins: { updater: { pubkey: publicKey, endpoints: [endpoint] } } }, null, 2));

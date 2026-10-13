@@ -1,4 +1,4 @@
-name: Release Preparation
+name: Signed Release
 
 on:
   workflow_dispatch:
@@ -6,25 +6,53 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: signed-release-main
+  cancel-in-progress: false
+
 jobs:
+  gate:
+    if: github.repository == 'bennick1/codex-monitor' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.gate.outputs.sha }}
+      version: ${{ steps.gate.outputs.version }}
+      tag: ${{ steps.gate.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - id: gate
+        run: node scripts/release-gate.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: node --test scripts/release-updater.node-test.mjs
+
   build:
+    needs: gate
+    environment: release
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: windows-latest
+            platform: windows
             bundles: nsis
-            target-args: ''
-            bundle-dir: src-tauri/target/release/bundle
-            artifact-name: codex-monitor-v1.1.0-windows-x64-unsigned
+            target-args: --target x86_64-pc-windows-msvc
+            bundle-dir: src-tauri/target/x86_64-pc-windows-msvc/release/bundle
           - os: macos-latest
+            platform: macos
             bundles: app,dmg
             target-args: --target universal-apple-darwin
             bundle-dir: src-tauri/target/universal-apple-darwin/release/bundle
-            artifact-name: codex-monitor-v1.1.0-macos-universal-unsigned
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -38,87 +66,94 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: npm run check:updater-policy
-      - name: Validate V1.1 version and record build environment
-        shell: pwsh
-        run: |
-          $package = Get-Content -Raw package.json | ConvertFrom-Json
-          $tauri = Get-Content -Raw src-tauri/tauri.conf.json | ConvertFrom-Json
-          $metadataJson = cargo metadata --manifest-path src-tauri/Cargo.toml --no-deps --format-version 1 --locked
-          if ($LASTEXITCODE -ne 0) { throw 'Cannot read Cargo package metadata.' }
-          $metadata = $metadataJson | ConvertFrom-Json
-          $cargoPackage = @($metadata.packages | Where-Object name -eq 'codex-monitor')
-          if ($package.version -ne '1.1.0' -or $tauri.version -ne $package.version -or $cargoPackage.Count -ne 1 -or $cargoPackage[0].version -ne $package.version) {
-            throw 'Expected matching V1.1.0 package, Cargo and Tauri versions.'
-          }
-          if ($tauri.identifier -ne 'app.quotafloat.desktop') { throw 'Unexpected application identifier.' }
-          New-Item -ItemType Directory -Force outputs/v1.1.0 | Out-Null
-          @{
-            commit = $env:GITHUB_SHA
-            buildStartedAt = (Get-Date).ToUniversalTime().ToString('o')
-            os = [System.Runtime.InteropServices.RuntimeInformation]::OSDescription
-            runnerArch = $env:RUNNER_ARCH
-            rust = (rustc --version)
-            node = (node --version)
-            npm = (npm --version)
-            tauri = (npx tauri --version | Select-Object -Last 1)
-            runUrl = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
-            platformSigning = 'Not configured; candidate artifacts only'
-          } | ConvertTo-Json | Set-Content -Encoding utf8 outputs/v1.1.0/build-environment.json
       - run: npm test
       - run: npm run build
       - run: npm audit --audit-level=high
-      - run: npm audit --omit=dev --audit-level=high
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-      - name: Build candidate installer
-        run: >-
-          npm run tauri -- build --bundles ${{ matrix.bundles }} ${{ matrix.target-args }}
-          --config '{"bundle":{"createUpdaterArtifacts":false}}'
-      - name: Smoke test Windows NSIS installer
-        if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Test signed archive internal identity binding
+        if: runner.os == 'macOS'
+        shell: bash
         run: |
-          $installer = @(Get-ChildItem '${{ matrix.bundle-dir }}/nsis/*.exe')
-          if ($installer.Count -ne 1 -or $installer[0].Length -lt 1MB) {
-            throw "Expected exactly one non-empty NSIS installer."
-          }
-          $install = Start-Process -FilePath $installer[0].FullName -ArgumentList '/S' -PassThru -Wait
-          if ($install.ExitCode -ne 0) { throw "Silent install failed: $($install.ExitCode)" }
-          $entry = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' |
-            ForEach-Object { Get-ItemProperty $_.PSPath } |
-            Where-Object DisplayName -eq 'Codex Monitor' |
-            Select-Object -First 1
-          if (-not $entry) { throw 'Codex Monitor uninstall registration not found.' }
-          $uninstaller = $entry.UninstallString.Trim('"')
-          $installDir = Split-Path $uninstaller
-          $executable = Get-ChildItem $installDir -Filter 'codex-monitor.exe' -Recurse | Select-Object -First 1
-          if (-not $executable) { throw 'Installed codex-monitor.exe not found.' }
-          $app = Start-Process -FilePath $executable.FullName -PassThru
-          Start-Sleep -Seconds 8
-          if ($app.HasExited) { throw "Installed app exited during smoke test: $($app.ExitCode)" }
-          Stop-Process -Id $app.Id -Force
-          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
-          if ($uninstall.ExitCode -ne 0) { throw "Silent uninstall failed: $($uninstall.ExitCode)" }
-      - name: Verify macOS bundle metadata and Universal architectures
+          cargo build --manifest-path src-tauri/Cargo.toml --locked --example verify_updater_signature
+          CODEX_MONITOR_SIGNATURE_VERIFY_BIN="$PWD/src-tauri/target/debug/examples/verify_updater_signature" node --test scripts/release-updater.node-test.mjs
+      - name: Validate signing configuration and build
+        shell: bash
+        env:
+          CODEX_MONITOR_RELEASE_BUILD: '1'
+          CODEX_MONITOR_UPDATER_PUBLIC_KEY: ${{ vars.CODEX_MONITOR_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$CODEX_MONITOR_UPDATER_PUBLIC_KEY"
+          test -n "$TAURI_SIGNING_PRIVATE_KEY"
+          node scripts/write-updater-build-config.mjs outputs/release-updater-config.json
+          npm run tauri -- build --bundles ${{ matrix.bundles }} ${{ matrix.target-args }} --config outputs/release-updater-config.json
+      - name: Record source and toolchain
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          PLATFORM: ${{ matrix.platform }}
+          BUNDLE_DIR: ${{ matrix.bundle-dir }}
+          CODEX_MONITOR_RELEASE_BUILD: '1'
+        run: node scripts/record-release-environment.mjs outputs/platform
+      - name: Verify universal architecture
         if: runner.os == 'macOS'
         shell: bash
         run: |
           set -euo pipefail
-          app_path="$(find '${{ matrix.bundle-dir }}/macos' -maxdepth 1 -name 'Codex Monitor.app' -print -quit)"
-          test -n "$app_path"
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$app_path/Contents/Info.plist")" = 'Codex Monitor'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app_path/Contents/Info.plist")" = '1.1.0'
-          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Contents/Info.plist")" = 'app.quotafloat.desktop'
-          executable="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Contents/Info.plist")"
-          file "$app_path/Contents/MacOS/$executable"
-          lipo "$app_path/Contents/MacOS/$executable" -verify_arch arm64 x86_64
-          codesign -dv --verbose=4 "$app_path" 2>&1 || true
-      - name: Name installers and generate SHA256
-        run: node scripts/prepare-release-artifacts.mjs "${{ matrix.bundle-dir }}" outputs/v1.1.0
+          app='${{ matrix.bundle-dir }}/macos/Codex Monitor.app'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app/Contents/Info.plist")" = 'app.quotafloat.desktop'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$app/Contents/Info.plist")" = '${{ needs.gate.outputs.version }}'
+          lipo "$app/Contents/MacOS/codex-monitor" -verify_arch arm64 x86_64
+      - name: Verify signatures against client public key and collect
+        env:
+          CODEX_MONITOR_UPDATER_PUBLIC_KEY: ${{ vars.CODEX_MONITOR_UPDATER_PUBLIC_KEY }}
+        run: node scripts/updater-artifacts.mjs collect ${{ matrix.platform }} "${{ matrix.bundle-dir }}" outputs/platform "${{ needs.gate.outputs.version }}" "${{ needs.gate.outputs.sha }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.artifact-name }}
-          path: outputs/v1.1.0/
+          name: signed-${{ matrix.platform }}-${{ needs.gate.outputs.sha }}
+          path: outputs/platform/
           if-no-files-found: error
           retention-days: 30
+
+  publish:
+    needs: [gate, build]
+    environment: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.gate.outputs.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: signed-*-${{ needs.gate.outputs.sha }}
+          path: outputs/incoming
+          merge-multiple: true
+      - name: Recheck remote version and tag before publication
+        run: node scripts/release-gate.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - name: Assemble one complete manifest
+        env:
+          CODEX_MONITOR_UPDATER_PUBLIC_KEY: ${{ vars.CODEX_MONITOR_UPDATER_PUBLIC_KEY }}
+        run: node scripts/updater-artifacts.mjs assemble outputs/incoming outputs/release "${{ needs.gate.outputs.version }}" "${{ needs.gate.outputs.sha }}"
+      - name: Create draft, upload complete set, then publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.gate.outputs.tag }}
+          SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" --repo bennick1/codex-monitor --target "$SOURCE_SHA" --draft --title "Codex Monitor $RELEASE_TAG" --notes '用户主动检查、确认下载并安装。更新包包含 Tauri updater 签名。此签名不代表 Apple Developer ID、公证或 Windows Authenticode；平台证书尚未配置。'
+          gh release upload "$RELEASE_TAG" outputs/release/* --repo bennick1/codex-monitor
+          node scripts/verify-release-assets.mjs outputs/release "$RELEASE_TAG"
+          gh release edit "$RELEASE_TAG" --repo bennick1/codex-monitor --draft=false --latest

@@ -17,6 +17,9 @@ vi.mock("../lib/bridge", () => ({
 const prefs: WidgetPreferences = { displayMode: "sidebar", sidebarSide: "right", sidebarOpacity: .9, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 const quota: ProviderSnapshot = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: null, resetCredits: 4, updatedAt: "2026-10-01T00:00:00Z", status: "ok", message: null };
 const update = vi.fn();
+const updaterOpen = vi.hoisted(() => vi.fn());
+vi.mock("../lib/updater", () => ({ openUpdateWindow: updaterOpen }));
+vi.mock("../hooks/useUpdater", () => ({ useUpdater: () => ({ state: { version: "2.0" } }) }));
 function mount(patch: Partial<WidgetPreferences> = {}, snapshot = quota) { return render(<Sidebar snapshot={snapshot} preferences={{ ...prefs, ...patch }} theme="light" onPreferences={update} onRefresh={vi.fn()} notice={null} />); }
 async function flush() { await act(async () => { await Promise.resolve(); }); }
 async function expand() { fireEvent.mouseEnter(screen.getByRole("main"), { screenX: 1900, screenY: 500 }); await flush(); }
@@ -869,4 +872,17 @@ it("republishes input regions when reopening an already expanded sidebar", async
   act(() => api.recovery.mock.calls[0][0]()); await flush();
   expect(api.regions).toHaveBeenCalledWith("rail", expect.any(Array));
   expect(api.phase).not.toHaveBeenCalled();
+});
+
+
+it("defaults automatic update checks on and saves the update preference independently", async () => {
+  mount(); await expand();
+  fireEvent.click(screen.getByRole("button", { name: "侧边栏菜单" })); await flush();
+  const automatic = screen.getByRole("checkbox", { name: "自动检查更新" }) as HTMLInputElement;
+  expect(automatic.checked).toBe(true);
+  fireEvent.click(automatic);
+  expect(update).toHaveBeenLastCalledWith(expect.objectContaining({ autoCheckUpdates: false, sidebarOpacity: .9 }));
+  fireEvent.click(screen.getByRole("button", { name: /检查更新/ })); await flush();
+  expect(updaterOpen).toHaveBeenCalledOnce();
+  expect(screen.getByText("2.0")).toBeTruthy();
 });

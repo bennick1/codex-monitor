@@ -200,7 +200,7 @@ pub fn stop_pointer_monitors() {
 pub fn state_plugin() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     tauri_plugin_window_state::Builder::default()
         .with_state_flags(saved_flags())
-        .with_denylist(&["deepseek-login"])
+        .with_denylist(&["deepseek-login", "updater"])
         .skip_initial_state("widget")
         .build()
 }

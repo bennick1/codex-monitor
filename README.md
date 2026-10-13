@@ -2,7 +2,7 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-Current release: **v1.2.1**, officially released. Updates are manual: Codex Monitor does not query, download, or install application updates in the background. Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.2.1-feature-validation-report.md) for the current status.
+Current release: **v1.2.1**, officially released. 本地在线更新实现支持主动或可关闭的后台检查；下载、验签与安装需要用户操作。普通开发构建未配置公钥时提供手动下载页。此实现尚未完成正式发布，双平台发布与实机证据见 [发布流程](docs/RELEASE.md)。 Download from [Codex Monitor Releases](https://github.com/bennick1/codex-monitor/releases). See the [release validation report](docs/v1.2.1-feature-validation-report.md) for the current status.
 
 ## Features
 
@@ -99,7 +99,7 @@ Run in PowerShell on Windows for an NSIS installer:
 npm run tauri -- build --bundles nsis --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
-These commands produce release-mode installers with application updater artifacts disabled. Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
+这些普通本地构建命令不生成 updater 制品；正式在线升级仅通过经过门禁的手动发布 workflow，使用独立签名配置生成制品。 Platform signing requires separately configured maintainer certificates. Output is under `src-tauri/target/release/bundle/`, or the target-specific directory for a Universal build.
 
 The frozen Branding sources are in [docs/branding/v1.2](docs/branding/v1.2/); production icons generated from them are in [src-tauri/icons](src-tauri/icons/).
 

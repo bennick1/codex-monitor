@@ -13,6 +13,7 @@ mod sidebar_glass_macos;
 #[cfg(target_os = "windows")]
 mod sidebar_glass_windows;
 mod token_stats;
+mod updater;
 
 use std::{
     fs,
@@ -22,7 +23,6 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[cfg(debug_assertions)]
 use models::UsageWindow;
 use models::{ProviderSnapshot, WidgetPreferences};
 use serde::Deserialize;
@@ -255,8 +255,9 @@ fn apply_short_window_test_override(
 // Explicit debug-only fixture for native feature validation in an isolated
 // application-data directory. Release builds always use the real provider.
 async fn fetch_provider_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
-    #[cfg(debug_assertions)]
-    if std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1") {
+    if (cfg!(debug_assertions) || updater::test_build_enabled())
+        && std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
+    {
         return ProviderSnapshot {
             provider: "codex".into(),
             display_name: "CODEX".into(),
@@ -445,7 +446,7 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 16);
+                assert_eq!(saved.as_object().unwrap().len(), 17);
                 assert_eq!(saved["displayMode"], "floating");
                 assert_eq!(saved["sidebarSide"], "right");
                 assert_eq!(saved["sidebarScale"], 1.0);
@@ -492,7 +493,20 @@ fn preferences_lock(state: &AppState) -> MutexGuard<'_, WidgetPreferences> {
     })
 }
 
+static PREFERENCE_WRITES: Mutex<bool> = Mutex::new(false);
+
+fn begin_update_install() {
+    *PREFERENCE_WRITES.lock().unwrap_or_else(|e| e.into_inner()) = true;
+}
+fn end_update_install() {
+    *PREFERENCE_WRITES.lock().unwrap_or_else(|e| e.into_inner()) = false;
+}
+
 fn persist_preferences(path: &PathBuf, value: &WidgetPreferences) -> Result<(), String> {
+    let installing = PREFERENCE_WRITES.lock().unwrap_or_else(|e| e.into_inner());
+    if *installing {
+        return Err("update installation in progress".into());
+    }
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|_| "failed to create settings directory".to_string())?;
@@ -1581,6 +1595,13 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    let updates = MenuItem::with_id(
+        app,
+        "updates",
+        "检查更新 / Check for updates",
+        true,
+        None::<&str>,
+    )?;
     let unlock = MenuItem::with_id(app, "unlock", "Unlock widget", true, None::<&str>)?;
     let pin = MenuItem::with_id(app, "pin", "Pin / Unpin Codex", true, None::<&str>)?;
     let language = MenuItem::with_id(
@@ -1707,6 +1728,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             &show,
             &refresh,
             &releases,
+            &updates,
             &settings,
             &display_mode,
             &theme,
@@ -1721,6 +1743,7 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             &show,
             &refresh,
             &releases,
+            &updates,
             &settings,
             &display_mode,
             &theme,
@@ -1779,6 +1802,12 @@ fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
             }
             "refresh" => {
                 let _ = app.emit_to("widget", "refresh-requested", ());
+            }
+            "updates" => {
+                let handle = app.clone();
+                tauri::async_runtime::spawn(async move {
+                    let _ = updater::open_update_window(handle.clone()).await;
+                });
             }
             "releases" => {
                 let _ = app.emit_to("widget", "release-page-requested", ());
@@ -1926,17 +1955,19 @@ fn show_widget(window: &tauri::WebviewWindow) {
 pub fn run() {
     #[allow(unused_mut)]
     let mut context = tauri::generate_context!();
+    updater::configure(&mut context).expect("invalid updater configuration");
     #[cfg(target_os = "macos")]
     macos_widget::prepare_config(context.config_mut());
     #[cfg(target_os = "macos")]
     let window_state = macos_widget::state_plugin();
     #[cfg(not(target_os = "macos"))]
     let window_state = WindowStateBuilder::default()
-        .with_denylist(&["deepseek-login"])
+        .with_denylist(&["deepseek-login", "updater"])
         .build();
     #[allow(unused_mut)]
     let mut app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
             if sidebar::recover(app).is_err() {
                 eprintln!("widget recovery failed");
@@ -1975,6 +2006,21 @@ pub fn run() {
                 && app.config().identifier == "app.quotafloat.desktop"
             {
                 return Err("native fixtures require an isolated validation identifier".into());
+            }
+            if updater::test_build_enabled() {
+                let home = std::env::var_os("CODEX_HOME")
+                    .filter(|value| !value.is_empty())
+                    .ok_or("updater QA requires isolated CODEX_HOME")?;
+                let path = std::path::Path::new(&home);
+                if std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() != Ok("1")
+                    || !path.is_dir()
+                    || std::fs::read_dir(path)?.next().is_some()
+                {
+                    return Err(
+                        "updater QA requires synthetic quota and an empty isolated CODEX_HOME"
+                            .into(),
+                    );
+                }
             }
             let token_db = app
                 .path()
@@ -2015,6 +2061,7 @@ pub fn run() {
                 expanded_height_mode: Mutex::new(ExpandedHeightMode::Full),
                 drag_mode: Mutex::new(None),
             });
+            updater::start(app.handle()).map_err(std::io::Error::other)?;
             if let Err(error) = setup_tray(app) {
                 #[cfg(target_os = "macos")]
                 {
@@ -2076,11 +2123,33 @@ pub fn run() {
         })
         .invoke_handler(|invoke| {
             // Remote sign-in content must never gain access to local app commands.
+            if !updater::allowed_command(
+                invoke.message.webview_ref().label(),
+                invoke.message.command(),
+            ) {
+                invoke.resolver.reject("unsupported caller or command");
+                return true;
+            }
+            if invoke.message.webview_ref().label() == "updater" {
+                let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+                    updater::get_updater_state,
+                    updater::check_for_updates,
+                    updater::download_update,
+                    updater::install_update,
+                    updater::open_update_window,
+                ];
+                return handler(invoke);
+            }
             if invoke.message.webview_ref().label() != "widget" {
                 invoke.resolver.reject("unsupported caller");
                 return true;
             }
             let handler: fn(tauri::ipc::Invoke<tauri::Wry>) -> bool = tauri::generate_handler![
+                updater::get_updater_state,
+                updater::check_for_updates,
+                updater::download_update,
+                updater::install_update,
+                updater::open_update_window,
                 deepseek::open_deepseek_login,
                 deepseek::disconnect_deepseek,
                 deepseek::get_deepseek_usage,

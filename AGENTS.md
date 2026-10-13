@@ -20,7 +20,7 @@ Codex Monitor 是基于 React 19、TypeScript 和 Tauri 2 的本地桌面监控�
 | `npm run tauri -- dev` | 启动桌面开发应用 |
 | `npm test` | 运行 Vitest 测试 |
 | `npm run build` | 执行 TypeScript 检查并构建前端 |
-| `npm run check:updater-policy` | 检查手动更新策略 |
+| `npm run check:updater-policy` | 检查在线更新安全与发布策略 |
 | `cargo test --manifest-path src-tauri/Cargo.toml --locked` | 运行 Rust 测试 |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check` | 检查 Rust 格式 |
 | `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings` | 执行 Rust 静态检查，警告视为失败 |
@@ -45,4 +45,4 @@ PR 应说明问题、行为变化、验证命令与结果，并关联已有 issu
 
 ## 隐私与配置
 
-遵守 `PRIVACY.md` 和 `SECURITY.md`：不得新增遥测、凭据持久化或原始响应日志。读取路径尊重 `CODEX_HOME`；不要提交 `auth.json`、`.env`、真实会话日志、数据库或安装包。保留额度与本地 Token 统计的独立语义，不用 Token 数量推算额度。应用保持手动更新策略；发布前须完成验收并获得维护者批准。
+遵守 `PRIVACY.md` 和 `SECURITY.md`：不得新增遥测、凭据持久化或原始响应日志。读取路径尊重 `CODEX_HOME`；不要提交 `auth.json`、`.env`、真实会话日志、数据库或安装包。保留额度与本地 Token 统计的独立语义，不用 Token 数量推算额度。在线更新使用固定本项目 manifest 与签名校验；后台只能检查，下载和安装须用户操作。发布前须完成验收并获得维护者批准，普通 push/PR 不发布。

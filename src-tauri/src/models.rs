@@ -44,6 +44,7 @@ impl ProviderSnapshot {
 #[serde(default, rename_all = "camelCase")]
 pub struct WidgetPreferences {
     pub deepseek_enabled: bool,
+    pub auto_check_updates: bool,
     pub display_mode: String,
     pub sidebar_side: String,
     pub sidebar_opacity: f64,
@@ -82,6 +83,7 @@ impl Default for WidgetPreferences {
     fn default() -> Self {
         Self {
             deepseek_enabled: false,
+            auto_check_updates: true,
             display_mode: "floating".into(),
             sidebar_side: "right".into(),
             sidebar_opacity: 0.9,
@@ -247,5 +249,23 @@ mod sidebar_preference_tests {
                 assert!(restored.deepseek_enabled);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod updater_preferences_tests {
+    use super::*;
+    #[test]
+    fn updates_default_on_and_false_survives_roundtrip() {
+        let legacy: WidgetPreferences = serde_json::from_str("{}").unwrap();
+        assert!(legacy.auto_check_updates);
+        let disabled: WidgetPreferences =
+            serde_json::from_str(r#"{"autoCheckUpdates":false}"#).unwrap();
+        let saved = serde_json::to_string(&disabled.normalized()).unwrap();
+        assert!(
+            !serde_json::from_str::<WidgetPreferences>(&saved)
+                .unwrap()
+                .auto_check_updates
+        );
     }
 }

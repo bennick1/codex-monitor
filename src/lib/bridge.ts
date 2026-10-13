@@ -5,7 +5,7 @@ import type { TokenStatisticsSnapshot, TokenStatisticsNotification, TokenStatist
 import type { SidebarInputRect } from "./widgetGeometry";
 import type { SidebarGlassFrame, SidebarGlassStatus } from "./sidebarGlass";
 
-const defaultPreferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const defaultPreferences: WidgetPreferences = { autoCheckUpdates: true, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
 
 const mockSnapshot: ProviderSnapshot = {
   provider: "codex",

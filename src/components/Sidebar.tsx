@@ -2,6 +2,8 @@ import { ArrowClockwise, ArrowLeft, ArrowRight, ArrowUp, GearSix, PushPin, X } f
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { ProviderSnapshot, WidgetPreferences, WidgetTheme } from "../types";
 import { deepSeekSession, getAccountUsage, getAutostart, getDeepSeekUsage, listenDeepSeekReady, listenSidebarRecovery, listenSidebarDismiss, listenSidebarPointer, setAlwaysOnTop, setSidebarPhase, syncSidebarRegions, sidebarAction, type SidebarPhase, type SidebarPointer } from "../lib/bridge";
+import { useUpdater } from "../hooks/useUpdater";
+import { openUpdateWindow } from "../lib/updater";
 import { sidebarInputRegions } from "../lib/widgetGeometry";
 import { useSidebarGlass } from "../hooks/useSidebarGlass";
 import { accountDays, formatMoney, durationText, EMPTY_DEEPSEEK, formatTokenCount, formatTokenCountExact, remainingFunds, sidebarQuotaWindows, sumTokens, type AccountUsage, type DeepSeekUsage } from "../lib/sidebarData";
@@ -40,6 +42,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
   snapshot: ProviderSnapshot; preferences: WidgetPreferences; theme: WidgetTheme;
   onPreferences: (value: WidgetPreferences) => void; onRefresh: () => void; notice: string | null;
 }) {
+  const { state: updater } = useUpdater();
   const zh = preferences.language === "zh-CN";
   const showCodex = preferences.sidebarShowCodex !== false;
   const showDeepseek = preferences.sidebarShowDeepseek !== false;
@@ -481,6 +484,8 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
         <button onClick={() => void run(async () => setAutostart(await sidebarAction("autostart")))}>{words("开机启动", "Start at login")}<span>{autostart === null ? "—" : autostart ? words("已开启", "On") : words("已关闭", "Off")}</span></button>
         <button onClick={() => void run(() => deepSeekSession("open"))}>{words("登录 / 管理 DeepSeek", "Sign in / manage DeepSeek")}</button>
         {preferences.deepseekEnabled && <button onClick={() => void run(async () => { await deepSeekSession("disconnect"); setDeepseek(EMPTY_DEEPSEEK); })}>{words("退出 DeepSeek 登录", "Sign out of DeepSeek")}</button>}
+        <label>{words("自动检查更新", "Automatically check for updates")}<input type="checkbox" checked={preferences.autoCheckUpdates !== false} onChange={event => update({ autoCheckUpdates: event.target.checked })} /></label>
+        <button onClick={() => void run(openUpdateWindow)}>{words("检查更新", "Check for updates")}{updater.version && <span>{updater.version}</span>}</button>
         <button onClick={() => void run(() => sidebarAction("releases"))}>{words("打开版本下载页", "Release downloads")}</button>
         <button className="sidebar-quit" onClick={() => void run(() => sidebarAction("quit"))}>{words("退出 Codex Monitor", "Quit Codex Monitor")}</button>
       </section> : panelPhase === "detail" ? <section ref={panel} className={`sidebar-panel sidebar-detail sidebar-detail--${provider}`} data-visible={phase === "detail"} data-parked={phase !== "detail" && nativePhase.current !== "detail"} aria-hidden={phase !== "detail"} inert={phase !== "detail"} aria-label={provider === "codex" ? words("Codex 用量详情", "Codex usage details") : words("DeepSeek 用量详情", "DeepSeek usage details")}>

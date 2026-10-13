@@ -16,6 +16,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check:updater-policy
+      - run: node --test scripts/release-updater.node-test.mjs
       - run: npm test
       - run: npm run build
       - run: npm audit --audit-level=high
@@ -53,6 +54,12 @@ jobs:
       - run: cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check
       - run: cargo test --manifest-path src-tauri/Cargo.toml --locked
       - run: cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+      - name: Test signed archive internal identity binding
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          cargo build --manifest-path src-tauri/Cargo.toml --locked --example verify_updater_signature
+          CODEX_MONITOR_SIGNATURE_VERIFY_BIN="$PWD/src-tauri/target/debug/examples/verify_updater_signature" node --test scripts/release-updater.node-test.mjs
       - run: ${{ matrix.build-command }}
       - name: Verify Windows GUI subsystem
         if: runner.os == 'Windows'

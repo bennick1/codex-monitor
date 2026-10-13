@@ -24,6 +24,7 @@ export interface ProviderSnapshot {
 }
 
 export interface WidgetPreferences {
+  autoCheckUpdates?: boolean;
   deepseekEnabled?: boolean;
   displayMode?: "floating" | "sidebar";
   sidebarSide?: "left" | "right" | "top";

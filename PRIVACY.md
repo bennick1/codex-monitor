@@ -46,7 +46,7 @@ DeepSeek 网站本身的资源请求及登录处理由该服务控制，适用�
 
 macOS 侧边栏通过 AppKit 鼠标按下事件判断设置外部点击；鼠标移动及左键拖动时，在内存中判断指针是否位于侧边窗口内，用于未激活应用时的悬停展开与离开收起。窗口内移动时，前端接收相对于侧边窗口的坐标、窗口尺寸及移动序号，用于识别额度圆环与齿轮，并过滤缩放产生的过时事件；窗口外仅发送离开状态，不发送窗口外位置或全局坐标。监听不包含键盘事件，不记录、保存或上传鼠标轨迹及点击内容，应用退出时移除监听。
 
-V1 has no runtime updater and does not query, download, or install application updates. Choosing the tray's manual download entry opens `https://github.com/bennick1/codex-monitor/releases` in the browser. Codex credentials and local statistics are not sent to GitHub.
+在线更新检查访问固定的 `https://github.com/bennick1/codex-monitor/releases/latest/download/latest.json`；用户可关闭后台检查。下载和安装须用户操作，更新包使用嵌入公钥验签。GitHub/CDN 会收到普通网络请求信息（例如 IP 与请求时间），不会收到 Codex 凭据、会话或本地统计。未配置公钥时可打开 `https://github.com/bennick1/codex-monitor/releases` 手动下载。独立 QA 构建仅允许本机 HTTP 测试端点，正式构建拒绝 QA 配置。
 
 应用本身不包含遥测、分析、崩溃上报或第三方追踪；可选网站页面的行为按上节说明。
 
