@@ -1,5 +1,5 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { useUpdater } from "./hooks/useUpdater";
 import { openUpdateWindow } from "./lib/updater";
@@ -11,25 +11,9 @@ import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
 import { mergeSnapshots } from "./lib/snapshots";
 import { DESKTOP_PALETTES } from "./lib/desktopPalette";
+import { DEFAULT_PREFERENCES as DEFAULT_PREFS, normalizePreferences } from "./lib/widgetPreferences";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "./types";
 
-const DEFAULT_PREFS: WidgetPreferences = { autoCheckUpdates: true, displayMode: "floating", sidebarSide: "right", sidebarOpacity: 0.9, sidebarGlassEnabled: true, deepseekEnabled: false, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
-const normalizeSkin = (value: unknown): WidgetSkin => value === "blur" || value === "computer" ? value : "default";
-const normalizePreferences = (value: Partial<WidgetPreferences>): WidgetPreferences => ({
-  ...DEFAULT_PREFS,
-  ...value,
-  language: normalizeLanguage(value.language),
-  selectedSkin: normalizeSkin(value.selectedSkin),
-  displayMode: value.displayMode === "sidebar" ? "sidebar" : "floating",
-  sidebarSide: value.sidebarSide === "left" || value.sidebarSide === "top" ? value.sidebarSide : "right",
-  sidebarShowCodex: value.sidebarShowCodex !== false,
-  sidebarShowDeepseek: value.sidebarShowDeepseek !== false,
-  autoCheckUpdates: value.autoCheckUpdates !== false,
-  sidebarGlassEnabled: value.sidebarGlassEnabled !== false,
-  sidebarOpacity: typeof value.sidebarOpacity === "number" && Number.isFinite(value.sidebarOpacity) ? Math.min(1, Math.max(.2, value.sidebarOpacity)) : .9,
-  sidebarScale: typeof value.sidebarScale === "number" && Number.isFinite(value.sidebarScale) ? Math.min(1.3, Math.max(.8, value.sidebarScale)) : 1,
-  locked: value.displayMode === "sidebar" ? false : value.locked ?? false,
-});
 const INITIAL_SNAPSHOT: ProviderSnapshot = {
   provider: "codex",
   displayName: "CODEX",
@@ -56,6 +40,26 @@ export default function App() {
     confirmedPreferences.current = normalized;
     setPreferences(normalized);
   }, []);
+  useLayoutEffect(() => {
+    // Keep the existing host/main composition intact. Applying the single
+    // opacity factor to the host also leaves each skin's child animation alone.
+    const root = document.getElementById("root");
+    if (!root || preferences.displayMode === "sidebar") return;
+    const previousOpacity = root.style.opacity;
+    const previousTransform = root.style.transform;
+    const hadVisualRootClass = root.classList.contains("widget-visual-root");
+    root.classList.add("widget-visual-root");
+    root.style.opacity = String(preferences.opacityPercent / 100);
+    // Rasterize the existing host as one surface before applying opacity.
+    // This keeps fractional rounded edges on the same antialiasing path as
+    // the undimmed widget; the identity transform leaves layout unchanged.
+    if (preferences.opacityPercent < 100) root.style.transform = "translateZ(0)";
+    return () => {
+      root.style.opacity = previousOpacity;
+      root.style.transform = previousTransform;
+      if (!hadVisualRootClass) root.classList.remove("widget-visual-root");
+    };
+  }, [preferences.opacityPercent, preferences.displayMode]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hovered, setHovered] = useState(false);
   const [compact, setCompact] = useState(true);
@@ -320,7 +324,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ display: "contents" }}>
+    <>
     {modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
       <strong>{language === "zh-CN" ? "展示模式" : "Display mode"}</strong>
       <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "sidebar" }); }}>{language === "zh-CN" ? "切换到侧边栏" : "Switch to sidebar"}</button>
@@ -348,6 +352,6 @@ export default function App() {
       skin={skin}
       style={cardStyle}
       notice={operationError}
-    /></div>
+    /></>
   );
 }

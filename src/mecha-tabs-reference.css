@@ -1,0 +1,140 @@
+/* CM-130-TABS-REFERENCE-EXACT-20261001. Per-button, text-free source slices.
+   Runtime text, aria-pressed and click handling remain in TokenUsage.
+   The 36px paint area uses the existing whitespace; layout remains 33px. */
+.quota-card.quota-card--skin-mecha-light .token-heading { gap: 2px; margin-bottom: 3px; }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch {
+  --tab-first-width: 89px;
+  --tab-middle-width: 78px;
+  --tab-last-width: 91px;
+  --tab-first-idle: url("../assets/mecha-light/tabs-reference-exact/blue-first-idle.png");
+  --tab-middle-idle: url("../assets/mecha-light/tabs-reference-exact/blue-middle-idle.png");
+  --tab-last-idle: url("../assets/mecha-light/tabs-reference-exact/blue-last-idle.png");
+  --tab-first-active: url("../assets/mecha-light/tabs-reference-exact/blue-first-active.png");
+  --tab-middle-active: url("../assets/mecha-light/tabs-reference-exact/blue-middle-active.png");
+  --tab-last-active: url("../assets/mecha-light/tabs-reference-exact/blue-last-active.png");
+  height: 33px; gap: 0; padding: 0; align-items: stretch;
+  border: 0; border-radius: 0; background: transparent; box-shadow: none;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--caution .token-heading > .token-switch {
+  --tab-first-width: 87px;
+  --tab-middle-width: 79px;
+  --tab-last-width: 92px;
+  --tab-first-idle: url("../assets/mecha-light/tabs-reference-exact/amber-first-idle.png");
+  --tab-middle-idle: url("../assets/mecha-light/tabs-reference-exact/amber-middle-idle.png");
+  --tab-last-idle: url("../assets/mecha-light/tabs-reference-exact/amber-last-idle.png");
+  --tab-first-active: url("../assets/mecha-light/tabs-reference-exact/amber-first-active.png");
+  --tab-middle-active: url("../assets/mecha-light/tabs-reference-exact/amber-middle-active.png");
+  --tab-last-active: url("../assets/mecha-light/tabs-reference-exact/amber-last-active.png");
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--critical .token-heading > .token-switch {
+  --tab-first-width: 86px;
+  --tab-middle-width: 79px;
+  --tab-last-width: 93px;
+  --tab-first-idle: url("../assets/mecha-light/tabs-reference-exact/red-first-idle.png");
+  --tab-middle-idle: url("../assets/mecha-light/tabs-reference-exact/red-middle-idle.png");
+  --tab-last-idle: url("../assets/mecha-light/tabs-reference-exact/red-last-idle.png");
+  --tab-first-active: url("../assets/mecha-light/tabs-reference-exact/red-first-active.png");
+  --tab-middle-active: url("../assets/mecha-light/tabs-reference-exact/red-middle-active.png");
+  --tab-last-active: url("../assets/mecha-light/tabs-reference-exact/red-last-active.png");
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button {
+  position: relative; isolation: isolate; min-width: 0; flex: none;
+  padding: 0; border: 0; border-radius: 0; background: transparent;
+  box-shadow: none; clip-path: none;
+  color: #344052; font-family: "Quota Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 12px; line-height: 18px; font-weight: 400;
+  animation: none; transition: none;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:first-child {
+  width: var(--tab-first-width); --tab-idle: var(--tab-first-idle); --tab-active: var(--tab-first-active);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:nth-child(2) {
+  width: var(--tab-middle-width); --tab-idle: var(--tab-middle-idle); --tab-active: var(--tab-middle-active);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:last-child {
+  width: var(--tab-last-width); --tab-idle: var(--tab-last-idle); --tab-active: var(--tab-last-active);
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::before {
+  content: ""; position: absolute; z-index: -1; pointer-events: none;
+  top: -2px; left: 0; right: 0; height: 36px;
+  background: var(--tab-idle) 0 0 / 100% 36px no-repeat;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button::after { content: none; }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button[aria-pressed="true"] {
+  color: #17233a; font-weight: 650;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button[aria-pressed="true"]::before {
+  background-image: var(--tab-active);
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--unknown .token-heading > .token-switch > button::before { filter: grayscale(1); }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:hover { color: #132f4e; }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch > button:focus-visible {
+  outline: 2px dashed var(--mecha-accent); outline-offset: -4px; z-index: 1;
+}
+/* Label anchors measured against the frozen three-color source, without moving
+   the button, plate, hit area, focus outline or data/list layout. English stays
+   live in the existing 12px application font; it has no pixel reference. */
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button {
+  font-family: "Hiragino Sans GB", "Quota Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 10px; font-weight: 400; color: #17233a;
+  --label-x: .5px; --label-y: 0px; --label-shadow: none; --label-stroke: .1px;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button:nth-child(2) {
+  font-weight: 600; color: #344052; --label-x: 0px; --label-shadow: 0 0 1px white; --label-stroke: .6px;
+}
+.quota-card.quota-card--skin-mecha-light:is(.quota-card--healthy,.quota-card--critical) .token-heading > .token-switch[data-language="zh-CN"] > button:first-child[aria-pressed="false"] {
+  font-family: "Arial Unicode MS", "Hiragino Sans GB", "Quota Sans", "Segoe UI", system-ui, sans-serif;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button > span {
+  position: relative; left: var(--label-x); top: var(--label-y); text-shadow: var(--label-shadow);
+  -webkit-text-stroke: var(--label-stroke) white; paint-order: stroke fill;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--caution .token-heading > .token-switch[data-language="zh-CN"] > button {
+  --label-x: .75px; --label-stroke: 0px;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--caution .token-heading > .token-switch[data-language="zh-CN"] > button:nth-child(2) {
+  --label-x: -.5px; --label-shadow: 0 0 1px white; --label-stroke: .4px; color: #425063;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--critical .token-heading > .token-switch[data-language="zh-CN"] > button:first-child {
+  --label-x: 2px; --label-stroke: 0px;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--critical .token-heading > .token-switch[data-language="zh-CN"] > button:nth-child(2) {
+  color: #425063;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button[aria-pressed="true"] {
+  font-family: "PingFang SC", "Quota Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 10.25px; font-weight: 500; color: #132b46;
+  --label-x: .25px; --label-y: -1px; --label-shadow: none; --label-stroke: .2px;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--caution .token-heading > .token-switch[data-language="zh-CN"] > button[aria-pressed="true"] {
+  --label-x: .75px; --label-stroke: 0px; color: #17233a;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--critical .token-heading > .token-switch[data-language="zh-CN"] > button[aria-pressed="true"] {
+  --label-x: .25px; --label-stroke: 0px; color: #17233a;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--healthy .token-heading > .token-switch[data-language="zh-CN"] > button[aria-pressed="true"] {
+  font-size: 10px; font-weight: 600;
+}
+.quota-card.quota-card--skin-mecha-light.quota-card--healthy .token-heading > .token-switch[data-language="zh-CN"] > button:nth-child(2)[aria-pressed="false"] {
+  --label-shadow: 0 0 0 white;
+}
+/* Only decoded, background-matched zh-CN label patches replace visible fonts.
+   Geometry and panel decoration above are unchanged. Keep one semantic span. */
+.mecha-tab-label-patch { display: none; pointer-events: none; user-select: none; }
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button > .mecha-tab-label-patch[data-ready="true"] {
+  display: block; position: absolute; max-width: none; pointer-events: none;
+}
+.quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button > .token-tab-label[data-label-status="ready"] {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0; left: 50%; top: 50%;
+  text-shadow: none; -webkit-text-stroke: 0;
+}
+@media (forced-colors: active) {
+  .quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button > .mecha-tab-label-patch[data-ready="true"] { display: none; }
+  .quota-card.quota-card--skin-mecha-light .token-heading > .token-switch[data-language="zh-CN"] > button > .token-tab-label[data-label-status="ready"] {
+    position: relative; width: auto; height: auto; padding: 0; margin: 0;
+    overflow: visible; clip: auto; clip-path: none; left: var(--label-x); top: var(--label-y);
+    color: ButtonText; text-shadow: none; -webkit-text-stroke: 0;
+  }
+}

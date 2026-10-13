@@ -16,7 +16,7 @@ const snapshot: ProviderSnapshot = {
 };
 const preferences: WidgetPreferences = {
   locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null,
-  autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default",
+  autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default", opacityPercent: 100,
 };
 
 describe("free built-in widget skins", () => {

@@ -11,7 +11,7 @@ import type { TurnTokenUsage } from "../lib/tokenStatistics";
 import type { ProviderSnapshot, WidgetPreferences } from "../types";
 afterEach(cleanup);
 const provider: ProviderSnapshot = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 }, resetCredits: 1, updatedAt: new Date().toISOString(), status: "ok", message: null };
-const preferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "en", appearance: "light", selectedSkin: "default" };
+const preferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "en", appearance: "light", selectedSkin: "default", opacityPercent: 100 };
 const turn = (overrides: Partial<TurnTokenUsage> = {}): TurnTokenUsage => ({ model: "synthetic-model-very-long-name", effort: "xhigh", fastMode: null, tokens: "9223372036854775807", completedAt: "2026-09-10T01:00:00Z", weeklyRemaining: 65.125, quotaObservedAt: "2026-09-10T01:10:00Z", isPartial: true, ...overrides });
 function snapshot(rows = [turn()]) { return tokenSnapshot({ turnStatistics: { weeklyResetAt: "2026-09-13T00:00:00Z", turns: rows } }); }
 for (const skin of ["default", "blur", "computer"] as const) for (const language of ["zh-CN", "en"] as const) for (const short of [true, false]) for (const mode of ["overview", "models", "turns"] as const) {

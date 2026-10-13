@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="86" height="99" viewBox="0 0 86 99" preserveAspectRatio="none">
+  <view id="first" viewBox="0 0 86 33"/>
+  <view id="middle" viewBox="0 33 86 33"/>
+  <view id="last" viewBox="0 66 86 33"/>
+  <!-- A directional colour layer beneath the white inner rim, not a focus ring. -->
+  <g fill="none" stroke="white">
+    <path d="M7.2 3H80.9L83 5.2V25.9L80.2 28.4H7.2L3.1 25.1V7.2Z" fill="white" fill-opacity=".18" stroke="none"/>
+    <path d="M1.2 26.5V6.3L6.4 1.2H81.7L84.8 4.4V28.6L81.2 31.8H6.4L1.2 26.5" stroke-width="1.25"/>
+    <path d="M1.3 16V6.3L6.4 1.2H22" stroke-width="1.7"/>
+  </g>
+  <g transform="translate(0 33)" fill="none" stroke="white">
+    <path d="M6.6 3H80.9L83 5.2V25.9L80.2 28.4H10.7L6 23.4H2.6V7.2Z" fill="white" fill-opacity=".18" stroke="none"/>
+    <path d="M.8 24V6.3L5.9 1.2H81.7L84.8 4.4V28.6L81.2 31.8H10L5 26H.8" stroke-width="1.25"/>
+    <path d="M.9 16V6.3L5.9 1.2H22" stroke-width="1.7"/>
+  </g>
+  <g transform="translate(0 66)" fill="none" stroke="white">
+    <path d="M7.2 3H78.4L83 7.5V23.9L77.5 28.4H10.7L6 23.4H2.6V7.5Z" fill="white" fill-opacity=".18" stroke="none"/>
+    <path d="M.8 24V6.8L6.4 1.2H79.2L84.8 6.8V25.7L78.7 31.8H10L5 26H.8" stroke-width="1.25"/>
+    <path d="M.9 16V6.8L6.4 1.2H22" stroke-width="1.7"/>
+  </g>
+</svg>

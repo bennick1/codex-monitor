@@ -1,0 +1,1006 @@
+{
+  "task": "CM-130-TABS-TEXT-LAYER-FINAL-20261002",
+  "source": "docs/design/v1.3.0/mecha-light/references/expanded-three-states.png",
+  "sourceSha256": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+  "referenceMapSha256": "8034d9fce1029b5b56a057a1b6fe22770183f789837e8e9d7f562655e3129936",
+  "normalization": "Pillow affine BICUBIC, isotropic scale 258/sourceWidth; x0 -> 0; y583 -> 35. No local registration or warping.",
+  "outputCanvas": [
+    258,
+    36
+  ],
+  "assetType": "background-bound label patch",
+  "boundary": "Only the existing normalized repair support. No mask expansion, border or panel changes.",
+  "derivedStates": "Overview/models selected are interaction derivatives, never direct pixel-reference acceptance.",
+  "entries": [
+    {
+      "id": "zh-CN:overview:blue-turns:idle:blue-first-idle",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "blue-first-idle",
+      "panelAsset": "blue-first-idle.png",
+      "panelSha256": "e28ec1e2e20ed1377c28648397a265f776b15f31028e5e47b9deaaa79e6bb4dd",
+      "sourceTextRectangle": [
+        117,
+        550,
+        149,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        33,
+        12,
+        56,
+        25
+      ],
+      "paintRectangle": [
+        33,
+        12,
+        23,
+        13
+      ],
+      "buttonRectangle": [
+        33,
+        10,
+        23,
+        13
+      ],
+      "asset": "blue-label-overview-idle.png",
+      "size": [
+        23,
+        13
+      ],
+      "sha256": "9454e30480365ad07f83a55b741e3b97069fdc7e14dd32cc01b8c1c45b7badd7",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:overview:blue-turns:active:blue-first-active",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "blue-first-active",
+      "panelAsset": "blue-first-active.png",
+      "panelSha256": "20dffb0a5b9e7b6a1b7a561240f14e0b251b7930d6d8cf8a0d1e805f6dbad11a",
+      "sourceTextRectangle": [
+        117,
+        550,
+        149,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        33,
+        12,
+        56,
+        25
+      ],
+      "paintRectangle": [
+        33,
+        11,
+        23,
+        13
+      ],
+      "buttonRectangle": [
+        33,
+        9,
+        23,
+        13
+      ],
+      "asset": "blue-label-overview-active.png",
+      "size": [
+        23,
+        13
+      ],
+      "sha256": "f0f07eb670b2ce9d29aa34737ac89341fc2a0392a64d7018d6e120e0c02e72ca",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:models:blue-turns:idle:blue-middle-idle",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "blue-middle-idle",
+      "panelAsset": "blue-middle-idle.png",
+      "panelSha256": "f68417936df6ae6bbddcc7668ee3a499aa8debb3002b66105a87426a69b6abdc",
+      "sourceTextRectangle": [
+        236,
+        550,
+        282,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        112,
+        12,
+        144,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        12,
+        32,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        10,
+        32,
+        13
+      ],
+      "asset": "blue-label-models-idle.png",
+      "size": [
+        32,
+        13
+      ],
+      "sha256": "75aa8ac918afb9b9b07226ba29bc4fd93384bdb4b0b0f56e691fec4abff81cff",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:models:blue-turns:active:blue-middle-active",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "blue-middle-active",
+      "panelAsset": "blue-middle-active.png",
+      "panelSha256": "fada2a7fa733598bf3ca62bef549fa91219669be059b3c5dbaadc32a572f3d8a",
+      "sourceTextRectangle": [
+        236,
+        550,
+        282,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        112,
+        12,
+        144,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        11,
+        32,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        9,
+        32,
+        13
+      ],
+      "asset": "blue-label-models-active.png",
+      "size": [
+        32,
+        13
+      ],
+      "sha256": "7d1f5db1810ac1e30c70690bae8b94e1d0fd3de9ec4365af7708044ae786cb1d",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:turns:blue-turns:idle:blue-last-idle",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "blue-last-idle",
+      "panelAsset": "blue-last-idle.png",
+      "panelSha256": "09244a4b4cc35296ae234a520c6c1f0f64049ac39ab2d0584f73428ce3f976b7",
+      "sourceTextRectangle": [
+        364,
+        549,
+        412,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        196,
+        12,
+        229,
+        25
+      ],
+      "paintRectangle": [
+        29,
+        13,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        29,
+        11,
+        33,
+        13
+      ],
+      "asset": "blue-label-turns-idle.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "c6f2a50e4767eea65c59951f1f6ea054e1ae5511892e324e02d30ba2dd2623bd",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:turns:blue-turns:active:blue-last-active",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "blue",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "blue-last-active",
+      "panelAsset": "blue-last-active.png",
+      "panelSha256": "63c9069ebbdb7fa3dad2a9c3ea51d61f9753645e73f4f6e08958fadec5b89d6e",
+      "sourceTextRectangle": [
+        364,
+        549,
+        412,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        196,
+        12,
+        229,
+        25
+      ],
+      "paintRectangle": [
+        29,
+        12,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        29,
+        10,
+        33,
+        13
+      ],
+      "asset": "blue-label-turns-active.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "9c9ed94523e44b05ace37d276e7e7dc71b538c2e9fcfb9fadcab02d2de4c9f4a",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5193798449612403,
+        0,
+        65,
+        0,
+        1.5193798449612403,
+        529.8217054263566
+      ]
+    },
+    {
+      "id": "zh-CN:overview:amber-turns:idle:amber-first-idle",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "amber-first-idle",
+      "panelAsset": "amber-first-idle.png",
+      "panelSha256": "e026a8b4bfc2b21d73d31ee9ed9b40a374d65071274cc872fde2a71e790a8f95",
+      "sourceTextRectangle": [
+        588,
+        550,
+        620,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        33,
+        12,
+        55,
+        25
+      ],
+      "paintRectangle": [
+        33,
+        12,
+        22,
+        13
+      ],
+      "buttonRectangle": [
+        33,
+        10,
+        22,
+        13
+      ],
+      "asset": "amber-label-overview-idle.png",
+      "size": [
+        22,
+        13
+      ],
+      "sha256": "3aa6843fb37e2ae09faa2eb2028579800d4db4c8ee9c7581dbf6f2e49ff7e7db",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:overview:amber-turns:active:amber-first-active",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "amber-first-active",
+      "panelAsset": "amber-first-active.png",
+      "panelSha256": "a47b0e326a99ee49a2250ee33eb19fd78f485a904c1ec15696528f4d2c0921d8",
+      "sourceTextRectangle": [
+        588,
+        550,
+        620,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        33,
+        12,
+        55,
+        25
+      ],
+      "paintRectangle": [
+        33,
+        11,
+        22,
+        13
+      ],
+      "buttonRectangle": [
+        33,
+        9,
+        22,
+        13
+      ],
+      "asset": "amber-label-overview-active.png",
+      "size": [
+        22,
+        13
+      ],
+      "sha256": "e311d5d739e22d6f476390d06b337a18fd5576741e1f2d733c52f4f23dc10150",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:models:amber-turns:idle:amber-middle-idle",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "amber-middle-idle",
+      "panelAsset": "amber-middle-idle.png",
+      "panelSha256": "7764644a115adb8d36b10a337bbec279df1f3241813d9f36f30f85fd3047bd24",
+      "sourceTextRectangle": [
+        702,
+        550,
+        749,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        110,
+        12,
+        142,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        12,
+        32,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        10,
+        32,
+        13
+      ],
+      "asset": "amber-label-models-idle.png",
+      "size": [
+        32,
+        13
+      ],
+      "sha256": "b2420a24fcbac3782c1b00eb673790477d433d27fda134ba4c5cdb36166a614c",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:models:amber-turns:active:amber-middle-active",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "amber-middle-active",
+      "panelAsset": "amber-middle-active.png",
+      "panelSha256": "bf9a40eab43dd725a8d1e23dc860607f5ddda8a5d6fd68288ec1bd882b405e28",
+      "sourceTextRectangle": [
+        702,
+        550,
+        749,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        110,
+        12,
+        142,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        11,
+        32,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        9,
+        32,
+        13
+      ],
+      "asset": "amber-label-models-active.png",
+      "size": [
+        32,
+        13
+      ],
+      "sha256": "4ff79bb1ff5e5f99acbbf58d862bf95fdb33a87f6e8d4054339bca89b3479a54",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:turns:amber-turns:idle:amber-last-idle",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "amber-last-idle",
+      "panelAsset": "amber-last-idle.png",
+      "panelSha256": "7f0f8afb94d74560cfc8986c8937c857c82abd8fd9a4222f28c151c595c68dda",
+      "sourceTextRectangle": [
+        831,
+        549,
+        878,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        196,
+        11,
+        229,
+        25
+      ],
+      "paintRectangle": [
+        30,
+        12,
+        33,
+        14
+      ],
+      "buttonRectangle": [
+        30,
+        10,
+        33,
+        14
+      ],
+      "asset": "amber-label-turns-idle.png",
+      "size": [
+        33,
+        14
+      ],
+      "sha256": "42f6bb3497eefd80c253d9fdfba03d60cca1940c72a11d81cbe67bba62beac5a",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:turns:amber-turns:active:amber-last-active",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "amber",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "amber-last-active",
+      "panelAsset": "amber-last-active.png",
+      "panelSha256": "b05826a35af4793d9ae0efb6c586dc3510e6549f0220e8753da6314dbc5dcce3",
+      "sourceTextRectangle": [
+        831,
+        549,
+        878,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        196,
+        11,
+        229,
+        25
+      ],
+      "paintRectangle": [
+        30,
+        11,
+        33,
+        14
+      ],
+      "buttonRectangle": [
+        30,
+        9,
+        33,
+        14
+      ],
+      "asset": "amber-label-turns-active.png",
+      "size": [
+        33,
+        14
+      ],
+      "sha256": "576efcfb653628cc1857f2362edb4a24560b0c39b0d9dc23e8e9fea7a0bc2fd0",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.4883720930232558,
+        0,
+        538,
+        0,
+        1.4883720930232558,
+        530.9069767441861
+      ]
+    },
+    {
+      "id": "zh-CN:overview:red-turns:idle:red-first-idle",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "red-first-idle",
+      "panelAsset": "red-first-idle.png",
+      "panelSha256": "de08ab9bbf439690c840530458268c2fa3bb0c996c1c99908e5928644d0e95b0",
+      "sourceTextRectangle": [
+        1052,
+        550,
+        1083,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        34,
+        13,
+        56,
+        25
+      ],
+      "paintRectangle": [
+        34,
+        13,
+        22,
+        12
+      ],
+      "buttonRectangle": [
+        34,
+        11,
+        22,
+        12
+      ],
+      "asset": "red-label-overview-idle.png",
+      "size": [
+        22,
+        12
+      ],
+      "sha256": "fd68fcd755a9b1a56ebca8973c664fa103f15d2b0010d12c2376c440d2b6721f",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    },
+    {
+      "id": "zh-CN:overview:red-turns:active:red-first-active",
+      "locale": "zh-CN",
+      "labelKey": "overview",
+      "label": "总览",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "red-first-active",
+      "panelAsset": "red-first-active.png",
+      "panelSha256": "b6c6936ece28063600b525daf961e283687dc4af71c3d28eb8ac7eecb534aa82",
+      "sourceTextRectangle": [
+        1052,
+        550,
+        1083,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        34,
+        13,
+        56,
+        25
+      ],
+      "paintRectangle": [
+        34,
+        12,
+        22,
+        12
+      ],
+      "buttonRectangle": [
+        34,
+        10,
+        22,
+        12
+      ],
+      "asset": "red-label-overview-active.png",
+      "size": [
+        22,
+        12
+      ],
+      "sha256": "4c04bca0e881bdbb0b9f3ac3f01e0d811e4c65e81841a9c4b6c46e1b88f849c7",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    },
+    {
+      "id": "zh-CN:models:red-turns:idle:red-middle-idle",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "red-middle-idle",
+      "panelAsset": "red-middle-idle.png",
+      "panelSha256": "da92084e15492aa2549888b047581768b1141455c290c3bcd58b14983915a9b0",
+      "sourceTextRectangle": [
+        1165,
+        550,
+        1212,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        109,
+        12,
+        142,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        12,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        10,
+        33,
+        13
+      ],
+      "asset": "red-label-models-idle.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "fc0935e810241329b5cde6bb63cf09a2d6522388d46bd3196826a09ddb6c3dba",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    },
+    {
+      "id": "zh-CN:models:red-turns:active:red-middle-active",
+      "locale": "zh-CN",
+      "labelKey": "models",
+      "label": "按模型",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "red-middle-active",
+      "panelAsset": "red-middle-active.png",
+      "panelSha256": "24610da55e57987f08820edfaa4ee453e2ba4f5dd4d6a69267054a2c88f5ee02",
+      "sourceTextRectangle": [
+        1165,
+        550,
+        1212,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        109,
+        12,
+        142,
+        25
+      ],
+      "paintRectangle": [
+        23,
+        11,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        23,
+        9,
+        33,
+        13
+      ],
+      "asset": "red-label-models-active.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "c47c9c04de848426c3add3074ea60ab8b2dc9fac06bb354d44f302eb980e8ec4",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    },
+    {
+      "id": "zh-CN:turns:red-turns:idle:red-last-idle",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "idle",
+      "panelBackgroundId": "red-last-idle",
+      "panelAsset": "red-last-idle.png",
+      "panelSha256": "827e383d4a78ae19c5f38157f42b79ca99c5c3e62ad4d59e3fca90999db11187",
+      "sourceTextRectangle": [
+        1293,
+        549,
+        1341,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        195,
+        12,
+        228,
+        25
+      ],
+      "paintRectangle": [
+        30,
+        13,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        30,
+        11,
+        33,
+        13
+      ],
+      "asset": "red-label-turns-idle.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "7e98280d504f65baecde56e1c289ce374a5bb3bd838a38ebc23dc68d9883b364",
+      "assetType": "background-bound label patch",
+      "directReference": false,
+      "method": "source composite + (target background - source background) * estimated background transmission; transmission from source dark-ink/white-fringe contrast; rounded uint8; background-bound derivative, NOT recovered alpha",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    },
+    {
+      "id": "zh-CN:turns:red-turns:active:red-last-active",
+      "locale": "zh-CN",
+      "labelKey": "turns",
+      "label": "额度周",
+      "color": "red",
+      "sourceState": "turns-selected",
+      "renderState": "active",
+      "panelBackgroundId": "red-last-active",
+      "panelAsset": "red-last-active.png",
+      "panelSha256": "1a001ee1c53dbe90f0871a75ced738da66fecbb3b6fbf7bde90c46afc17a2988",
+      "sourceTextRectangle": [
+        1293,
+        549,
+        1341,
+        567
+      ],
+      "normalizedSourceRectangle": [
+        195,
+        12,
+        228,
+        25
+      ],
+      "paintRectangle": [
+        30,
+        12,
+        33,
+        13
+      ],
+      "buttonRectangle": [
+        30,
+        10,
+        33,
+        13
+      ],
+      "asset": "red-label-turns-active.png",
+      "size": [
+        33,
+        13
+      ],
+      "sha256": "be9ed9c85275fa31fd1805e293040c97cb325aba8b497ba87b8c609c6334831d",
+      "assetType": "background-bound label patch",
+      "directReference": true,
+      "method": "exact normalized source composite inside frozen repair support",
+      "provenance": "Project-approved generated reference PNG; not Exo 2 or an OFL glyph",
+      "alpha": "binary support of the existing repair region, NOT glyph opacity",
+      "registration": [
+        1.5,
+        0,
+        1000,
+        0,
+        1.5,
+        530.5
+      ]
+    }
+  ]
+}

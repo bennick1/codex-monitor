@@ -1,0 +1,179 @@
+{
+  "blue": {
+    "full": {
+      "pixels": 9288,
+      "differentPixels": 1043,
+      "maxChannelDifference": 118,
+      "meanAbsoluteChannelDifference": 2.0772681596325007,
+      "exact": false
+    },
+    "textDiagnostic": {
+      "pixels": 1067,
+      "differentPixels": 1041,
+      "maxChannelDifference": 118,
+      "meanAbsoluteChannelDifference": 18.078725398313026,
+      "exact": false
+    },
+    "outsideTextDiagnostic": {
+      "pixels": 8221,
+      "differentPixels": 2,
+      "maxChannelDifference": 3,
+      "meanAbsoluteChannelDifference": 0.0004460122450634554,
+      "exact": false
+    },
+    "contourDiagnostic": {
+      "pixels": 4690,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "seamsDiagnostic": {
+      "pixels": 648,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "bottomDiagnostic": {
+      "pixels": 2064,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "selectedLightDiagnostic": {
+      "pixels": 1926,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "metalFaceDiagnostic": {
+      "pixels": 3057,
+      "differentPixels": 2,
+      "maxChannelDifference": 3,
+      "meanAbsoluteChannelDifference": 0.0011994329953113074,
+      "exact": false
+    },
+    "note": "No acceptance threshold or mask. Full region is the primary result."
+  },
+  "amber": {
+    "full": {
+      "pixels": 9288,
+      "differentPixels": 1040,
+      "maxChannelDifference": 124,
+      "meanAbsoluteChannelDifference": 2.4974160206718348,
+      "exact": false
+    },
+    "textDiagnostic": {
+      "pixels": 1119,
+      "differentPixels": 1040,
+      "maxChannelDifference": 124,
+      "meanAbsoluteChannelDifference": 20.72922252010724,
+      "exact": false
+    },
+    "outsideTextDiagnostic": {
+      "pixels": 8169,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "contourDiagnostic": {
+      "pixels": 4690,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "seamsDiagnostic": {
+      "pixels": 648,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "bottomDiagnostic": {
+      "pixels": 2064,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "selectedLightDiagnostic": {
+      "pixels": 1944,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "metalFaceDiagnostic": {
+      "pixels": 3004,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "note": "No acceptance threshold or mask. Full region is the primary result."
+  },
+  "red": {
+    "full": {
+      "pixels": 9288,
+      "differentPixels": 1060,
+      "maxChannelDifference": 171,
+      "meanAbsoluteChannelDifference": 2.335163652024117,
+      "exact": false
+    },
+    "textDiagnostic": {
+      "pixels": 1078,
+      "differentPixels": 1060,
+      "maxChannelDifference": 171,
+      "meanAbsoluteChannelDifference": 20.119666048237477,
+      "exact": false
+    },
+    "outsideTextDiagnostic": {
+      "pixels": 8210,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "contourDiagnostic": {
+      "pixels": 4690,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "seamsDiagnostic": {
+      "pixels": 648,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "bottomDiagnostic": {
+      "pixels": 2064,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "selectedLightDiagnostic": {
+      "pixels": 1962,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "metalFaceDiagnostic": {
+      "pixels": 3044,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "note": "No acceptance threshold or mask. Full region is the primary result."
+  }
+}

@@ -14,7 +14,7 @@ vi.mock("../lib/bridge", () => ({
   setAlwaysOnTop: vi.fn(), sidebarAction: api.action, getAutostart: vi.fn(async () => false), deepSeekSession: api.session,
   listenDeepSeekReady: vi.fn(async () => () => {}), listenSidebarRecovery: api.recovery, listenSidebarDismiss: api.dismiss, listenSidebarPointer: api.pointer,
 }));
-const prefs: WidgetPreferences = { displayMode: "sidebar", sidebarSide: "right", sidebarOpacity: .9, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default" };
+const prefs: WidgetPreferences = { displayMode: "sidebar", sidebarSide: "right", sidebarOpacity: .9, locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: null, autoRotateSeconds: 12, language: "zh-CN", appearance: "light", selectedSkin: "default", opacityPercent: 100 };
 const quota: ProviderSnapshot = { provider: "codex", displayName: "CODEX", plan: "TEST", shortWindow: { remainingPercent: 74, resetsAt: null, windowSeconds: 18000 }, weeklyWindow: null, resetCredits: 4, updatedAt: "2026-10-01T00:00:00Z", status: "ok", message: null };
 const update = vi.fn();
 const updaterOpen = vi.hoisted(() => vi.fn());

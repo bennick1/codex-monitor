@@ -1,7 +1,8 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import { DESKTOP_PALETTES, type DesktopPaletteName } from "../lib/desktopPalette";
 import { quotaTier } from "../lib/format";
-import type { Language, ProviderSnapshot, WidgetPreferences, WidgetTheme } from "../types";
+import { normalizePreferences } from "../lib/widgetPreferences";
+import type { Language, ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "../types";
 import { QuotaCard, QuotaOrb } from "./QuotaCard";
 
 type ErrorMode = "unavailable" | "stale" | "signed_out";
@@ -15,7 +16,7 @@ const base: ProviderSnapshot = {
   weeklyWindow: { remainingPercent: 42, resetsAt: new Date(Date.now() + 3.2 * 86_400_000).toISOString(), windowSeconds: 604_800 },
   resetCredits: 1, resetCreditExpiresAt: [], updatedAt: new Date().toISOString(), status: "ok", message: null,
 };
-const preferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: "codex", autoRotateSeconds: 12, language: "en", appearance: "system", selectedSkin: "default" };
+const preferences: WidgetPreferences = { locked: false, alwaysOnTop: true, stayExpanded: false, pinnedProvider: "codex", autoRotateSeconds: 12, language: "en", appearance: "system", selectedSkin: "default", opacityPercent: 100 };
 const defaults: Controls = { radius: 38, numberSize: 64, progressHeight: 6, brightness: 100, motion: 18 };
 const names: DesktopPaletteName[] = ["healthy", "caution", "critical", "unavailable", "stale", "signed_out"];
 const modes: Array<[Mode, string]> = [[74, "healthy"], [35, "caution"], [8, "critical"], ["weekly", "weekly"], ["healthy-orb", "healthyOrb"], ["caution-orb", "cautionOrb"], ["critical-orb", "criticalOrb"], ["weekly-orb", "weeklyOrb"], ["unavailable", "unavailable"], ["stale", "stale"], ["signed_out", "signedOut"], ["unavailable-orb", "unavailableOrb"], ["stale-orb", "staleOrb"], ["signed_out-orb", "signedOutOrb"]];
@@ -23,7 +24,7 @@ const fields = ["--cool", "--glow", "--warm", "--progress-start", "--progress-en
 const workbenchCopy = {
   "zh-CN": {
     widget: "组件",
-    previewState: "预览状态", previewTheme: "预览主题", language: "内容语言", light: "浅色", dark: "深色",
+    previewState: "预览状态", previewTheme: "预览主题", previewSkin: "预览皮肤", defaultSkin: "默认皮肤", mechaLight: "浅色机甲", language: "内容语言", light: "浅色", dark: "深色",
     geometryPreview: "几何预览", description: "配色为只读，始终来自桌面组件。以下几何调整仅用于此预览，并会在刷新后恢复默认。",
     source: "桌面来源：", cornerRadius: "圆角", mainNumber: "主数字", progressHeight: "进度条高度", brightness: "亮度", motion: "动效", reset: "重置几何设置",
     sourceValues: "桌面源数值", paletteMatrix: "配色矩阵", paletteDescription: "这些数值为只读。选择一个状态即可检查其生产环境外观；如需修改桌面配色，请编辑", preview: "预览", verification: "预览验证成功",
@@ -31,7 +32,7 @@ const workbenchCopy = {
   },
   en: {
     widget: "Widget",
-    previewState: "Preview state", previewTheme: "Preview theme", language: "Content language", light: "Light", dark: "Dark",
+    previewState: "Preview state", previewTheme: "Preview theme", previewSkin: "Preview skin", defaultSkin: "Default skin", mechaLight: "Mecha Light", language: "Content language", light: "Light", dark: "Dark",
     geometryPreview: "Geometry preview", description: "The palette is read-only and always comes from the desktop widget. Geometry changes below exist only in this preview and reset on refresh.",
     source: "Desktop source:", cornerRadius: "Corner radius", mainNumber: "Main number", progressHeight: "Progress height", brightness: "Brightness", motion: "Motion", reset: "Reset geometry",
     sourceValues: "Desktop source values", paletteMatrix: "Palette matrix", paletteDescription: "These values are read-only. Select a state to inspect its production appearance; edit", preview: "Preview", verification: "Preview verification success",
@@ -65,6 +66,7 @@ function modeForPalette(name: DesktopPaletteName): Mode {
 export function DesignPlayground() {
   const query = new URLSearchParams(window.location.search);
   const [theme, setTheme] = useState<WidgetTheme>(() => query.get("theme") === "dark" ? "dark" : "light");
+  const [skin, setSkin] = useState<WidgetSkin>(() => normalizePreferences({ selectedSkin: query.get("skin") as WidgetSkin }).selectedSkin);
   const [mode, setMode] = useState<Mode>(() => (query.get("mode") as Mode) || 74);
   const [controls, setControls] = useState<Controls>(defaults);
   const [language, setLanguage] = useState<Language>(() => query.get("language") === "en" ? "en" : "zh-CN");
@@ -73,14 +75,14 @@ export function DesignPlayground() {
   const t = workbenchCopy[language];
   const isOrb = mode === "orb" || mode === "weekly-orb" || (typeof mode === "string" && mode.endsWith("-orb"));
   const style = (item: ProviderSnapshot) => {
-    const palette = DESKTOP_PALETTES[theme][paletteName(item)];
+    const palette = skin === "mecha-light" ? {} : DESKTOP_PALETTES[theme][paletteName(item)];
     return { ...palette, "--card-radius": `${controls.radius}px`, "--number-size": `${controls.numberSize}px`, "--progress-height": `${controls.progressHeight}px`, "--card-brightness": `${controls.brightness}%`, "--motion-duration": `${controls.motion}s` } as CSSProperties;
   };
   const update = <K extends keyof Controls>(key: K, value: Controls[K]) => setControls((previous) => ({ ...previous, [key]: value }));
   const selectPalette = (nextTheme: WidgetTheme, name: DesktopPaletteName) => { setTheme(nextTheme); setMode(modeForPalette(name)); };
   const render = (item: ProviderSnapshot) => isOrb
-    ? <QuotaOrb snapshot={item} language={language} onDrag={() => {}} onHover={() => {}} theme={theme} style={style(item)} />
-    : <QuotaCard snapshot={item} preferences={{ ...preferences, language }} providerCount={1} onPrevious={() => {}} onNext={() => {}} onTogglePin={() => {}} onLock={() => {}} onToggleStayExpanded={() => {}} onDrag={() => {}} onHover={() => {}} theme={theme} style={style(item)} />;
+    ? <QuotaOrb snapshot={item} language={language} onDrag={() => {}} onHover={() => {}} skin={skin} theme={theme} style={style(item)} />
+    : <QuotaCard snapshot={item} preferences={{ ...preferences, language, selectedSkin: skin }} providerCount={1} onPrevious={() => {}} onNext={() => {}} onTogglePin={() => {}} onLock={() => {}} onToggleStayExpanded={() => {}} onDrag={() => {}} onHover={() => {}} skin={skin} theme={theme} style={style(item)} />;
 
   return <main className={`design-workbench design-workbench--${theme}`}>
     <section className="design-stage" aria-label={t.widget}>
@@ -89,6 +91,9 @@ export function DesignPlayground() {
       </div>
       <div className="design-theme-switch" role="group" aria-label={t.previewTheme}>
         {(["light", "dark"] as const).map((value) => <button key={value} className={theme === value ? "is-active" : ""} onClick={() => setTheme(value)}>{value === "light" ? t.light : t.dark}</button>)}
+      </div>
+      <div className="design-theme-switch" role="group" aria-label={t.previewSkin}>
+        {(["default", "blur", "computer", "mecha-light"] as const).map((value) => <button key={value} className={skin === value ? "is-active" : ""} aria-pressed={skin === value} onClick={() => setSkin(value)}>{value === "default" ? t.defaultSkin : value === "mecha-light" ? t.mechaLight : value === "blur" ? "Blur" : "Computer"}</button>)}
       </div>
       <div className={isOrb ? "design-orb-frame" : "design-card-frame"}>{render(snapshot)}</div>
     </section>

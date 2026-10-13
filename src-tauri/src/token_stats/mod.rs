@@ -2,6 +2,7 @@
 mod aggregate;
 mod attribution;
 mod fast;
+mod fast_requests;
 mod model;
 mod normalize;
 mod parser;

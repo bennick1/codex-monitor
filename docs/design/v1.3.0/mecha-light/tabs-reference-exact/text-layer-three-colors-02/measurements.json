@@ -1,0 +1,1915 @@
+{
+  "phase": "text-layer-three-colors-02",
+  "source": "production runtime components and CSS, synthetic data",
+  "environment": {
+    "browser": "154.0.8037.58",
+    "dpr": 1,
+    "colorProfile": "sRGB",
+    "reducedMotion": "reduce",
+    "time": "2026-09-30T12:00:00Z",
+    "hover": "outside",
+    "focus": "blurred"
+  },
+  "cases": [
+    {
+      "name": "blue-turns-full",
+      "state": "blue",
+      "percent": 70,
+      "height": "full",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 379,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 329,
+              "width": 30.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 329,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(52, 64, 82)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 329,
+              "width": 45.5,
+              "height": 21.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          }
+        ]
+      },
+      "platformFonts": [
+        {
+          "fonts": [
+            {
+              "familyName": "Arial Unicode MS",
+              "postScriptName": "ArialUnicodeMS",
+              "isCustomFont": false,
+              "glyphCount": 2
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "Hiragino Sans GB",
+              "postScriptName": "HiraginoSansGB-W6",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "PingFang SC",
+              "postScriptName": "PingFangSC-Semibold",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "blue-overview-full",
+      "state": "blue",
+      "percent": 70,
+      "height": "full",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 328,
+              "width": 30.5,
+              "height": 22.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 329,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(52, 64, 82)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 330,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "blue-models-full",
+      "state": "blue",
+      "percent": 70,
+      "height": "full",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 381,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 329,
+              "width": 30.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 319,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 328,
+              "width": 45,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 319,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 330,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "blue-turns-compact",
+      "state": "blue",
+      "percent": 70,
+      "height": "compact",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 325,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 275,
+              "width": 30.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 265,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 275,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(52, 64, 82)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 265,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 275,
+              "width": 45.5,
+              "height": 21.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "blue-overview-compact",
+      "state": "blue",
+      "percent": 70,
+      "height": "compact",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 274,
+              "width": 30.5,
+              "height": 22.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 265,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 275,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(52, 64, 82)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 265,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 276,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "blue-models-compact",
+      "state": "blue",
+      "percent": 70,
+      "height": "compact",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 327,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 89,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 275,
+              "width": 30.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 117,
+              "y": 265,
+              "width": 78,
+              "height": 33
+            },
+            "text": {
+              "x": 140,
+              "y": 274,
+              "width": 45,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "600 10px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(19, 43, 70)"
+          },
+          {
+            "box": {
+              "x": 195,
+              "y": 265,
+              "width": 91,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 276,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "amber-turns-full",
+      "state": "amber",
+      "percent": 34,
+      "height": "full",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 379,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 329,
+              "width": 29.5,
+              "height": 19.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 329,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 328,
+              "width": 45.75,
+              "height": 22.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": [
+        {
+          "fonts": [
+            {
+              "familyName": "Hiragino Sans GB",
+              "postScriptName": "HiraginoSansGB-W3",
+              "isCustomFont": false,
+              "glyphCount": 2
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "Hiragino Sans GB",
+              "postScriptName": "HiraginoSansGB-W6",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "PingFang SC",
+              "postScriptName": "PingFangSC-Medium",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "amber-overview-full",
+      "state": "amber",
+      "percent": 34,
+      "height": "full",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 328,
+              "width": 30,
+              "height": 22.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 329,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 329,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "amber-models-full",
+      "state": "amber",
+      "percent": 34,
+      "height": "full",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 381,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 329,
+              "width": 29.5,
+              "height": 19.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 328,
+              "width": 46.25,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 319,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 329,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "amber-turns-compact",
+      "state": "amber",
+      "percent": 34,
+      "height": "compact",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 325,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 275,
+              "width": 29.5,
+              "height": 19.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 275,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 265,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 274,
+              "width": 45.75,
+              "height": 22.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "amber-overview-compact",
+      "state": "amber",
+      "percent": 34,
+      "height": "compact",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 274,
+              "width": 30,
+              "height": 22.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 275,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 265,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 275,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "amber-models-compact",
+      "state": "amber",
+      "percent": 34,
+      "height": "compact",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 327,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 87,
+              "height": 33
+            },
+            "text": {
+              "x": 61,
+              "y": 275,
+              "width": 29.5,
+              "height": 19.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 115,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 138,
+              "y": 274,
+              "width": 46.25,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 194,
+              "y": 265,
+              "width": 92,
+              "height": 33
+            },
+            "text": {
+              "x": 224,
+              "y": 275,
+              "width": 45,
+              "height": 19.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "red-turns-full",
+      "state": "red",
+      "percent": 6,
+      "height": "full",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 379,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 330,
+              "width": 28,
+              "height": 20.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 329,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 329,
+              "width": 46.25,
+              "height": 21.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": [
+        {
+          "fonts": [
+            {
+              "familyName": "Arial Unicode MS",
+              "postScriptName": "ArialUnicodeMS",
+              "isCustomFont": false,
+              "glyphCount": 2
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "Hiragino Sans GB",
+              "postScriptName": "HiraginoSansGB-W6",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        },
+        {
+          "fonts": [
+            {
+              "familyName": "PingFang SC",
+              "postScriptName": "PingFangSC-Medium",
+              "isCustomFont": false,
+              "glyphCount": 3
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "red-overview-full",
+      "state": "red",
+      "percent": 6,
+      "height": "full",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 329,
+              "width": 28.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 329,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 330,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "red-models-full",
+      "state": "red",
+      "percent": 6,
+      "height": "full",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 381,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 319,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 330,
+              "width": 28,
+              "height": 20.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 319,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 328,
+              "width": 46.25,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 319,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 330,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "red-turns-compact",
+      "state": "red",
+      "percent": 6,
+      "height": "compact",
+      "mode": "turns",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 325,
+          "width": 258,
+          "height": 115
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 276,
+              "width": 28,
+              "height": 20.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 275,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 265,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 275,
+              "width": 46.25,
+              "height": 21.5
+            },
+            "label": "额度周",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "red-overview-compact",
+      "state": "red",
+      "percent": 6,
+      "height": "compact",
+      "mode": "overview",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 92
+        },
+        "list": null,
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 275,
+              "width": 28.5,
+              "height": 21.5
+            },
+            "label": "总览",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 275,
+              "width": 45.5,
+              "height": 19.5
+            },
+            "label": "按模型",
+            "pressed": "false",
+            "font": "600 10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(66, 80, 99)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 265,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 276,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    },
+    {
+      "name": "red-models-compact",
+      "state": "red",
+      "percent": 6,
+      "height": "compact",
+      "mode": "models",
+      "geometry": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 327,
+          "width": 258,
+          "height": 113
+        },
+        "buttons": [
+          {
+            "box": {
+              "x": 28,
+              "y": 265,
+              "width": 86,
+              "height": 33
+            },
+            "text": {
+              "x": 62,
+              "y": 276,
+              "width": 28,
+              "height": 20.5
+            },
+            "label": "总览",
+            "pressed": "false",
+            "font": "10px / 18px \"Arial Unicode MS\", \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 114,
+              "y": 265,
+              "width": 79,
+              "height": 33
+            },
+            "text": {
+              "x": 137,
+              "y": 274,
+              "width": 46.25,
+              "height": 22.5
+            },
+            "label": "按模型",
+            "pressed": "true",
+            "font": "500 10.25px / 18px \"PingFang SC\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          },
+          {
+            "box": {
+              "x": 193,
+              "y": 265,
+              "width": 93,
+              "height": 33
+            },
+            "text": {
+              "x": 223,
+              "y": 276,
+              "width": 45.5,
+              "height": 18.5
+            },
+            "label": "额度周",
+            "pressed": "false",
+            "font": "10px / 18px \"Hiragino Sans GB\", \"Quota Sans\", \"Segoe UI\", system-ui, sans-serif",
+            "color": "rgb(23, 35, 58)"
+          }
+        ]
+      },
+      "platformFonts": []
+    }
+  ],
+  "errors": []
+}

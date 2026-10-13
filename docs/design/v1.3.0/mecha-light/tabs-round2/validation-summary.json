@@ -1,0 +1,2753 @@
+{
+  "status": "Ready for Mecha Tabs Visual Review — Local Preview Only",
+  "beforeSha": "1980d03dc0468ea499b0718280a3ad49dbf7a223",
+  "after": "Uncommitted working tree on feat/v1.3.0-fast-opacity-mecha-skin; no Candidate created",
+  "evidence": "Synthetic Chromium fixture only. Native interaction and human Tab visual acceptance remain Pending.",
+  "environment": {
+    "browser": "Chromium",
+    "browserArgs": [
+      "--disable-gpu",
+      "--force-color-profile=srgb"
+    ],
+    "deviceScaleFactor": 1,
+    "fixedTime": "2026-09-30T12:00:00.000Z",
+    "hover": "outside card",
+    "focus": "blurred except explicit keyboard captures",
+    "browserVersion": "149.0.7827.55"
+  },
+  "summary": {
+    "comparisons": 99,
+    "interactions": 24,
+    "mechaComparisons": 81,
+    "failed": 0,
+    "runtimeErrors": 0,
+    "humanVisualAcceptance": "Pending",
+    "nativeAcceptance": "Pending"
+  },
+  "frontend": {
+    "unitTests": {
+      "filesPassed": 17,
+      "testsPassed": 264,
+      "command": "npm test"
+    },
+    "build": {
+      "passed": true,
+      "command": "npm run build"
+    },
+    "diffCheck": {
+      "command": "git diff --check",
+      "passed": true
+    }
+  },
+  "css": {
+    "beforeSha256": "ac6132ea08d3b9f7dae2ae53010ad7c39d3f1110fb2d9d95ade7afee0786725d",
+    "afterSha256": "3ab75a8b2d175c19106111fa232a1f7918b64ead338939ffa9eb327940385d95",
+    "replacement": "Entire Vite mecha.css style text on the same fixture DOM; relative URLs resolved from /src/"
+  },
+  "assets": [
+    {
+      "path": "../../../../../assets/mecha-light/token-tabs.svg",
+      "sha256": "371dbe9547bd93107742bf4f14445c8c30570bdc567a851df1e453e5df0762cf"
+    },
+    {
+      "path": "../../../../../assets/mecha-light/token-tab-lights.svg",
+      "sha256": "ec55d9d4b0eae8d0f81722c72cf5b5a91afcbad1bf16bc0b0676921150c9a234"
+    }
+  ],
+  "reference": {
+    "path": "../references/expanded-three-states.png",
+    "originalSize": [
+      1448,
+      1086
+    ],
+    "sha256": "6d0786a06dac5051abc403bddfa10f0227097438a54d137194899d20f1112fb1",
+    "crops": {
+      "blue": {
+        "xyxy": [
+          65,
+          533,
+          457,
+          583
+        ],
+        "originalSize": [
+          392,
+          50
+        ],
+        "at258CssPx": {
+          "width": 258,
+          "height": 32.90816326530612
+        }
+      },
+      "amber": {
+        "xyxy": [
+          538,
+          533,
+          922,
+          583
+        ],
+        "originalSize": [
+          384,
+          50
+        ],
+        "at258CssPx": {
+          "width": 258,
+          "height": 33.59375
+        }
+      },
+      "red": {
+        "xyxy": [
+          1000,
+          533,
+          1387,
+          583
+        ],
+        "originalSize": [
+          387,
+          50
+        ],
+        "at258CssPx": {
+          "width": 258,
+          "height": 33.333333333333336
+        }
+      }
+    },
+    "handling": "Cropped directly from the approved original, not a comparison screenshot. Top-left origin; right/bottom exclusive. Width 258 CSS px, automatic proportional height; bottom edges aligned. Reference remains Quota week selected in all five groups. No reference repainting."
+  },
+  "allocation": {
+    "before": {
+      "tabHeight": 28,
+      "headingGap": 4,
+      "headingBottomMargin": 6
+    },
+    "after": {
+      "tabHeight": 33,
+      "headingGap": 2,
+      "headingBottomMargin": 3
+    },
+    "unchanged": "Card size, Token section/title, content and list rectangles. Fonts and data row heights. No space taken from data."
+  },
+  "invariants": {
+    "stableGeometryCases": 99,
+    "outsideAllowedRegionChangedPixels": 0,
+    "otherSkinExactRgbaCases": 18,
+    "periodButtonsUnchangedCases": 33,
+    "keyboardActions": 144,
+    "pointerActions": 360,
+    "dragPositiveControls": 24,
+    "tabDragCalls": 0
+  },
+  "geometry": [
+    {
+      "name": "blue-turns-zh-CN-full-100-light",
+      "before": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "tokenUsage": {
+          "x": 28,
+          "y": 288,
+          "width": 258,
+          "height": 206
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 50
+        },
+        "tabs": {
+          "x": 28,
+          "y": 321,
+          "width": 258,
+          "height": 28
+        },
+        "buttons": [
+          {
+            "x": 29,
+            "y": 322,
+            "width": 84,
+            "height": 26
+          },
+          {
+            "x": 115,
+            "y": 322,
+            "width": 84,
+            "height": 26
+          },
+          {
+            "x": 201,
+            "y": 322,
+            "width": 84,
+            "height": 26
+          }
+        ],
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 379,
+          "width": 258,
+          "height": 115
+        }
+      },
+      "after": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 506
+        },
+        "tokenUsage": {
+          "x": 28,
+          "y": 288,
+          "width": 258,
+          "height": 206
+        },
+        "title": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 299,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 319,
+          "width": 258,
+          "height": 33
+        },
+        "buttons": [
+          {
+            "x": 28,
+            "y": 319,
+            "width": 89.03125,
+            "height": 33
+          },
+          {
+            "x": 117.03125,
+            "y": 319,
+            "width": 79.921875,
+            "height": 33
+          },
+          {
+            "x": 196.953125,
+            "y": 319,
+            "width": 89.046875,
+            "height": 33
+          }
+        ],
+        "content": {
+          "x": 28,
+          "y": 355,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 379,
+          "width": 258,
+          "height": 115
+        }
+      }
+    },
+    {
+      "name": "blue-turns-zh-CN-compact-100-light",
+      "before": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "tokenUsage": {
+          "x": 28,
+          "y": 234,
+          "width": 258,
+          "height": 206
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 50
+        },
+        "tabs": {
+          "x": 28,
+          "y": 267,
+          "width": 258,
+          "height": 28
+        },
+        "buttons": [
+          {
+            "x": 29,
+            "y": 268,
+            "width": 84,
+            "height": 26
+          },
+          {
+            "x": 115,
+            "y": 268,
+            "width": 84,
+            "height": 26
+          },
+          {
+            "x": 201,
+            "y": 268,
+            "width": 84,
+            "height": 26
+          }
+        ],
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 325,
+          "width": 258,
+          "height": 115
+        }
+      },
+      "after": {
+        "card": {
+          "x": 4,
+          "y": 4,
+          "width": 306,
+          "height": 452
+        },
+        "tokenUsage": {
+          "x": 28,
+          "y": 234,
+          "width": 258,
+          "height": 206
+        },
+        "title": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 18
+        },
+        "heading": {
+          "x": 28,
+          "y": 245,
+          "width": 258,
+          "height": 53
+        },
+        "tabs": {
+          "x": 28,
+          "y": 265,
+          "width": 258,
+          "height": 33
+        },
+        "buttons": [
+          {
+            "x": 28,
+            "y": 265,
+            "width": 89.03125,
+            "height": 33
+          },
+          {
+            "x": 117.03125,
+            "y": 265,
+            "width": 79.921875,
+            "height": 33
+          },
+          {
+            "x": 196.953125,
+            "y": 265,
+            "width": 89.046875,
+            "height": 33
+          }
+        ],
+        "content": {
+          "x": 28,
+          "y": 301,
+          "width": 258,
+          "height": 139
+        },
+        "list": {
+          "x": 28,
+          "y": 325,
+          "width": 258,
+          "height": 115
+        }
+      }
+    }
+  ],
+  "comparisons": [
+    {
+      "name": "blue-turns-zh-CN-full-100-light",
+      "screenshots": {
+        "beforeTabs": "before-blue-turns-zh-CN-full-100-light-tabs.png",
+        "beforeCard": "before-blue-turns-zh-CN-full-100-light-card.png",
+        "afterTabs": "after-blue-turns-zh-CN-full-100-light-tabs.png",
+        "afterCard": "after-blue-turns-zh-CN-full-100-light-card.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-full-100-light",
+      "screenshots": {
+        "beforeTabs": "before-blue-overview-zh-CN-full-100-light-tabs.png",
+        "afterTabs": "after-blue-overview-zh-CN-full-100-light-tabs.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-zh-CN-full-100-light",
+      "screenshots": {
+        "beforeTabs": "before-blue-models-zh-CN-full-100-light-tabs.png",
+        "afterTabs": "after-blue-models-zh-CN-full-100-light-tabs.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-en-compact-60-light",
+      "screenshots": {
+        "beforeTabs": "before-blue-models-en-compact-60-light-tabs.png",
+        "afterTabs": "after-blue-models-en-compact-60-light-tabs.png",
+        "afterCard": "after-blue-models-en-compact-60-light-card.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-zh-CN-full-100-light",
+      "screenshots": {
+        "beforeTabs": "before-amber-turns-zh-CN-full-100-light-tabs.png",
+        "afterTabs": "after-amber-turns-zh-CN-full-100-light-tabs.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-zh-CN-full-100-light",
+      "screenshots": {
+        "beforeTabs": "before-red-turns-zh-CN-full-100-light-tabs.png",
+        "afterTabs": "after-red-turns-zh-CN-full-100-light-tabs.png"
+      },
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-zh-CN-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-zh-CN-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-zh-CN-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-en-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-en-full-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 315,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 146322,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-en-compact-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-en-compact-60-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blue-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "amber-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "red-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 261,
+        "width": 258,
+        "height": 33
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 129798,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-overview-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 318,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 264,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-models-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 318,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 264,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-turns-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 318,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "default-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 25,
+        "y": 264,
+        "width": 256,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-overview-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-models-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-turns-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "blur-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-overview-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-overview-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-models-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-models-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-turns-zh-CN-full-100-light",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 317,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 154836,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    },
+    {
+      "name": "computer-turns-en-compact-60-dark",
+      "screenshots": {},
+      "stableGeometryEqual": true,
+      "allowedPixelRegion": {
+        "x": 24,
+        "y": 263,
+        "width": 258,
+        "height": 24
+      },
+      "unchangedPixels": {
+        "equal": true,
+        "changedPixels": 0,
+        "comparedPixels": 138312,
+        "changedBounds": null
+      },
+      "periodsEqual": true,
+      "labelsEqual": true,
+      "errors": []
+    }
+  ],
+  "interactions": [
+    {
+      "name": "blue-overview-zh-CN-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-zh-CN-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "blue-overview-en-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-zh-CN-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "amber-overview-en-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-zh-CN-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-full-100-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-compact-60-light",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-full-100-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    },
+    {
+      "name": "red-overview-en-compact-60-dark",
+      "positiveControl": 1,
+      "dragCount": 0,
+      "errors": []
+    }
+  ],
+  "retainedStatuses": {
+    "previousMechaTabsHumanVerdict": "Needs Revision",
+    "currentMechaTabsHumanVerdict": "Pending",
+    "Fast": "unchanged from prior record",
+    "nativeOpacity": "unchanged from prior record",
+    "otherHumanItems": "unchanged from prior record"
+  },
+  "images": [
+    {
+      "path": "after-amber-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        33
+      ],
+      "sha256": "a884a4576f660bdb7d98279b11fb37c4fb815420f1990444107b0bdc3d5ae0ae"
+    },
+    {
+      "path": "after-blue-models-en-compact-60-light-card.png",
+      "size": [
+        306,
+        452
+      ],
+      "sha256": "9da9ac694264066264b413b3cdf0fc003ec8b3483d7feec8591a1a7f35f0bcd2"
+    },
+    {
+      "path": "after-blue-models-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        33
+      ],
+      "sha256": "de18a9b5d4d48e1c68af76efc8f00f8a24508acb113e3d2e4127d7412c703cdb"
+    },
+    {
+      "path": "after-blue-overview-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        33
+      ],
+      "sha256": "73743c282eb658e9850550335dd6e796e4ed661c4d38f9e4615319635c6125f7"
+    },
+    {
+      "path": "after-blue-turns-zh-CN-full-100-light-card.png",
+      "size": [
+        306,
+        506
+      ],
+      "sha256": "a0d383e7064982d2d114116cea59bec9455f5722c921cee6c0134f338da445d6"
+    },
+    {
+      "path": "after-blue-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        33
+      ],
+      "sha256": "30c803de6951f98a8c23cffb763b6952e8c6f6722ca04831befd7ec99ccd2c73"
+    },
+    {
+      "path": "after-red-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        33
+      ],
+      "sha256": "7ae47b6dbc96196f283550f14126c47c20ad3e79396a339852dd2e9d8c0e7a73"
+    },
+    {
+      "path": "before-amber-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        28
+      ],
+      "sha256": "89ae9ffa44107611856bae768d5ef32ea88d2bcdc63cfa0506f05fdcf78d1a99"
+    },
+    {
+      "path": "before-blue-models-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        28
+      ],
+      "sha256": "3423e2fa2c6882885486a889fd3ae37831b1c9e1d12bb962e8cfcd9636d5ebeb"
+    },
+    {
+      "path": "before-blue-overview-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        28
+      ],
+      "sha256": "3147e2986f6dda65e3575c5582616241caddb1d985db7f22623168e0202177eb"
+    },
+    {
+      "path": "before-blue-turns-zh-CN-full-100-light-card.png",
+      "size": [
+        306,
+        506
+      ],
+      "sha256": "b19e4a18dd1fd8c84f10a611079de5a7e5d2e25792b460042719993d91b0acb5"
+    },
+    {
+      "path": "before-blue-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        28
+      ],
+      "sha256": "7494176ee20f7a761249a4909528a4144dc51b9d4f0baaa4ad9ff6a42c41cb12"
+    },
+    {
+      "path": "before-red-turns-zh-CN-full-100-light-tabs.png",
+      "size": [
+        258,
+        28
+      ],
+      "sha256": "0bb9d257636eb11f6cd8586643d29404f1dccb1b66afee140bc23bd72fb90a04"
+    },
+    {
+      "path": "five-groups-1x.png",
+      "size": [
+        830,
+        483
+      ],
+      "sha256": "28b39c17db2f6602f93e0062b19460c74984f173605b323bbc9f2ae9269f6408"
+    },
+    {
+      "path": "five-groups-3x.png",
+      "size": [
+        2378,
+        823
+      ],
+      "sha256": "e1b98bcbe4fce2692189c91d7c0dae8cb308173ed8e30bf4b1d8372be5b2c318"
+    },
+    {
+      "path": "focus-blue-overview-zh-CN-full-100-light-models-enter-tabs.png",
+      "size": [
+        266,
+        41
+      ],
+      "sha256": "1548d4a24dc72694cdf2b0ea000953b590ea8d4c7f3b05232e3f1d3c0256f6a7"
+    },
+    {
+      "path": "reference-amber-original-crop.png",
+      "size": [
+        384,
+        50
+      ],
+      "sha256": "b93e7ebbe9b6b1ed3752e0bea31bc7d74b7a431217b950b3888a39bdabd990bd"
+    },
+    {
+      "path": "reference-blue-original-crop.png",
+      "size": [
+        392,
+        50
+      ],
+      "sha256": "22f076135b124eb4092e26d035f7a9d69709e839fda6b802d34b99236b4dd94f"
+    },
+    {
+      "path": "reference-red-original-crop.png",
+      "size": [
+        387,
+        50
+      ],
+      "sha256": "1b3e4d1b1549fa5039ba419a404a1ec0b56ea58fb38e840a64ecf5c70dfdee67"
+    }
+  ],
+  "implementation": {
+    "decorativeSvgBytes": 5835,
+    "productionBuildSvgFragments": {
+      "count": 9,
+      "resolved": true,
+      "builtAssetsByteIdentical": true
+    },
+    "unchangedCssOutsideTabBlock": true,
+    "unchangedFrozenScopes": [
+      "TokenUsage and all components",
+      "src/lib",
+      "src-tauri",
+      "src/styles.css",
+      "package.json",
+      "package-lock.json",
+      ".github",
+      "previous tabs-fix evidence",
+      "approved references"
+    ],
+    "historicalPage": {
+      "path": "../comparison-round1.html",
+      "byteIdenticalToBefore": true
+    },
+    "interactionOwner": "Existing real buttons; no new DOM, handlers or dependencies",
+    "states": "aria-pressed selects decoration independently of focus-visible; all three positions supported"
+  },
+  "verificationCommand": "PLAYWRIGHT_MODULE_PATH=<installed-playwright/index.mjs> PLAYWRIGHT_CHROMIUM_EXECUTABLE=<installed-chromium> node scripts/test-mecha-tabs.mjs",
+  "testScriptSha256": "755fc3fc138b748b69bed015af0e8357efca57b0643c43bdbf2ad57e5040ffdb",
+  "reviewPage": {
+    "loadedImages": 41,
+    "groupsPerScale": 5,
+    "scales": [
+      1,
+      3
+    ],
+    "sameWidth": true,
+    "aspectRatiosPreserved": true,
+    "bottomBaselinesAligned": true,
+    "runtimeErrors": []
+  }
+}

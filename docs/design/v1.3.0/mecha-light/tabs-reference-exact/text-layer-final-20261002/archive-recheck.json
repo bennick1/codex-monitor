@@ -1,0 +1,104 @@
+{
+  "browser": "Chromium 154.0.8037.93",
+  "originalSignedBrowser": "Chromium 154.0.8037.58",
+  "conditions": "Full 258x36, DPR1, zoom100%, opacity100%, no hover/focus; all direct colors turns selected",
+  "direct": {
+    "blue": {
+      "pixels": 9288,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "amber": {
+      "pixels": 9288,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    },
+    "red": {
+      "pixels": 9288,
+      "differentPixels": 0,
+      "maxChannelDifference": 0,
+      "meanAbsoluteChannelDifference": 0.0,
+      "exact": true
+    }
+  },
+  "acceptedTabCaptures": [
+    {
+      "file": "blue-overview-full-tabs.png",
+      "sha256": "1c64c472d27e4995308a32d3bb71e4735eab1751213af4ef36154723900e15d1",
+      "byteIdentical": true
+    },
+    {
+      "file": "blue-models-full-tabs.png",
+      "sha256": "683b9f6cfa27bc51c38be65c89773461a753e2bd772e5f5be08822bd77cc2656",
+      "byteIdentical": true
+    },
+    {
+      "file": "blue-turns-full-tabs.png",
+      "sha256": "a83c8f87e071805447aba31bef417103f6ab37a19e19c05470ed3c510e9f9819",
+      "byteIdentical": true
+    },
+    {
+      "file": "amber-overview-full-tabs.png",
+      "sha256": "2f27148b2e1fee3ccd156fe76d5484d895159a2776ef8c072c589a127e4ab41a",
+      "byteIdentical": true
+    },
+    {
+      "file": "amber-models-full-tabs.png",
+      "sha256": "5762fbb52fde80384dc364d397ffd20ec99eeaac151ab967e4fa1462c5e6596b",
+      "byteIdentical": true
+    },
+    {
+      "file": "amber-turns-full-tabs.png",
+      "sha256": "2cc92ce587892dda9bbc584b5dffc7486d2d879411da14b54ca6bdfdca75a501",
+      "byteIdentical": true
+    },
+    {
+      "file": "red-overview-full-tabs.png",
+      "sha256": "aae36cddd9e1e6e118915223bccf62d23da22653e289b6bff8dadc5134a60de9",
+      "byteIdentical": true
+    },
+    {
+      "file": "red-models-full-tabs.png",
+      "sha256": "e2f520d70ab8415b2f17ac3d05d7f5f2b67896732dad54c176d14d654d31aa9f",
+      "byteIdentical": true
+    },
+    {
+      "file": "red-turns-full-tabs.png",
+      "sha256": "c2345146f9627ee08a0220f47a88885831e6bc374466f2f0df6ca607a83a21e5",
+      "byteIdentical": true
+    }
+  ],
+  "frontend": {
+    "files": 18,
+    "tests": 272,
+    "passed": true
+  },
+  "labelBrowser": {
+    "checks": 36,
+    "failed": 0,
+    "runtimeErrors": 0
+  },
+  "scope": {
+    "comparisons": 117,
+    "interactions": 6,
+    "failed": 0,
+    "runtimeErrors": 0,
+    "outsideTabOtherSkinsAndFivePeriodButtons": "unchanged"
+  },
+  "mechaLayout": 323,
+  "mechaKeyboard": 4,
+  "fourSkinOpacity": {
+    "cases": 252,
+    "passed": true
+  },
+  "updaterPolicy": "passed",
+  "build": "passed; output isolated; no asset generation",
+  "diffCheck": "passed",
+  "all103FrozenFilesAfterBuild": "byte-identical",
+  "unchangedOutsideScope": "All initial non-document files byte-identical: Fast/accounting/quota-week ordering/Schema4/branding/dependencies/workflows unchanged",
+  "nativeAndScreenReaderAcceptance": "not performed"
+}

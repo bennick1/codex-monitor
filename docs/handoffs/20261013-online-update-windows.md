@@ -1,23 +1,23 @@
 # Windows 在线升级验收交接
 
 - 日期：2026-10-13，Asia/Shanghai；Mac arm64 → Windows 11 x64。
-- 状态：材料已准备；尚未传输、在 Windows 构建或实测。Mac 结果见 `docs/ONLINE-UPDATE-VALIDATION.md`。
+- 状态：材料已准备；尚未传输、在 Windows 构建或实测。本次合并后的 Mac 结果见 `docs/MAIN-MERGE-VALIDATION.md`，此前独立在线升级结果保留在 `docs/ONLINE-UPDATE-VALIDATION.md`。
 
 ## 代码与边界
 
-仓库为 `bennick1/codex-monitor`，分支 `codex/side-dock-analysis`，基线 `a964644c84352339cd2c1e9c89a0c9e7f381ae3f`。该本地提交保存之前的侧边栏功能，未推送；当前分支没有 upstream。本次升级实现包含未提交文件，不能只检出基线。
+仓库为 `bennick1/codex-monitor`，分支 `codex/side-dock-analysis`。在线升级先提交为 `d7ae2c2f803b0797fc0bf49b108b34614c099b8a`，随后合入实际拉取的 main `9f769559b669c289a0c59a7fc3810c9f818a463e`。最终本地合并提交见随附 `SOURCE-MANIFEST.json`；未推送，当前分支没有 upstream，不能仅从远程检出便声称取得本次源码。
 
-恢复载体为源设备 `outputs/online-update-20261013/codex-monitor-online-update-source.zip`，同目录提供 `SOURCE-MANIFEST.json` 和 `SHA256SUMS.txt`。归档含当前源码、锁文件、发布工作流、QA 脚本和本说明；排除 `.git`、依赖、工具链、构建产物、数据库、测试密钥及另一个会话的 `docs/branding/icon-candidates-20261003/`、`docs/branding/sidebar/`。不要覆盖目标设备已有工作区；解压到新目录。
+恢复载体为源设备 `outputs/main-merge-validation-20261013/codex-monitor-merged-source.zip`，同目录提供 `SOURCE-MANIFEST.json` 和 `SHA256SUMS.txt`。归档含当前源码、锁文件、发布工作流、QA 脚本和本说明；排除 `.git`、依赖、工具链、构建产物、数据库、测试密钥及另一个会话的 `docs/branding/icon-candidates-20261003/`、`docs/branding/sidebar/`。不要覆盖目标设备已有工作区；解压到新目录。
 
-本轮不推送、不合并 `main`、不升级正式版本、不配置正式密钥或 GitHub 权限、不发布。正式版本仍为 1.2.1；实施前核对的远程最新版本为 1.3.1，正式发布前必须重新核对并处理版本及主分支集成。
+本轮已将 main 合入本地功能分支，不推送、不配置正式密钥或 GitHub 权限、不发布。基础版本继承 main 的 1.3.1，未额外升版；正式发布前仍须重新核对远程最新版本，并选择更高的稳定版本。
 
 ## 目标设备第一步
 
 取得归档和校验文件后，在 PowerShell 7 执行：
 
 ```powershell
-Get-FileHash .\codex-monitor-online-update-source.zip -Algorithm SHA256
-Expand-Archive .\codex-monitor-online-update-source.zip .\codex-monitor-updater-qa
+Get-FileHash .\codex-monitor-merged-source.zip -Algorithm SHA256
+Expand-Archive .\codex-monitor-merged-source.zip .\codex-monitor-updater-qa
 Set-Location .\codex-monitor-updater-qa
 $manifest = Get-Content .\SOURCE-MANIFEST.json -Raw | ConvertFrom-Json
 foreach ($entry in $manifest.files) {

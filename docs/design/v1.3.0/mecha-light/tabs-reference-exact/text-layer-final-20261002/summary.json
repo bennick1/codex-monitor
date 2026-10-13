@@ -1,0 +1,109 @@
+{
+  "task": "CM-130-TABS-TEXT-LAYER-FINAL-20261002",
+  "status": "Mecha Tabs Human Accepted; text and panel implementation Frozen — 用户明确签署",
+  "taskCommit": "3e93c53d97c374ac8bea2a042662f281375ce313",
+  "branch": "feat/v1.3.0-fast-opacity-mecha-skin",
+  "head": "1980d03dc0468ea499b0718280a3ad49dbf7a223",
+  "method": "background-bound label patches; direct composites exact; other selected states are explicitly derived",
+  "patchCount": 18,
+  "directLabelAssets": 9,
+  "derivedLabelAssets": 9,
+  "patchSizes": [
+    [
+      22,
+      12
+    ],
+    [
+      22,
+      13
+    ],
+    [
+      23,
+      13
+    ],
+    [
+      32,
+      13
+    ],
+    [
+      33,
+      13
+    ],
+    [
+      33,
+      14
+    ]
+  ],
+  "directReferenceConditions": {
+    "browser": "154.0.8037.58",
+    "DPR": 1,
+    "opacity": 100,
+    "zoom": 100,
+    "hover": "outside",
+    "focus": "blurred",
+    "canvas": [
+      258,
+      36
+    ]
+  },
+  "directReferences": {
+    "blue": {
+      "pixels": 9288,
+      "different_pixels": 0,
+      "max_channel_delta": 0
+    },
+    "amber": {
+      "pixels": 9288,
+      "different_pixels": 0,
+      "max_channel_delta": 0
+    },
+    "red": {
+      "pixels": 9288,
+      "different_pixels": 0,
+      "max_channel_delta": 0
+    }
+  },
+  "scope": {
+    "comparisons": 117,
+    "failed": 0,
+    "interactions": 6,
+    "runtimeErrors": 0
+  },
+  "labelBehavior": {
+    "checks": 30,
+    "failed": 0,
+    "runtimeErrors": 0
+  },
+  "hoverFocus": {
+    "checks": 6,
+    "failed": 0,
+    "runtimeErrors": 0
+  },
+  "frontendTests": {
+    "files": 18,
+    "tests": 272,
+    "result": "passed"
+  },
+  "existingMechaLayout": {
+    "checks": 323,
+    "result": "passed"
+  },
+  "existingMechaKeyboard": {
+    "checks": 4,
+    "result": "passed"
+  },
+  "build": "outputs/v1.3.0-tabs-text-layer-final/build-02; passed",
+  "gitDiffCheck": "passed",
+  "humanVisualAcceptance": {
+    "date": "2026-10-02",
+    "authority": "explicit user signature",
+    "quote": "Mecha Tabs 三色原图还原及交互派生视觉验收通过。",
+    "directThreeColors": "Human Accepted",
+    "overviewAndModelsDerived": "Human Accepted",
+    "implementation": "Frozen — 用户明确签署"
+  },
+  "nativeTauriAndAssistiveTechnology": "not tested; no macOS/Windows native acceptance claim",
+  "otherGates": "Fast and native opacity human-acceptance status unchanged",
+  "gitActions": "Final archive authorized: normal commit/push and existing CI candidates; actual Source SHA and CI evidence in delivered BUILD-INFO.txt; no merge main/tag/release",
+  "preAcceptanceStatus": "Local restoration and automated regression complete; final human visual signature pending"
+}

@@ -1,0 +1,14 @@
+{
+  "method": "Native Chrome browser zoom controls via CUA, isolated incognito window",
+  "observedZoomPercent": [
+    100,
+    125,
+    200
+  ],
+  "mechanism": "Chrome Command-plus and Command-0, with actual zoom percentage in AX and screenshots; not CSS zoom",
+  "observed": "All three fixed labels remained visible, with no doubled font or displaced label patch. Magnified bitmap interpolation remains visible.",
+  "evidence": "CUA AX state and native browser screenshots retained in this conversation; no disk capture available from the CUA screenshot API",
+  "DPR": "not measured for the native browser window; separate scripted DPR1/2 captures are retained",
+  "restored": "100% before closing the isolated test window",
+  "nativeTauriAcceptance": false
+}

@@ -1,0 +1,108 @@
+{
+  "evidence": "Synthetic Chromium engineering checks; human/native acceptance Pending",
+  "frontend": {
+    "tests": 264,
+    "files": 17,
+    "passed": true
+  },
+  "rust": {
+    "passed": 131,
+    "existingIgnored": 2
+  },
+  "opacity": {
+    "cases": 252,
+    "pageErrors": [],
+    "baselineExact": 84
+  },
+  "mecha": {
+    "cases": 323,
+    "failed": 0,
+    "rawThresholds": [
+      70,
+      50,
+      34,
+      11,
+      10,
+      6,
+      0,
+      50.01,
+      49.99,
+      10.01,
+      9.99
+    ],
+    "sharedAccents": {
+      "healthy": "rgb(8, 103, 200)",
+      "caution": "rgb(169, 107, 8)",
+      "critical": "rgb(188, 36, 56)"
+    }
+  },
+  "keyboard": [
+    {
+      "name": "zh-CN-light",
+      "focusedTabIndex": 1,
+      "focusVisible": true,
+      "outline": "rgb(8, 103, 200) solid 2px",
+      "outlineColor": "rgb(8, 103, 200)",
+      "accentColor": "rgb(8, 103, 200)",
+      "outlineOffset": "-3px",
+      "clipPath": "polygon(7px 0px, calc(100% - 6px) 0px, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0px calc(100% - 5px), 0px 7px)",
+      "focusChangesPixels": true,
+      "beforeSha256": "0e9e7a6a2c82edee3375029e8958b8197ff8ed01cd5a6fcaebd2c35b7c679529",
+      "focusedSha256": "b515b9cdefa62dda92050c717ecc5a8dd7fa09191ad09c1dd5c864a0732c69ac"
+    },
+    {
+      "name": "zh-CN-dark",
+      "focusedTabIndex": 1,
+      "focusVisible": true,
+      "outline": "rgb(8, 103, 200) solid 2px",
+      "outlineColor": "rgb(8, 103, 200)",
+      "accentColor": "rgb(8, 103, 200)",
+      "outlineOffset": "-3px",
+      "clipPath": "polygon(7px 0px, calc(100% - 6px) 0px, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0px calc(100% - 5px), 0px 7px)",
+      "focusChangesPixels": true,
+      "beforeSha256": "0e9e7a6a2c82edee3375029e8958b8197ff8ed01cd5a6fcaebd2c35b7c679529",
+      "focusedSha256": "b515b9cdefa62dda92050c717ecc5a8dd7fa09191ad09c1dd5c864a0732c69ac"
+    },
+    {
+      "name": "en-light",
+      "focusedTabIndex": 1,
+      "focusVisible": true,
+      "outline": "rgb(8, 103, 200) solid 2px",
+      "outlineColor": "rgb(8, 103, 200)",
+      "accentColor": "rgb(8, 103, 200)",
+      "outlineOffset": "-3px",
+      "clipPath": "polygon(7px 0px, calc(100% - 6px) 0px, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0px calc(100% - 5px), 0px 7px)",
+      "focusChangesPixels": true,
+      "beforeSha256": "aeef4637543e157c1452d7b4301b330eeb830ef15b30a0c21b747ab5e0bced92",
+      "focusedSha256": "0eb7bbfa6840c569d754a8d21ebd0bcf3e45e5c6ce3417b484e1f232a2477f34"
+    },
+    {
+      "name": "en-dark",
+      "focusedTabIndex": 1,
+      "focusVisible": true,
+      "outline": "rgb(8, 103, 200) solid 2px",
+      "outlineColor": "rgb(8, 103, 200)",
+      "accentColor": "rgb(8, 103, 200)",
+      "outlineOffset": "-3px",
+      "clipPath": "polygon(7px 0px, calc(100% - 6px) 0px, 100% 6px, 100% calc(100% - 5px), calc(100% - 5px) 100%, 5px 100%, 0px calc(100% - 5px), 0px 7px)",
+      "focusChangesPixels": true,
+      "beforeSha256": "aeef4637543e157c1452d7b4301b330eeb830ef15b30a0c21b747ab5e0bced92",
+      "focusedSha256": "0eb7bbfa6840c569d754a8d21ebd0bcf3e45e5c6ce3417b484e1f232a2477f34"
+    }
+  ],
+  "comparison": {
+    "implementationImages": 28,
+    "approvedOriginals": 4,
+    "decoded": true,
+    "opacityAndZoomCombinations": 4,
+    "pageErrors": 0
+  },
+  "branding": {
+    "png": 63,
+    "ico": 8,
+    "icns": 10,
+    "passed": true
+  },
+  "nativeHumanAcceptance": "Pending",
+  "mechaHumanVisualAcceptance": "Pending"
+}

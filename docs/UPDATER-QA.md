@@ -1,6 +1,6 @@
 # 本地隔离在线升级 QA
 
-此流程只升级独立 QA 应用，正式基础版本仍为 1.2.1。A=0.0.1、B=0.0.2 使用独立 `app.codexmonitor.updater-test.local` 标识和 `Codex Monitor Updater QA` 名称；全部材料在 ignored outputs/updater-qa，不接触正式安装目录。测试密钥只能用于本机 QA。
+此流程只升级独立 QA 应用，当前合并后的基础版本为 1.3.1。A=0.0.1、B=0.0.2 使用独立 `app.codexmonitor.updater-test.local` 标识和 `Codex Monitor Updater QA` 名称；全部材料在 ignored outputs/updater-qa，不接触正式安装目录。测试密钥只能用于本机 QA。
 
 ## 准备与构建
 

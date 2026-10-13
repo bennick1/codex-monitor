@@ -52,7 +52,6 @@ pub fn parse(line: &[u8]) -> Evidence {
             e.timestamp
                 .and_then(|v| serde_json::from_str::<&str>(v.get()).ok()),
         ),
-        reset: e.kind == "compacted",
         ..Evidence::default()
     };
     if e.kind == "event_msg" {
@@ -75,16 +74,14 @@ pub fn parse(line: &[u8]) -> Evidence {
             evidence.settings = Some((
                 thread,
                 match tier {
-                    Some("priority") => Some(true),
+                    // Codex ServiceTier::from_request_value accepts these exact aliases.
+                    Some("priority" | "fast") => Some(true),
                     Some("default") => Some(false),
                     _ => None,
                 },
             ));
         }
-        evidence.reset |= matches!(
-            p.kind,
-            Some("thread_rolled_back" | "thread_forked" | "context_compacted")
-        );
+        evidence.reset |= matches!(p.kind, Some("thread_rolled_back" | "thread_forked"));
     }
     evidence
 }
@@ -96,6 +93,7 @@ pub struct Context {
     conflicted: bool,
     selected: Option<bool>,
     last_at: Option<String>,
+    active_turn: Option<String>,
 }
 
 pub fn observe(
@@ -110,6 +108,7 @@ pub fn observe(
         c.thread = Some(thread.clone());
         c.selected = None;
         c.last_at = None;
+        c.active_turn = None;
     }
     let reversed = c
         .last_at
@@ -118,6 +117,7 @@ pub fn observe(
         .is_some_and(|(old, new)| new < old);
     if evidence.reset || reversed || matches!(event, Event::Problem(_)) {
         c.selected = None;
+        c.active_turn = None;
     }
     if let Some(at) = &evidence.at {
         if c.last_at.as_ref().is_none_or(|old| at >= old) {
@@ -132,7 +132,22 @@ pub fn observe(
             None
         };
     }
+    if matches!(
+        event,
+        Event::Started | Event::Lifecycle { .. } | Event::Turn(None, _, _)
+    ) {
+        c.active_turn = None;
+    }
     if let (false, Some(thread), Event::Turn(Some(turn), _, _)) = (c.conflicted, &c.thread, event) {
+        // A repeated context (including after content compaction) is still the
+        // same active Turn. A later thread setting belongs to subsequent Turns;
+        // it must neither contradict nor fill an initially unknown selection.
+        // Independent sources and noncontinuous identity reuse still go through
+        // the conflict merge below; this is not a blanket first/latest-wins rule.
+        if c.active_turn.as_ref() == Some(turn) {
+            return Ok(());
+        }
+        c.active_turn = Some(turn.clone());
         db.execute("UPDATE model_turns SET fast_conflict=MAX(fast_conflict, CASE WHEN fast_mode IS NOT NULL AND ?4 IS NOT NULL AND fast_mode != ?4 THEN 1 ELSE 0 END), fast_mode=COALESCE(fast_mode,?4) WHERE root=?1 AND thread=?2 AND turn=?3", params![p.root, thread, turn, c.selected])?;
     }
     Ok(())
