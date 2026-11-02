@@ -791,13 +791,13 @@ it("applies the saved rail pin immediately when closing settings and leaving the
   await act(async () => { await vi.advanceTimersByTimeAsync(700); });
   expect(root.className).toContain("sidebar--handle");
 });
-it("uses only the weekly quota for Pro and does not substitute a short window when weekly is missing", async () => {
+it("uses actual quota windows for Pro and keeps an available short period when weekly is absent", async () => {
   const view = mount({}, { ...quota, plan: "PRO", weeklyWindow: { remainingPercent: 42, resetsAt: null, windowSeconds: 604800 } });
-  await expand(); hover("Codex 剩余 42%"); await flush();
+  await expand(); hover("Codex 剩余 74%"); await flush();
   expect(screen.getByRole("progressbar", { name: "每周额度 剩余" })).toBeTruthy();
-  expect(screen.queryByText("5 小时额度")).toBeNull();
+  expect(screen.getByRole("progressbar", { name: "5 小时额度 剩余" })).toBeTruthy();
   view.unmount(); mount({}, { ...quota, plan: "prolite" }); await expand();
-  expect(screen.getByRole("button", { name: "Codex 剩余 —" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Codex 剩余 74%" })).toBeTruthy();
 });
 it("can change side, opacity and return to the existing mode from the gear", async () => {
   mount({ sidebarSide: "left" }); await expand();
@@ -885,4 +885,11 @@ it("defaults automatic update checks on and saves the update preference independ
   fireEvent.click(screen.getByRole("button", { name: /检查更新/ })); await flush();
   expect(updaterOpen).toHaveBeenCalledOnce();
   expect(screen.getByText("2.0")).toBeTruthy();
+});
+
+it("shows the actual short duration without renaming it five hours", async () => {
+  mount({}, { ...quota, shortWindow: { ...quota.shortWindow!, windowSeconds: 7200 } });
+  await expand(); hover("Codex 剩余 74%"); await flush();
+  expect(screen.getByRole("progressbar", { name: "2 小时额度 剩余" })).toBeTruthy();
+  expect(screen.queryByText("5 小时额度")).toBeNull();
 });

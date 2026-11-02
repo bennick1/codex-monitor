@@ -244,14 +244,31 @@ fn parse(value: Value) -> Result<Usage, String> {
 fn enabled(app: &AppHandle) -> bool {
     crate::preferences_lock(&app.state::<crate::AppState>()).deepseek_enabled
 }
-fn set_enabled(app: &AppHandle, value: bool) -> Result<(), String> {
-    let state = app.state::<crate::AppState>();
-    let mut prefs = crate::preferences_lock(&state).clone();
-    prefs.deepseek_enabled = value;
-    crate::persist_preferences(&state.preferences_path, &prefs)?;
-    *crate::preferences_lock(&state) = prefs.clone();
-    let _ = app.emit_to("widget", "preferences-changed", prefs);
-    Ok(())
+async fn set_enabled(app: &AppHandle, value: bool) -> Result<(), String> {
+    let (send, receive) = tokio::sync::oneshot::channel();
+    let handle = app.clone();
+    app.run_on_main_thread(move || {
+        // The whole read-modify-save transaction shares the UI thread with
+        // mode/menu changes. A login finishing on a worker must not write an
+        // older display mode or skin back over the user's latest choice.
+        let result = (|| {
+            let state = handle.state::<crate::AppState>();
+            let mut saved = crate::preferences_lock(&state);
+            let mut next = saved.clone();
+            next.deepseek_enabled = value;
+            crate::persist_preferences(&state.preferences_path, &next)?;
+            *saved = next.clone();
+            drop(saved);
+            let _ = handle.emit_to("widget", "preferences-changed", next);
+            let _ = crate::operations_menu::refresh(&handle);
+            Ok(())
+        })();
+        let _ = send.send(result);
+    })
+    .map_err(|_| "settings unavailable".to_string())?;
+    receive
+        .await
+        .map_err(|_| "settings unavailable".to_string())?
 }
 fn origin(url: &tauri::Url) -> bool {
     url.scheme() == "https"
@@ -336,7 +353,7 @@ pub async fn open_deepseek_login(window: WebviewWindow, app: AppHandle) -> Resul
     if window.label() != "widget" {
         return Err("unsupported caller".into());
     }
-    set_enabled(&app, true)?;
+    set_enabled(&app, true).await?;
     let login = create_window(&app, true)?;
     if !origin(&login.url().map_err(|_| "login unavailable")?) {
         login
@@ -368,7 +385,7 @@ pub async fn disconnect_deepseek(window: WebviewWindow, app: AppHandle) -> Resul
             .destroy()
             .map_err(|_| "could not close DeepSeek session")?;
     }
-    set_enabled(&app, false)?;
+    set_enabled(&app, false).await?;
     *state.latest.lock().map_err(|_| "usage unavailable")? = Usage::empty("signed_out");
     state.ready.store(false, Ordering::SeqCst);
     *gate = None;

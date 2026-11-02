@@ -21,6 +21,7 @@ Codex Monitor stores widget preferences in its own application config directory:
 - auto-rotate interval
 - language, Light / Dark / Follow system appearance, selected built-in skin, and persistent expansion
 - 悬浮窗整体透明度、展示模式、侧边位置/大小/底色不透明度/毛玻璃效果、服务显示开关、是否启用 DeepSeek 网站登录及自动检查更新开关
+- macOS 菜单栏固定显示的额度周期，以及切回悬浮窗所需的位置
 
 历史 `selectedSkin` 值（`default`、`blur`、`computer`）继续保留，新增 `mecha-light` 使用同一普通本地偏好。 Removed supporter-license, unlock, and reminder fields in older settings are ignored and omitted from subsequent preference saves. Skin selection and bundled skin assets add no network requests. The app no longer reads hardware identifiers or generates device request codes. Existing position settings and the Token Statistics database are preserved.
 
@@ -29,6 +30,8 @@ Token Statistics stores `token-statistics.sqlite3` and its SQLite WAL/SHM files 
 Confirmed statistics and the minimal evidence needed to prevent recounting remain after source sessions are archived or deleted. Deleting source logs therefore does not delete previously collected statistics. Source roots remain separate when `CODEX_HOME` changes. The database is historical state, not a disposable cache; losing it without a consistent backup can lose statistics from already deleted sources. Unsupported versions or corruption cause an explicit error and preserve the existing database.
 
 It does not copy or persist Codex access tokens, credentials, account IDs, raw quota responses, prompts, answers, reasoning text, code, tool contents, conversation titles, original JSONL lines, raw diagnostic records, or `tags_json`. All Token Statistics processing and storage stays on the current machine, protected by the current user's filesystem permissions; none of these statistics are uploaded.
+
+在线额度由一个 Rust 后台调度器刷新，隐藏面板不停止刷新。最后有效额度仅保存在内存；账户边界使用只在内存比较的摘要，前端只接收不含身份的进程内轮次。退出或切换账户时清除上个账户的额度，不持久化账号标识、凭据或额度响应。菜单栏模式复用同一受信任窗口与既有鼠标点击监听，用于外部点击收起面板，不增加远程窗口权限。
 
 ## What It Sends
 

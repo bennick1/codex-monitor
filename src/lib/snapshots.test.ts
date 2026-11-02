@@ -33,4 +33,48 @@ describe("snapshot failure handling", () => {
   it("replaces stale data after recovery", () => {
     expect(mergeSnapshots([{ ...success, status: "stale" }], [{ ...success, shortWindow: { ...success.shortWindow!, remainingPercent: 88 } }])[0].shortWindow?.remainingPercent).toBe(88);
   });
+  it("retains weekly-only snapshots and their last success across repeated failures", () => {
+    const weekly = { ...success, shortWindow: null };
+    const failure: ProviderSnapshot = { ...weekly, weeklyWindow: null, status: "unavailable", updatedAt: "2026-07-07T01:00:00Z" };
+    const stale = mergeSnapshots([weekly], [failure])[0];
+    expect(stale.status).toBe("stale");
+    expect(stale.shortWindow).toBeNull();
+    expect(stale.weeklyWindow).toEqual(weekly.weeklyWindow);
+    expect(stale.updatedAt).toBe(success.updatedAt);
+    expect(mergeSnapshots([stale], [{ ...failure, updatedAt: "2026-07-07T02:00:00Z" }])[0].updatedAt).toBe(success.updatedAt);
+  });
+
+  it("does not retain invalid or unauthenticated values", () => {
+    const failure: ProviderSnapshot = { ...success, shortWindow: null, weeklyWindow: null, status: "unavailable" };
+    for (const percent of [NaN, Infinity, -1, 101]) {
+      const invalid = { ...success, shortWindow: null, weeklyWindow: { ...success.weeklyWindow!, remainingPercent: percent } };
+      expect(mergeSnapshots([invalid], [failure])[0]).toEqual(failure);
+    }
+    expect(mergeSnapshots([{ ...success, status: "signed_out" }], [failure])[0]).toEqual(failure);
+  });
+
+  it("accepts backend stale values with the backend's successful timestamp", () => {
+    const old = { ...success, accountGeneration: 1 };
+    const authoritative: ProviderSnapshot = { ...old, status: "stale", updatedAt: "2026-07-07T00:30:00Z" };
+    expect(mergeSnapshots([old], [authoritative])[0]).toEqual(authoritative);
+  });
+
+  it("never borrows cached values across a backend account generation", () => {
+    const old = { ...success, accountGeneration: 1 };
+    for (const status of ["loading", "unavailable", "signed_out"] as const) {
+      const next: ProviderSnapshot = { ...success, shortWindow: null, weeklyWindow: null, accountGeneration: 2, status };
+      expect(mergeSnapshots([old], [next])[0]).toEqual(next);
+    }
+  });
+
+  it("rejects late results from an earlier account and unscoped responses", () => {
+    const latest: ProviderSnapshot = { ...success, accountGeneration: 3, shortWindow: null, weeklyWindow: null, status: "signed_out" };
+    expect(mergeSnapshots([latest], [{ ...success, accountGeneration: 2 }])[0]).toEqual(latest);
+    expect(mergeSnapshots([latest], [success])[0]).toEqual(latest);
+  });
+
+  it("does not turn an authoritative empty failure into old values in the same generation", () => {
+    const failure: ProviderSnapshot = { ...success, accountGeneration: 2, shortWindow: null, weeklyWindow: null, status: "unavailable" };
+    expect(mergeSnapshots([{ ...success, accountGeneration: 2 }], [failure])[0]).toEqual(failure);
+  });
 });

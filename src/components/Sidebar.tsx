@@ -8,6 +8,7 @@ import { sidebarInputRegions } from "../lib/widgetGeometry";
 import { useSidebarGlass } from "../hooks/useSidebarGlass";
 import { accountDays, formatMoney, durationText, EMPTY_DEEPSEEK, formatTokenCount, formatTokenCountExact, remainingFunds, sidebarQuotaWindows, sumTokens, type AccountUsage, type DeepSeekUsage } from "../lib/sidebarData";
 import { formatDateTime, formatResetTime } from "../lib/format";
+import { quotaPeriodLabel } from "../lib/menubar";
 import codexLogo from "../../assets/codex-mark.svg";
 import deepSeekLogo from "../../assets/deepseek.svg";
 import "./sidebar.css";
@@ -38,9 +39,9 @@ function Chart({ label, days, money = false, locale = "zh-CN", currency = "CNY" 
   </div></figure>;
 }
 
-export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh, notice }: {
+export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh, notice, menubarAvailable = false }: {
   snapshot: ProviderSnapshot; preferences: WidgetPreferences; theme: WidgetTheme;
-  onPreferences: (value: WidgetPreferences) => void; onRefresh: () => void; notice: string | null;
+  onPreferences: (value: WidgetPreferences) => void; onRefresh: () => void; notice: string | null; menubarAvailable?: boolean;
 }) {
   const { state: updater } = useUpdater();
   const zh = preferences.language === "zh-CN";
@@ -464,7 +465,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
       </div>
       {panelPhase === "menu" ? <section ref={panel} className="sidebar-panel sidebar-menu" data-visible={phase === "menu"} aria-hidden={phase !== "menu"} inert={phase !== "menu"} role="dialog" aria-label={words("侧边栏菜单", "Sidebar menu")}>
         <header><h2>{words("设置", "Settings")}</h2><button aria-label={words("关闭菜单", "Close menu")} onClick={dismissMenu}><X size={17} /></button></header>
-        <label>{words("展示模式", "Display mode")}<select value="sidebar" onChange={event => update({ displayMode: event.target.value as "floating" | "sidebar" })}><option value="floating">{words("悬浮窗", "Floating widget")}</option><option value="sidebar">{words("侧边栏", "Sidebar")}</option></select></label>
+        <label>{words("展示模式", "Display mode")}<select value="sidebar" onChange={event => update({ displayMode: event.target.value as WidgetPreferences["displayMode"] })}>{menubarAvailable && <option value="menubar">{words("仅菜单栏", "Menu bar only")}</option>}<option value="floating">{words("悬浮窗", "Floating widget")}</option><option value="sidebar">{words("侧边栏", "Sidebar")}</option></select></label>
         <label>{words("贴边位置", "Screen edge")}<select value={side} onChange={event => update({ sidebarSide: event.target.value as WidgetPreferences["sidebarSide"] })}><option value="right">{words("右侧", "Right")}</option><option value="left">{words("左侧", "Left")}</option><option value="top">{words("顶部", "Top")}</option></select></label>
         <label className="sidebar-opacity">{words("侧边栏大小", "Sidebar size")}<output>{Math.round(scaleChoice * 100)}%</output><input aria-label={words("侧边栏大小", "Sidebar size")} type="range" min="80" max="130" step="10" value={Math.round(scaleChoice * 100)} onChange={event => { const value = Number(event.target.value) / 100; setScaleChoice(value); update({ sidebarScale: value }); }} /></label>
         {scaleLimited && <small className="sidebar-scale-note">{words("已缩小以适应当前屏幕", "Reduced to fit the current screen")}</small>}
@@ -494,7 +495,7 @@ export function Sidebar({ snapshot, preferences, theme, onPreferences, onRefresh
         {provider === "codex" ? <>
           {snapshot.status !== "ok" && <p className="sidebar-status">{snapshot.status === "stale" ? words("额度数据未更新", "Quota data is stale") : words("额度暂不可用，请检查 Codex 登录", "Quota unavailable. Check Codex sign-in.")}</p>}
           {quotaWindows.length === 0 && <p className="sidebar-status">{words("额度暂不可用", "Quota unavailable")}</p>}
-          {quotaWindows.map(row => { const name = row.kind === "short" ? words("5 小时额度", "5-hour quota") : words("每周额度", "Weekly quota"); return <div className="sidebar-quota" key={row.kind}><div><span>{name}</span><span>{formatResetTime(row.value.resetsAt, now, preferences.language)}</span></div><progress max={100} value={row.value.remainingPercent} aria-label={`${name} ${words("剩余", "remaining")}`} /><small>{row.value.remainingPercent.toFixed(1)}% {words("剩余", "remaining")}</small></div>; })}
+          {quotaWindows.map(row => { const name = quotaPeriodLabel(row.value, preferences.language); return <div className="sidebar-quota" key={row.kind}><div><span>{name}</span><span>{formatResetTime(row.value.resetsAt, now, preferences.language)}</span></div><progress max={100} value={row.value.remainingPercent} aria-label={`${name} ${words("剩余", "remaining")}`} /><small>{row.value.remainingPercent.toFixed(1)}% {words("剩余", "remaining")}</small></div>; })}
           <dl><Metric label={words("未使用重置", "Unused resets")} value={snapshot.resetCredits ?? "—"} />{snapshot.resetCreditExpiresAt?.[0] && <Metric label={words("下次到期", "Next expiration")} value={formatDateTime(snapshot.resetCreditExpiresAt[0], preferences.language)} />}</dl>
           <h3 className="sr-only">{words("账户统计", "Account statistics")}</h3>
           {accountStatus !== "ok" && <p className="sidebar-status">{accountStatus === "loading" ? words("正在读取…", "Loading…") : account ? words("账户统计未更新", "Account statistics are stale") : words("账户统计暂不可用", "Account statistics unavailable")}</p>}

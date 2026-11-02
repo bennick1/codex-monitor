@@ -1,12 +1,12 @@
 import { expandedHeightMode } from "./lib/widgetGeometry";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTokenStatistics } from "./hooks/useTokenStatistics";
 import { useUpdater } from "./hooks/useUpdater";
 import { openUpdateWindow } from "./lib/updater";
 import { Sidebar } from "./components/Sidebar";
 import { QuotaCard, QuotaOrb } from "./components/QuotaCard";
-import { fetchSnapshots, getPreferences, isTauri, listenDesktopEvents, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
-import { needsFastRefresh, quotaTier } from "./lib/format";
+import { fetchSnapshots, getDesktopPlatform, getPreferences, hideMenubarPanel, isTauri, listenDesktopEvents, openOperationsMenu, resizeMenubarPanel, setAlwaysOnTop, setWidgetExpanded, startDragging, syncWidgetAppearance, updatePreferences } from "./lib/bridge";
+import { quotaTier } from "./lib/format";
 import { openReleasePage } from "./lib/releasePage";
 import { copy, normalizeLanguage } from "./lib/i18n";
 import { mergeSnapshots } from "./lib/snapshots";
@@ -23,12 +23,14 @@ const INITIAL_SNAPSHOT: ProviderSnapshot = {
   resetCredits: null,
   resetCreditExpiresAt: [],
   updatedAt: new Date().toISOString(),
-  status: "unavailable",
+  status: "loading",
   message: "Quota is loading.",
 };
 
 export default function App() {
   const { state: updater } = useUpdater();
+  const [menubarAvailable, setMenubarAvailable] = useState(false);
+  useEffect(() => { void getDesktopPlatform().then(value => setMenubarAvailable(value === "macos")).catch(() => {}); }, []);
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [preferences, setPreferences] = useState(DEFAULT_PREFS);
   const confirmedPreferences = useRef(DEFAULT_PREFS);
@@ -44,7 +46,7 @@ export default function App() {
     // Keep the existing host/main composition intact. Applying the single
     // opacity factor to the host also leaves each skin's child animation alone.
     const root = document.getElementById("root");
-    if (!root || preferences.displayMode === "sidebar") return;
+    if (!root || (preferences.displayMode && preferences.displayMode !== "floating")) return;
     const previousOpacity = root.style.opacity;
     const previousTransform = root.style.transform;
     const hadVisualRootClass = root.classList.contains("widget-visual-root");
@@ -70,8 +72,8 @@ export default function App() {
   const current = preferences.pinnedProvider
     ? snapshots.find((item) => item.provider === preferences.pinnedProvider) ?? snapshots[0] ?? INITIAL_SNAPSHOT
     : snapshots[activeIndex % Math.max(1, snapshots.length)] ?? INITIAL_SNAPSHOT;
-  const tokens = useTokenStatistics(preferences.displayMode !== "sidebar" && !compact, current);
-  const failures = useRef(0);
+  const menubar = preferences.displayMode === "menubar";
+  const tokens = useTokenStatistics(menubar || ((!preferences.displayMode || preferences.displayMode === "floating") && !compact), current);
   const previousPrimary = useRef(new Map<string, number>());
   const consumptionTimers = useRef(new Map<string, number>());
   const collapseTimer = useRef<number | null>(null);
@@ -99,12 +101,33 @@ export default function App() {
   const skin: WidgetSkin = preferences.selectedSkin;
   const heightMode = expandedHeightMode(current);
   useEffect(() => {
-    if (preferences.displayMode === "sidebar") return;
+    if (preferences.displayMode && preferences.displayMode !== "floating") return;
     // This only reconciles the transparent-window safety inset after a theme
     // change. A platform refusal is non-fatal: the current widget geometry is
     // still usable and users should never see an internal resize error.
     void syncWidgetAppearance(theme, heightMode).catch(() => undefined);
   }, [theme, heightMode, preferences.displayMode]);
+
+  useLayoutEffect(() => {
+    if (!menubar) return;
+    // The card uses exactly the floating expanded dimensions, including its
+    // existing weekly-only mode. Only the native anchoring differs.
+    void resizeMenubarPanel(heightMode === "compact" ? 460 : 514).catch(() => setOperationError(operation.expandFailed));
+  }, [menubar, heightMode, operation.expandFailed]);
+
+  useEffect(() => {
+    if (!menubar) return;
+    const root = document.getElementById("root");
+    const overflow = root?.style.overflow ?? "";
+    if (root) root.style.overflow = "auto";
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
+      void hideMenubarPanel().catch(() => setOperationError(operation.collapseFailed));
+    };
+    window.addEventListener("keydown", keyboard);
+    return () => { if (root) root.style.overflow = overflow; window.removeEventListener("keydown", keyboard); };
+  }, [menubar, operation.collapseFailed]);
 
   useEffect(() => {
     const media = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -115,38 +138,38 @@ export default function App() {
     return () => media.removeEventListener("change", onChange);
   }, []);
 
-  const refresh = useCallback(async (force = false) => {
-    try {
-      const values = await fetchSnapshots(force);
-      const hasFailure = values.some((item) => item.status !== "ok");
-      if (hasFailure) failures.current += 1;
-      else failures.current = 0;
-      for (const item of values) {
-        const nextPrimary = item.shortWindow?.remainingPercent;
-        const previous = previousPrimary.current.get(item.provider);
-        if (nextPrimary !== undefined && previous !== undefined && nextPrimary < previous) {
-          setConsumingProviders((current) => new Set(current).add(item.provider));
-          const oldTimer = consumptionTimers.current.get(item.provider);
-          if (oldTimer !== undefined) window.clearTimeout(oldTimer);
-          const timer = window.setTimeout(() => {
-            setConsumingProviders((current) => { const next = new Set(current); next.delete(item.provider); return next; });
-            consumptionTimers.current.delete(item.provider);
-          }, 5 * 60_000);
-          consumptionTimers.current.set(item.provider, timer);
-        }
-        if (nextPrimary !== undefined) previousPrimary.current.set(item.provider, nextPrimary);
+  const acceptSnapshots = useCallback((values: ProviderSnapshot[]) => {
+    for (const item of values) {
+      const nextPrimary = item.shortWindow?.remainingPercent;
+      const previous = previousPrimary.current.get(item.provider);
+      if (nextPrimary !== undefined && previous !== undefined && nextPrimary < previous) {
+        setConsumingProviders((current) => new Set(current).add(item.provider));
+        const oldTimer = consumptionTimers.current.get(item.provider);
+        if (oldTimer !== undefined) window.clearTimeout(oldTimer);
+        const timer = window.setTimeout(() => {
+          setConsumingProviders((current) => { const next = new Set(current); next.delete(item.provider); return next; });
+          consumptionTimers.current.delete(item.provider);
+        }, 5 * 60_000);
+        consumptionTimers.current.set(item.provider, timer);
       }
-      setSnapshots((current) => mergeSnapshots(current, values));
-    } catch {
-      failures.current += 1;
+      if (nextPrimary !== undefined) previousPrimary.current.set(item.provider, nextPrimary);
+    }
+    // Native generations carry authoritative stale retention and reject
+    // a delayed response from an older account.
+    setSnapshots(current => mergeSnapshots(current, values));
+  }, []);
+
+  const refresh = useCallback(async (force = false) => {
+    try { acceptSnapshots(await fetchSnapshots(force)); }
+    catch {
       setSnapshots((current) => current.length > 0
         ? current.map((item) => ({ ...item, status: "stale", message: "Refresh failed. Please try again later." }))
         : [{ provider: "codex", displayName: "CODEX", plan: null, shortWindow: null, weeklyWindow: null, resetCredits: null, resetCreditExpiresAt: [], updatedAt: new Date().toISOString(), status: "unavailable", message: "Quota is temporarily unavailable. It will retry automatically." }]);
     }
-  }, []);
+  }, [acceptSnapshots]);
 
   useEffect(() => {
-    void refresh(true);
+    void refresh();
     const sequence = preferenceSaveSequence.current;
     void (async () => {
       const value = await getPreferences().catch(async () => {
@@ -160,7 +183,7 @@ export default function App() {
       acceptPreferences(value);
       // Window-state may restore the last expanded footprint while React starts
       // as an orb. Reconcile once, unless the user has already begun hovering.
-      if (value.displayMode !== "sidebar" && !value.stayExpanded && hoverSequence.current === 0) {
+      if ((!value.displayMode || value.displayMode === "floating") && !value.stayExpanded && hoverSequence.current === 0) {
         void setWidgetExpanded(false).catch(() => undefined);
       }
     })().catch(() => { if (sequence === preferenceSaveSequence.current) acceptPreferences(DEFAULT_PREFS); });
@@ -187,39 +210,23 @@ export default function App() {
         if (!preferenceSavePending.current) acceptPreferences(value);
       },
       onRefresh: refreshAll,
+      onSnapshots: acceptSnapshots,
+      onOperationFailed: () => setOperationError(operation.settingsFailed),
       onRelease: () => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed)),
     }).then((value) => {
       if (cancelled) value(); else cleanup = value;
     }).catch(() => setOperationError(operation.listenerFailed));
     return () => { cancelled = true; cleanup(); };
-  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll, acceptPreferences]);
+  }, [operation.listenerFailed, operation.releaseOpenFailed, refreshAll, acceptPreferences, acceptSnapshots]);
 
-  const refreshMs = useMemo(() => {
-    const backoff = failures.current === 0 ? 5 * 60_000 : Math.min(30 * 60_000, 30_000 * 2 ** (failures.current - 1));
-    if (failures.current === 0 && snapshots.some((item) => item.status === "ok" && needsFastRefresh(item))) return 60_000;
-    return backoff;
-  }, [snapshots]);
+  // Native Rust owns online refresh, retries and reset deadlines. Hidden
+  // WebViews consume events and must not be a second request scheduler.
 
   useEffect(() => {
-    const id = window.setInterval(() => void refresh(), refreshMs);
-    return () => window.clearInterval(id);
-  }, [refresh, refreshMs]);
-
-  useEffect(() => {
-    const refreshWhenActive = () => { if (document.visibilityState === "visible") void refresh(true); };
-    window.addEventListener("focus", refreshWhenActive);
-    document.addEventListener("visibilitychange", refreshWhenActive);
-    return () => {
-      window.removeEventListener("focus", refreshWhenActive);
-      document.removeEventListener("visibilitychange", refreshWhenActive);
-    };
-  }, [refresh]);
-
-  useEffect(() => {
-    if (hovered || preferences.pinnedProvider || snapshots.length < 2) return;
+    if (preferences.displayMode === "menubar" || hovered || preferences.pinnedProvider || snapshots.length < 2) return;
     const id = window.setInterval(() => setActiveIndex((value) => (value + 1) % snapshots.length), preferences.autoRotateSeconds * 1000);
     return () => window.clearInterval(id);
-  }, [hovered, preferences.autoRotateSeconds, preferences.pinnedProvider, snapshots.length]);
+  }, [hovered, preferences.autoRotateSeconds, preferences.pinnedProvider, preferences.displayMode, snapshots.length]);
 
   const primaryPercent = current?.shortWindow?.remainingPercent ?? current?.weeklyWindow?.remainingPercent ?? null;
   const tier = quotaTier(primaryPercent);
@@ -268,7 +275,7 @@ export default function App() {
     }
     setHovered(value);
     if (!value && (preferences.stayExpanded || menuOpen.current)) return;
-    if (value) void refresh(true);
+    if (value) void refresh();
     if (value) {
       const sequence = ++hoverSequence.current;
       void setWidgetExpanded(true)
@@ -288,7 +295,7 @@ export default function App() {
   }, [operation.collapseFailed, operation.expandFailed, preferences.stayExpanded, refresh]);
 
   useEffect(() => {
-    if (preferences.displayMode === "sidebar" || !preferences.stayExpanded) return;
+    if ((preferences.displayMode && preferences.displayMode !== "floating") || !preferences.stayExpanded) return;
     if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
     setCompact(false);
     void setWidgetExpanded(true).catch(() => setOperationError(operation.expandFailed));
@@ -299,7 +306,7 @@ export default function App() {
       previousMode.current = preferences.displayMode;
       ++hoverSequence.current;
       if (collapseTimer.current !== null) window.clearTimeout(collapseTimer.current);
-      if (preferences.displayMode !== "sidebar") {
+      if (!preferences.displayMode || preferences.displayMode === "floating") {
         setCompact(!preferences.stayExpanded);
         void setWidgetExpanded(preferences.stayExpanded).catch(() => setOperationError(operation.expandFailed));
       }
@@ -316,36 +323,39 @@ export default function App() {
   if (preferences.displayMode === "sidebar") {
     return <Sidebar snapshot={snapshots.find(value => value.provider === "codex") ?? INITIAL_SNAPSHOT}
       preferences={preferences} theme={theme} onPreferences={savePreferences} onRefresh={refreshAll}
-      notice={operationError} />;
+      notice={operationError} menubarAvailable={menubarAvailable} />;
   }
 
-  if (compact) {
+  if (compact && !menubar) {
     return <QuotaOrb snapshot={current} language={language} onDrag={() => startDragging()} onHover={handleHover} theme={theme} skin={skin} style={cardStyle} />;
   }
 
   return (
     <>
-    {modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
+    {!menubar && modeMenuOpen && <div className="display-mode-menu" role="dialog" aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} onKeyDown={event => { if (event.key === "Escape") closeMenu(); }}>
       <strong>{language === "zh-CN" ? "展示模式" : "Display mode"}</strong>
+      {menubarAvailable && <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "menubar" }); }}>{language === "zh-CN" ? "仅菜单栏" : "Menu bar only"}</button>}
       <button onClick={() => { closeMenu(); savePreferences({ ...preferences, displayMode: "sidebar" }); }}>{language === "zh-CN" ? "切换到侧边栏" : "Switch to sidebar"}</button>
       <button onClick={() => { void openUpdateWindow().catch(error => setOperationError(String(error))); }}>{language === "zh-CN" ? "检查更新" : "Check for updates"}{updater.version ? ` · ${updater.version}` : ""}</button>
       <label>{language === "zh-CN" ? "自动检查更新" : "Automatically check for updates"}<input type="checkbox" checked={preferences.autoCheckUpdates !== false} onChange={event => savePreferences({ ...preferences, autoCheckUpdates: event.target.checked })} /></label>
-      <button onClick={() => void openReleasePage().catch(() => setOperationError(operation.releaseOpenFailed))}>{language === "zh-CN" ? "打开版本下载页" : "Release downloads"}</button>
       <button onClick={closeMenu}>{language === "zh-CN" ? "保留悬浮窗" : "Keep floating widget"}</button>
     </div>}
     <QuotaCard
+      host={menubar ? "menubar" : "floating"}
       snapshot={current}
       preferences={preferences}
       providerCount={snapshots.length}
       onPrevious={() => setActiveIndex((value) => (value - 1 + snapshots.length) % snapshots.length)}
       onNext={() => setActiveIndex((value) => (value + 1) % snapshots.length)}
       onTogglePin={() => savePreferences({ ...preferences, pinnedProvider: preferences.pinnedProvider ? null : current.provider })}
-      onToggleStayExpanded={() => savePreferences({ ...preferences, stayExpanded: !preferences.stayExpanded })}
-      onLock={() => { setOperationError(null); void setAlwaysOnTop(!preferences.alwaysOnTop).then((value) => setPreferences(normalizePreferences(value))).catch(() => setOperationError(operation.alwaysOnTopFailed)); }}
+      onToggleStayExpanded={menubar
+        ? () => { void hideMenubarPanel().catch(() => setOperationError(operation.collapseFailed)); }
+        : () => savePreferences({ ...preferences, stayExpanded: !preferences.stayExpanded })}
+      onLock={menubar ? () => savePreferences({ ...preferences, displayMode: "floating" }) : () => { setOperationError(null); void setAlwaysOnTop(!preferences.alwaysOnTop).then((value) => setPreferences(normalizePreferences(value))).catch(() => setOperationError(operation.alwaysOnTopFailed)); }}
       onDrag={() => startDragging()}
       onHover={handleHover}
       onRefresh={refreshAll}
-      onMenu={showMenu}
+      onMenu={menubar ? () => { void openOperationsMenu().catch(() => setOperationError(operation.settingsFailed)); } : showMenu}
       tokens={tokens}
       isConsuming={consumingProviders.has(current.provider)}
       theme={theme}

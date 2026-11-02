@@ -12,8 +12,10 @@ use block2::RcBlock;
 use objc2::{available, rc::Retained, runtime::AnyObject, MainThreadMarker};
 use objc2_app_kit::{
     NSApplication, NSApplicationActivationPolicy, NSEvent, NSEventMask, NSEventType,
-    NSFloatingWindowLevel, NSNormalWindowLevel, NSWindow, NSWindowCollectionBehavior as Behavior,
+    NSFloatingWindowLevel, NSNormalWindowLevel, NSScreen, NSWindow,
+    NSWindowCollectionBehavior as Behavior,
 };
+use objc2_foundation::{NSPoint, NSRect, NSSize};
 use tauri::{Emitter, Manager, WebviewWindow};
 use tauri_plugin_window_state::{AppHandleExt, StateFlags, WindowExt, DEFAULT_FILENAME};
 
@@ -136,6 +138,7 @@ fn watch_pointer_events(window: &WebviewWindow) -> Result<(), String> {
                 track_sidebar_pointer(&global_app);
             } else {
                 crate::sidebar::dismiss_menu(&global_app);
+                crate::menubar::dismiss(&global_app);
             }
         });
         let local = RcBlock::new(move |event: NonNull<NSEvent>| {
@@ -306,7 +309,11 @@ fn saved_visibility(path: &Path) -> bool {
         .unwrap_or(true)
 }
 
-pub fn initialize(window: &WebviewWindow, always_on_top: bool) -> Result<(), String> {
+pub fn initialize(
+    window: &WebviewWindow,
+    always_on_top: bool,
+    allow_visible: bool,
+) -> Result<(), String> {
     let state_path = window
         .app_handle()
         .path()
@@ -327,10 +334,159 @@ pub fn initialize(window: &WebviewWindow, always_on_top: bool) -> Result<(), Str
     })?;
     set_always_on_top(window, always_on_top)?;
     watch_pointer_events(window)?;
-    if visible {
+    if visible && allow_visible {
         show(window)?;
     }
     Ok(())
+}
+
+pub fn control_pressed() -> bool {
+    NSEvent::modifierFlags_class().contains(objc2_app_kit::NSEventModifierFlags::Control)
+}
+
+pub fn menu_is_tracking(app: &tauri::AppHandle) -> bool {
+    app.get_webview_window("widget").is_some_and(|window| {
+        on_main(&window, |_| {
+            objc2_foundation::NSRunLoop::currentRunLoop()
+                .currentMode()
+                .is_some_and(|mode| mode.to_string() == "NSEventTrackingRunLoopMode")
+        })
+        .unwrap_or(false)
+    })
+}
+
+fn menubar_frame(anchor: NSRect, visible: NSRect, height: f64) -> Result<NSRect, String> {
+    if ![
+        anchor.origin.x,
+        anchor.origin.y,
+        anchor.size.width,
+        anchor.size.height,
+        visible.origin.x,
+        visible.origin.y,
+        visible.size.width,
+        visible.size.height,
+        height,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || anchor.size.width <= 0.0
+        || anchor.size.height <= 0.0
+        || visible.size.width <= 0.0
+        || visible.size.height <= 0.0
+        || height <= 0.0
+    {
+        return Err("menu bar geometry unavailable".into());
+    }
+    // These are AppKit points throughout, with a bottom-left origin. Never
+    // compare per-monitor physical coordinates: a 2x screen and an adjacent
+    // 1x screen can have overlapping numeric physical rectangles in Tauri.
+    let width = crate::menubar::WINDOW_WIDTH.min(visible.size.width);
+    let height = height.min(visible.size.height);
+    let x = (anchor.origin.x + anchor.size.width / 2.0 - width / 2.0).clamp(
+        visible.origin.x,
+        visible.origin.x + visible.size.width - width,
+    );
+    let y = (anchor.origin.y - 4.0 - height).clamp(
+        visible.origin.y,
+        visible.origin.y + visible.size.height - height,
+    );
+    Ok(NSRect::new(NSPoint::new(x, y), NSSize::new(width, height)))
+}
+
+pub fn position_menubar(window: &WebviewWindow, height: f64) -> Result<(), String> {
+    let tray = window
+        .app_handle()
+        .tray_by_id("main")
+        .ok_or("tray unavailable")?;
+    window
+        .set_min_size(None::<tauri::LogicalSize<f64>>)
+        .map_err(|_| "panel size unavailable")?;
+    window
+        .set_max_size(None::<tauri::LogicalSize<f64>>)
+        .map_err(|_| "panel size unavailable")?;
+    let owned = window.clone();
+    // This public Tauri/tray-icon API guarantees the closure runs on AppKit's
+    // main thread. No borrowed native object or raw pointer leaves it.
+    tray.with_inner_tray_icon(move |inner| {
+        let main = MainThreadMarker::new().ok_or("menu bar requires the main thread")?;
+        let item = inner.ns_status_item().ok_or("status item unavailable")?;
+        let button = item.button(main).ok_or("status button unavailable")?;
+        let status_window = button.window().ok_or("status window unavailable")?;
+        let screen = status_window.screen().ok_or("status screen unavailable")?;
+        let anchor =
+            status_window.convertRectToScreen(button.convertRect_toView(button.bounds(), None));
+        let frame = menubar_frame(anchor, screen.visibleFrame(), height)?;
+        let pointer = owned.ns_window().map_err(|_| "panel unavailable")?;
+        // SAFETY: the retained Tauri handle owns this NSWindow, and the main
+        // thread marker above covers this short borrow and native mutation.
+        let native = unsafe { pointer.cast::<NSWindow>().as_ref() }.ok_or("panel unavailable")?;
+        // Apply position and size together, without ordering front or taking
+        // focus. Calling this while hidden must leave the panel hidden.
+        native.setFrame_display(frame, true);
+        Ok(())
+    })
+    .map_err(|_| "menu bar positioning unavailable".to_string())?
+}
+
+fn fit_visible_frame(frame: NSRect, visible: NSRect) -> Option<NSRect> {
+    if ![
+        frame.origin.x,
+        frame.origin.y,
+        frame.size.width,
+        frame.size.height,
+        visible.origin.x,
+        visible.origin.y,
+        visible.size.width,
+        visible.size.height,
+    ]
+    .into_iter()
+    .all(f64::is_finite)
+        || frame.size.width <= 0.0
+        || frame.size.height <= 0.0
+        || visible.size.width <= 0.0
+        || visible.size.height <= 0.0
+    {
+        return None;
+    }
+    let width = frame.size.width.min(visible.size.width);
+    let height = frame.size.height.min(visible.size.height);
+    Some(NSRect::new(
+        NSPoint::new(
+            frame.origin.x.clamp(
+                visible.origin.x,
+                visible.origin.x + visible.size.width - width,
+            ),
+            frame.origin.y.clamp(
+                visible.origin.y,
+                visible.origin.y + visible.size.height - height,
+            ),
+        ),
+        NSSize::new(width, height),
+    ))
+}
+
+pub fn ensure_visible(window: &WebviewWindow) -> Result<(), String> {
+    on_main(window, |native| {
+        let main = MainThreadMarker::new().ok_or("window recovery requires the main thread")?;
+        let screens = NSScreen::screens(main);
+        let frame = native.frame();
+        if screens.iter().any(|screen| {
+            fit_visible_frame(frame, screen.visibleFrame()).is_some_and(|fitted| fitted == frame)
+        }) {
+            return Ok(());
+        }
+        let screen = native
+            .screen()
+            .or_else(|| NSScreen::mainScreen(main))
+            .or_else(|| screens.firstObject())
+            .ok_or("visible screen unavailable")?;
+        let fitted =
+            fit_visible_frame(frame, screen.visibleFrame()).ok_or("window geometry unavailable")?;
+        // Saved floating positions can refer to a removed external display.
+        // Reconcile only their frame; retain mode, appearance, focus and level.
+        native.setFrame_display(fitted, true);
+        Ok(())
+    })?
 }
 
 pub fn set_always_on_top(window: &WebviewWindow, enabled: bool) -> Result<(), String> {
@@ -416,6 +572,83 @@ pub fn save_visibility(app: &tauri::AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn rect(x: f64, y: f64, width: f64, height: f64) -> NSRect {
+        NSRect::new(NSPoint::new(x, y), NSSize::new(width, height))
+    }
+
+    #[test]
+    fn menubar_uses_the_status_screen_points_instead_of_overlapping_mixed_dpi_bounds() {
+        // A Retina primary screen is 1440 points wide (2880 device pixels).
+        // The 1x external screen begins at x=1440 points. Its status item at
+        // x=1980 must not be misidentified as residing on the primary screen.
+        let external = rect(1440.0, 0.0, 1920.0, 1056.0);
+        let anchor = rect(1980.0, 1056.0, 40.0, 24.0);
+        let frame = menubar_frame(anchor, external, 514.0).unwrap();
+        assert_eq!(frame, rect(1843.0, 538.0, 314.0, 514.0));
+        assert!(frame.origin.x >= external.origin.x);
+        // A different anchor on the Retina primary keeps the same readable
+        // logical width while fitting that screen's narrower logical bounds.
+        let primary = menubar_frame(
+            rect(1300.0, 876.0, 40.0, 24.0),
+            rect(0.0, 0.0, 1440.0, 876.0),
+            514.0,
+        )
+        .unwrap();
+        assert_eq!(primary, rect(1126.0, 358.0, 314.0, 514.0));
+        assert_eq!(primary.size, frame.size);
+    }
+
+    #[test]
+    fn menubar_fits_negative_and_vertically_offset_displays_without_changing_text_scale() {
+        let left = rect(-1920.0, -300.0, 1920.0, 1056.0);
+        let edge = menubar_frame(rect(-1910.0, 756.0, 40.0, 24.0), left, 514.0).unwrap();
+        assert_eq!(edge, rect(-1920.0, 238.0, 314.0, 514.0));
+        let right = menubar_frame(rect(-30.0, 756.0, 30.0, 24.0), left, 514.0).unwrap();
+        assert_eq!(right.origin.x, -314.0);
+        let short = menubar_frame(rect(-100.0, 756.0, 40.0, 24.0), left, 460.0).unwrap();
+        assert_eq!(
+            short.origin.y + short.size.height,
+            edge.origin.y + edge.size.height
+        );
+    }
+
+    #[test]
+    fn menubar_clamps_tall_content_and_rejects_incomplete_native_geometry() {
+        let visible = rect(0.0, 100.0, 300.0, 240.0);
+        let anchor = rect(260.0, 340.0, 40.0, 24.0);
+        assert_eq!(menubar_frame(anchor, visible, 760.0).unwrap(), visible);
+        assert!(menubar_frame(anchor, visible, f64::NAN).is_err());
+        assert!(menubar_frame(anchor, rect(0.0, 0.0, 0.0, 0.0), 260.0).is_err());
+    }
+
+    #[test]
+    fn restored_frame_on_a_remaining_negative_display_is_preserved() {
+        let visible = rect(-1920.0, -300.0, 1920.0, 1056.0);
+        let frame = rect(-1700.0, -120.0, 306.0, 506.0);
+        assert_eq!(fit_visible_frame(frame, visible), Some(frame));
+    }
+
+    #[test]
+    fn removed_display_and_partial_overflow_return_to_a_usable_work_area() {
+        let visible = rect(0.0, 30.0, 1440.0, 846.0);
+        assert_eq!(
+            fit_visible_frame(rect(-1800.0, -500.0, 80.0, 80.0), visible),
+            Some(rect(0.0, 30.0, 80.0, 80.0))
+        );
+        assert_eq!(
+            fit_visible_frame(rect(1420.0, 850.0, 306.0, 506.0), visible),
+            Some(rect(1134.0, 370.0, 306.0, 506.0))
+        );
+        assert_eq!(
+            fit_visible_frame(
+                rect(0.0, 0.0, 500.0, 900.0),
+                rect(100.0, 50.0, 300.0, 200.0)
+            ),
+            Some(rect(100.0, 50.0, 300.0, 200.0))
+        );
+        assert!(fit_visible_frame(rect(f64::NAN, 0.0, 80.0, 80.0), visible).is_none());
+    }
 
     #[test]
     fn combined_sidebar_frame_preserves_center_and_negative_screen_coordinates() {

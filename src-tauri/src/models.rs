@@ -11,6 +11,9 @@ pub struct UsageWindow {
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProviderSnapshot {
+    // Process-local epoch only; never an account identifier or credential.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub account_generation: Option<u64>,
     pub provider: String,
     pub display_name: String,
     pub plan: Option<String>,
@@ -26,6 +29,7 @@ pub struct ProviderSnapshot {
 impl ProviderSnapshot {
     pub fn failure(status: &str, message: &str) -> Self {
         Self {
+            account_generation: None,
             provider: "codex".into(),
             display_name: "CODEX".into(),
             plan: None,
@@ -46,6 +50,8 @@ pub struct WidgetPreferences {
     pub deepseek_enabled: bool,
     pub auto_check_updates: bool,
     pub display_mode: String,
+    pub menubar_quota_display: String,
+    pub floating_position: Option<(i32, i32)>,
     pub sidebar_side: String,
     pub sidebar_opacity: f64,
     pub sidebar_glass_enabled: bool,
@@ -112,6 +118,8 @@ impl Default for WidgetPreferences {
             deepseek_enabled: false,
             auto_check_updates: true,
             display_mode: "floating".into(),
+            menubar_quota_display: "short".into(),
+            floating_position: None,
             sidebar_side: "right".into(),
             sidebar_opacity: 0.9,
             sidebar_glass_enabled: true,
@@ -133,11 +141,18 @@ impl Default for WidgetPreferences {
 
 impl WidgetPreferences {
     pub fn normalized(mut self) -> Self {
-        if self.display_mode != "sidebar" {
+        if !matches!(self.display_mode.as_str(), "sidebar" | "menubar")
+            || (self.display_mode == "menubar" && !cfg!(target_os = "macos"))
+        {
             self.display_mode = "floating".into();
-        } else {
-            // A sidebar is the only visible way back when its tray is hidden.
-            self.locked = false;
+        }
+        // Keep each mode's saved floating options. Non-floating windows ignore
+        // click-through at the native boundary rather than erasing this choice.
+        if !matches!(
+            self.menubar_quota_display.as_str(),
+            "short" | "weekly" | "both"
+        ) {
+            self.menubar_quota_display = "short".into();
         }
         if !matches!(self.sidebar_side.as_str(), "right" | "left" | "top") {
             self.sidebar_side = "right".into();
@@ -177,6 +192,45 @@ impl WidgetPreferences {
 mod sidebar_preference_tests {
     use super::*;
     #[test]
+    fn menubar_migration_is_opt_in_and_windows_has_a_reachable_fallback() {
+        let old: WidgetPreferences = serde_json::from_str(
+            r#"{"selectedSkin":"computer","locked":true,"sidebarSide":"left"}"#,
+        )
+        .unwrap();
+        assert_eq!(old.display_mode, "floating");
+        assert_eq!(old.menubar_quota_display, "short");
+        let next = WidgetPreferences {
+            display_mode: "menubar".into(),
+            menubar_quota_display: "both".into(),
+            floating_position: Some((-800, 200)),
+            ..old
+        }
+        .normalized();
+        assert_eq!(
+            next.display_mode,
+            if cfg!(target_os = "macos") {
+                "menubar"
+            } else {
+                "floating"
+            }
+        );
+        assert!(next.locked);
+        assert_eq!(next.sidebar_side, "left");
+        let restored: WidgetPreferences =
+            serde_json::from_str(&serde_json::to_string(&next).unwrap()).unwrap();
+        assert_eq!(restored.menubar_quota_display, "both");
+        assert_eq!(restored.floating_position, Some((-800, 200)));
+        assert_eq!(
+            WidgetPreferences {
+                menubar_quota_display: "average".into(),
+                ..next
+            }
+            .normalized()
+            .menubar_quota_display,
+            "short"
+        );
+    }
+    #[test]
     fn old_preferences_keep_floating_mode_and_sidebar_is_always_reachable() {
         let legacy: WidgetPreferences =
             serde_json::from_str(r#"{"locked":true,"selectedSkin":"blur"}"#).unwrap();
@@ -193,7 +247,7 @@ mod sidebar_preference_tests {
             ..legacy
         }
         .normalized();
-        assert!(!next.locked);
+        assert!(next.locked); // Saved floating preference; sidebar ignores it.
         assert_eq!(next.sidebar_opacity, 0.2);
         assert_eq!(next.sidebar_side, "right");
         assert_eq!(next.selected_skin, "blur");

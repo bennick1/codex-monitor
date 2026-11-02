@@ -3,7 +3,10 @@ mod codex;
 mod deepseek;
 #[cfg(target_os = "macos")]
 mod macos_widget;
+mod menubar;
 mod models;
+mod operations_menu;
+mod quota_service;
 mod sidebar;
 #[cfg(debug_assertions)]
 mod sidebar_fixtures;
@@ -20,18 +23,17 @@ use std::{
     io::Write,
     path::PathBuf,
     sync::{Mutex, MutexGuard},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use models::UsageWindow;
 use models::{ProviderSnapshot, WidgetPreferences};
 use serde::Deserialize;
 use tauri::{
-    menu::{CheckMenuItem, Menu, MenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WindowEvent,
 };
-use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_autostart::MacosLauncher;
 #[cfg(not(target_os = "macos"))]
 use tauri_plugin_window_state::Builder as WindowStateBuilder;
 
@@ -98,6 +100,7 @@ fn preferences_for_opacity_menu(
     Some(next.normalized())
 }
 
+#[cfg(test)]
 fn opacity_menu_labels(language: &str) -> (&'static str, &'static str) {
     if language == "en" {
         ("Opacity", "Reset to 100%")
@@ -139,6 +142,7 @@ fn preferences_for_theme_menu(
     Some(next.normalized())
 }
 
+#[cfg(test)]
 fn skin_check_state(selected_skin: &str) -> (bool, bool, bool) {
     (
         selected_skin == BLUR_SKIN_ID,
@@ -147,6 +151,7 @@ fn skin_check_state(selected_skin: &str) -> (bool, bool, bool) {
     )
 }
 
+#[cfg(test)]
 #[derive(Clone, Copy)]
 struct ThemeMenuLabels {
     theme: &'static str,
@@ -157,6 +162,7 @@ struct ThemeMenuLabels {
     mecha_light: &'static str,
 }
 
+#[cfg(test)]
 fn theme_menu_labels(language: &str) -> ThemeMenuLabels {
     if language == "en" {
         ThemeMenuLabels {
@@ -246,21 +252,11 @@ struct AppState {
     client: reqwest::Client,
     preferences: Mutex<WidgetPreferences>,
     preferences_path: PathBuf,
-    fetch_lock: tokio::sync::Mutex<()>,
-    snapshot_cache: Mutex<Option<(Instant, Vec<ProviderSnapshot>)>>,
     #[cfg(debug_assertions)]
     simulate_short_window_for_testing: Mutex<bool>,
     geometry: Mutex<Option<WidgetGeometryState>>,
     expanded_height_mode: Mutex<ExpandedHeightMode>,
     drag_mode: Mutex<Option<WidgetMode>>,
-}
-
-fn release_menu_label(language: &str) -> &'static str {
-    if language == "en" {
-        "Open release downloads"
-    } else {
-        "打开版本下载页"
-    }
 }
 
 fn apply_short_window_test_override(
@@ -294,6 +290,7 @@ async fn fetch_provider_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
         && std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
     {
         return ProviderSnapshot {
+            account_generation: None,
             provider: "codex".into(),
             display_name: "CODEX".into(),
             plan: Some(
@@ -324,19 +321,6 @@ async fn fetch_provider_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
         };
     }
     codex::fetch_snapshot(client).await
-}
-
-async fn fetch_snapshots_uncached(
-    state: &State<'_, AppState>,
-    token_service: &token_stats::TokenStatisticsService,
-) -> Vec<ProviderSnapshot> {
-    let _guard = state.fetch_lock.lock().await;
-    let values = vec![fetch_provider_snapshot(&state.client).await];
-    persist_quota_observations(token_service, &values).await;
-    if let Ok(mut cache) = state.snapshot_cache.lock() {
-        *cache = Some((Instant::now(), values.clone()));
-    }
-    apply_short_window_test_override(state.inner(), values)
 }
 
 fn load_preferences(path: &PathBuf) -> WidgetPreferences {
@@ -487,7 +471,7 @@ mod preference_migration_tests {
         assert!(!selected.sidebar_show_codex);
         assert!(selected.sidebar_show_deepseek && selected.deepseek_enabled);
         assert!(!selected.auto_check_updates);
-        assert!(!selected.locked);
+        assert!(selected.locked);
         let expected = serde_json::to_value(&selected).unwrap();
         persist_preferences(&path, &selected).unwrap();
         assert_eq!(
@@ -554,7 +538,7 @@ mod preference_migration_tests {
                 persist_preferences(&path, &prefs).unwrap();
                 let saved: serde_json::Value =
                     serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                assert_eq!(saved.as_object().unwrap().len(), 18);
+                assert_eq!(saved.as_object().unwrap().len(), 20);
                 assert_eq!(saved["displayMode"], "floating");
                 assert_eq!(saved["sidebarSide"], "right");
                 assert_eq!(saved["sidebarScale"], 1.0);
@@ -744,71 +728,9 @@ fn persist_preferences(path: &PathBuf, value: &WidgetPreferences) -> Result<(), 
     Ok(())
 }
 
-fn apply_theme_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPreferences> {
-    let state = app.try_state::<AppState>()?;
-    let mut preferences = state.preferences.lock().ok()?;
-    let normalized = preferences_for_theme_menu(&preferences, menu_id)?;
-    persist_preferences(&state.preferences_path, &normalized).ok()?;
-    *preferences = normalized.clone();
-    let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
-    Some(normalized)
-}
-
-fn apply_opacity_menu_selection(app: &AppHandle, menu_id: &str) -> Option<WidgetPreferences> {
-    let state = app.try_state::<AppState>()?;
-    let mut preferences = preferences_lock(&state);
-    let normalized = preferences_for_opacity_menu(&preferences, menu_id)?;
-    // Keep the current selection if saving fails; never leave menu checks ahead
-    // of the saved and rendered value.
-    if persist_preferences(&state.preferences_path, &normalized).is_err() {
-        eprintln!("opacity settings could not be saved");
-        return Some(preferences.clone());
-    }
-    *preferences = normalized.clone();
-    let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
-    Some(normalized)
-}
-
 #[tauri::command]
-async fn get_snapshots(
-    state: State<'_, AppState>,
-    token_service: State<'_, token_stats::TokenStatisticsService>,
-) -> Result<Vec<ProviderSnapshot>, String> {
-    const CACHE_TTL: Duration = Duration::from_secs(30);
-    if let Ok(cache) = state.snapshot_cache.lock() {
-        if let Some((time, values)) = &*cache {
-            if time.elapsed() < CACHE_TTL {
-                return Ok(apply_short_window_test_override(&state, values.clone()));
-            }
-        }
-    }
-    let _guard = match state.fetch_lock.try_lock() {
-        Ok(guard) => guard,
-        Err(_) => {
-            if let Ok(cache) = state.snapshot_cache.lock() {
-                if let Some((_, values)) = &*cache {
-                    return Ok(apply_short_window_test_override(&state, values.clone()));
-                }
-            }
-            return Ok(vec![ProviderSnapshot::failure(
-                "unavailable",
-                "Quota refresh is already running.",
-            )]);
-        }
-    };
-    if let Ok(cache) = state.snapshot_cache.lock() {
-        if let Some((time, values)) = &*cache {
-            if time.elapsed() < CACHE_TTL {
-                return Ok(apply_short_window_test_override(&state, values.clone()));
-            }
-        }
-    }
-    let values = vec![fetch_provider_snapshot(&state.client).await];
-    persist_quota_observations(token_service.inner(), &values).await;
-    if let Ok(mut cache) = state.snapshot_cache.lock() {
-        *cache = Some((Instant::now(), values.clone()));
-    }
-    Ok(apply_short_window_test_override(&state, values))
+async fn get_snapshots(app: AppHandle) -> Result<Vec<ProviderSnapshot>, String> {
+    quota_service::refresh(&app, false).await
 }
 
 #[tauri::command]
@@ -827,11 +749,8 @@ async fn get_account_usage(
 }
 
 #[tauri::command]
-async fn refresh_snapshots(
-    state: State<'_, AppState>,
-    token_service: State<'_, token_stats::TokenStatisticsService>,
-) -> Result<Vec<ProviderSnapshot>, String> {
-    Ok(fetch_snapshots_uncached(&state, token_service.inner()).await)
+async fn refresh_snapshots(app: AppHandle) -> Result<Vec<ProviderSnapshot>, String> {
+    quota_service::refresh(&app, true).await
 }
 
 async fn persist_quota_observations(
@@ -1134,7 +1053,7 @@ fn expand_widget(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    if sidebar::enabled(&app) {
+    if sidebar::enabled(&app) || menubar::enabled(&app) {
         return Ok(());
     }
     let window = app
@@ -1377,7 +1296,7 @@ mod geometry_tests {
 
 #[tauri::command]
 fn collapse_widget(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if sidebar::enabled(&app) {
+    if sidebar::enabled(&app) || menubar::enabled(&app) {
         return Ok(());
     }
     let window = app
@@ -1443,7 +1362,7 @@ fn collapse_widget(app: AppHandle, state: State<'_, AppState>) -> Result<(), Str
 
 #[tauri::command]
 fn begin_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if sidebar::enabled(&app) {
+    if sidebar::enabled(&app) || menubar::enabled(&app) {
         return Ok(());
     }
     let window = app
@@ -1471,7 +1390,7 @@ fn begin_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), S
 
 #[tauri::command]
 fn finish_widget_drag(app: AppHandle, state: State<'_, AppState>) -> Result<(), String> {
-    if sidebar::enabled(&app) {
+    if sidebar::enabled(&app) || menubar::enabled(&app) {
         return Ok(());
     }
     let window = app
@@ -1590,12 +1509,19 @@ fn set_preferences(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    let preferences = preferences.normalized();
+    let mut preferences = preferences.normalized();
     let previous = preferences_lock(&state).clone();
+    if previous.display_mode == "floating" && preferences.display_mode != "floating" {
+        if let Some(window) = app.get_webview_window("widget") {
+            if let Ok(position) = window.outer_position() {
+                preferences.floating_position = Some((position.x, position.y));
+            }
+        }
+    }
     persist_preferences(&state.preferences_path, &preferences)?;
-    if let Err(error) = sidebar::apply_mode(&app, &previous, &preferences) {
+    if let Err(error) = menubar::apply_mode(&app, &previous, &preferences) {
         let _ = persist_preferences(&state.preferences_path, &previous);
-        let _ = sidebar::apply_mode(&app, &preferences, &previous);
+        let _ = menubar::apply_mode(&app, &preferences, &previous);
         return Err(error);
     }
     *preferences_lock(&state) = preferences.clone();
@@ -1604,6 +1530,7 @@ fn set_preferences(
     }
     let _ = app.emit_to("widget", "sidebar-glass-invalidated", ());
     let _ = app.emit_to("widget", "preferences-changed", preferences);
+    menubar::update_tray(&app, &quota_service::cached(&app));
     Ok(())
 }
 
@@ -1685,7 +1612,7 @@ fn sync_widget_appearance(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    if sidebar::enabled(&app) {
+    if sidebar::enabled(&app) || menubar::enabled(&app) {
         return Ok(());
     }
     let window = app
@@ -1799,422 +1726,12 @@ fn resized_position_in_bounds(
 }
 
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
-    let mode_floating = MenuItem::with_id(
-        app,
-        "mode-floating",
-        "Floating widget / 悬浮窗",
-        true,
-        None::<&str>,
-    )?;
-    let mode_sidebar =
-        MenuItem::with_id(app, "mode-sidebar", "Sidebar / 侧边栏", true, None::<&str>)?;
-    let display_mode = Submenu::with_items(
-        app,
-        "Display mode / 展示模式",
-        true,
-        &[&mode_floating, &mode_sidebar],
-    )?;
-    let show = MenuItem::with_id(app, "show", "Show / Hide", true, None::<&str>)?;
-    let refresh = MenuItem::with_id(app, "refresh", "Refresh now", true, None::<&str>)?;
-    let releases = MenuItem::with_id(
-        app,
-        "releases",
-        "Open release downloads",
-        true,
-        None::<&str>,
-    )?;
-    let updates = MenuItem::with_id(
-        app,
-        "updates",
-        "检查更新 / Check for updates",
-        true,
-        None::<&str>,
-    )?;
-    let unlock = MenuItem::with_id(app, "unlock", "Unlock widget", true, None::<&str>)?;
-    let pin = MenuItem::with_id(app, "pin", "Pin / Unpin Codex", true, None::<&str>)?;
-    let language = MenuItem::with_id(
-        app,
-        "language",
-        "Switch Language / 切换语言",
-        true,
-        None::<&str>,
-    )?;
-    let theme_system = CheckMenuItem::with_id(
-        app,
-        "theme-system",
-        "Follow system",
-        true,
-        false,
-        None::<&str>,
-    )?;
-    let theme_dark = CheckMenuItem::with_id(app, "theme-dark", "Dark", true, false, None::<&str>)?;
-    let theme_light =
-        CheckMenuItem::with_id(app, "theme-light", "Light", true, false, None::<&str>)?;
-    let skin_blur =
-        CheckMenuItem::with_id(app, SKIN_BLUR_MENU_ID, "Blur", true, false, None::<&str>)?;
-    let skin_computer = CheckMenuItem::with_id(
-        app,
-        SKIN_COMPUTER_MENU_ID,
-        "Computer",
-        true,
-        false,
-        None::<&str>,
-    )?;
-    let skin_mecha_light = CheckMenuItem::with_id(
-        app,
-        SKIN_MECHA_LIGHT_MENU_ID,
-        "Mecha Light",
-        true,
-        false,
-        None::<&str>,
-    )?;
-    let default_skin = Submenu::with_items(
-        app,
-        "Default skin / 默认皮肤",
-        true,
-        &[&theme_system, &theme_dark, &theme_light],
-    )?;
-    let theme = Submenu::with_items(
-        app,
-        "Theme / 主题",
-        true,
-        &[&default_skin, &skin_blur, &skin_computer, &skin_mecha_light],
-    )?;
-    let autostart_enabled = app.autolaunch().is_enabled().unwrap_or(false);
-    let autostart = CheckMenuItem::with_id(
-        app,
-        "autostart",
-        "Start at login",
-        true,
-        autostart_enabled,
-        None::<&str>,
-    )?;
-    #[cfg(debug_assertions)]
-    let test_short_window = CheckMenuItem::with_id(
-        app,
-        "debug-short-window",
-        "Test: simulate 5-hour quota",
-        true,
-        false,
-        None::<&str>,
-    )?;
-    let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
-    let initial_opacity = app
-        .try_state::<AppState>()
-        .map(|state| preferences_lock(&state).opacity_percent)
-        .unwrap_or(100);
-    let opacity = Submenu::new(app, "Opacity / 不透明度", true)?;
-    let mut opacity_items = Vec::new();
-    for value in OPACITY_PERCENT_OPTIONS {
-        let item = CheckMenuItem::with_id(
-            app,
-            format!("opacity-{value}"),
-            format!("{value}%"),
-            true,
-            value == initial_opacity,
-            None::<&str>,
-        )?;
-        opacity.append(&item)?;
-        opacity_items.push((value, item));
-    }
-    let opacity_reset = MenuItem::with_id(
-        app,
-        OPACITY_RESET_MENU_ID,
-        "Reset to 100%",
-        true,
-        None::<&str>,
-    )?;
-    opacity.append(&opacity_reset)?;
-    let settings = Submenu::with_items(
-        app,
-        "Settings / 设置",
-        true,
-        &[&unlock, &pin, &language, &opacity, &autostart],
-    )?;
-    let initial_language = app
-        .try_state::<AppState>()
-        .and_then(|state| {
-            state
-                .preferences
-                .lock()
-                .ok()
-                .map(|prefs| prefs.language.clone())
-        })
-        .unwrap_or_else(|| "zh-CN".into());
-    let initial_appearance = app
-        .try_state::<AppState>()
-        .and_then(|state| {
-            state
-                .preferences
-                .lock()
-                .ok()
-                .map(|prefs| prefs.appearance.clone())
-        })
-        .unwrap_or_else(|| "system".into());
-    let initial_skin = app
-        .try_state::<AppState>()
-        .and_then(|state| {
-            state
-                .preferences
-                .lock()
-                .ok()
-                .map(|prefs| prefs.selected_skin.clone())
-        })
-        .unwrap_or_else(|| DEFAULT_SKIN_ID.into());
-    let _ = theme_system.set_checked(initial_appearance == "system");
-    let _ = theme_dark.set_checked(initial_appearance == "dark");
-    let _ = theme_light.set_checked(initial_appearance == "light");
-    let (blur_checked, computer_checked, mecha_light_checked) = skin_check_state(&initial_skin);
-    let _ = skin_blur.set_checked(blur_checked);
-    let _ = skin_computer.set_checked(computer_checked);
-    let _ = skin_mecha_light.set_checked(mecha_light_checked);
-    let initial_theme_labels = theme_menu_labels(&initial_language);
-    let (opacity_label, opacity_reset_label) = opacity_menu_labels(&initial_language);
-    let _ = opacity.set_text(opacity_label);
-    let _ = opacity_reset.set_text(opacity_reset_label);
-    let _ = theme.set_text(initial_theme_labels.theme);
-    let _ = default_skin.set_text(initial_theme_labels.default_skin);
-    let _ = theme_system.set_text(initial_theme_labels.system);
-    let _ = theme_dark.set_text(initial_theme_labels.dark);
-    let _ = theme_light.set_text(initial_theme_labels.light);
-    let _ = skin_mecha_light.set_text(initial_theme_labels.mecha_light);
-    if initial_language != "en" {
-        let _ = show.set_text("显示 / 隐藏");
-        let _ = refresh.set_text("立即刷新");
-        let _ = releases.set_text(release_menu_label(&initial_language));
-        let _ = unlock.set_text("解锁悬浮窗");
-        let _ = pin.set_text("固定 / 取消固定 Codex");
-        let _ = language.set_text("Switch to English");
-        let _ = autostart.set_text("开机启动");
-        let _ = quit.set_text("退出");
-    }
-    #[cfg(debug_assertions)]
-    let menu = Menu::with_items(
-        app,
-        &[
-            &show,
-            &refresh,
-            &releases,
-            &updates,
-            &settings,
-            &display_mode,
-            &theme,
-            &test_short_window,
-            &quit,
-        ],
-    )?;
-    #[cfg(not(debug_assertions))]
-    let menu = Menu::with_items(
-        app,
-        &[
-            &show,
-            &refresh,
-            &releases,
-            &updates,
-            &settings,
-            &display_mode,
-            &theme,
-            &quit,
-        ],
-    )?;
-    let mut builder = TrayIconBuilder::with_id("main")
+    let menu = operations_menu::build(app.handle())?;
+    TrayIconBuilder::with_id("main")
         .menu(&menu)
-        .tooltip("Codex Monitor");
-    builder = builder.icon(tauri::include_image!("icons/tray-32.png"));
-    let autostart_menu = autostart.clone();
-    let show_menu = show.clone();
-    let refresh_menu = refresh.clone();
-    let releases_menu = releases.clone();
-    let unlock_menu = unlock.clone();
-    let pin_menu = pin.clone();
-    let language_menu = language.clone();
-    let theme_menu = theme.clone();
-    let default_skin_menu = default_skin.clone();
-    let theme_system_menu = theme_system.clone();
-    let theme_dark_menu = theme_dark.clone();
-    let theme_light_menu = theme_light.clone();
-    let theme_system_state = theme_system.clone();
-    let theme_dark_state = theme_dark.clone();
-    let theme_light_state = theme_light.clone();
-    let skin_blur_state = skin_blur.clone();
-    let skin_computer_state = skin_computer.clone();
-    let skin_mecha_light_state = skin_mecha_light.clone();
-    let quit_menu = quit.clone();
-    #[cfg(debug_assertions)]
-    let test_short_window_menu = test_short_window.clone();
-    builder
-        .on_menu_event(move |app, event| match event.id.as_ref() {
-            "mode-floating" | "mode-sidebar" => {
-                let state = app.state::<AppState>();
-                let mut preferences = preferences_lock(&state).clone();
-                preferences.display_mode = if event.id.as_ref() == "mode-sidebar" {
-                    "sidebar"
-                } else {
-                    "floating"
-                }
-                .into();
-                if set_preferences(preferences, app.clone(), state).is_err() {
-                    eprintln!("display mode update failed");
-                }
-            }
-            "show" => {
-                if let Some(window) = app.get_webview_window("widget") {
-                    if window.is_visible().unwrap_or(false) {
-                        let _ = window.hide();
-                        #[cfg(target_os = "macos")]
-                        macos_widget::save_visibility(app);
-                    } else {
-                        show_widget(&window);
-                    }
-                }
-            }
-            "refresh" => {
-                let _ = app.emit_to("widget", "refresh-requested", ());
-            }
-            "updates" => {
-                let handle = app.clone();
-                tauri::async_runtime::spawn(async move {
-                    let _ = updater::open_update_window(handle.clone()).await;
-                });
-            }
-            "releases" => {
-                let _ = app.emit_to("widget", "release-page-requested", ());
-            }
-            "debug-short-window" =>
-            {
-                #[cfg(debug_assertions)]
-                if let Some(state) = app.try_state::<AppState>() {
-                    if let Ok(mut enabled) = state.simulate_short_window_for_testing.lock() {
-                        *enabled = !*enabled;
-                        let _ = test_short_window_menu.set_checked(*enabled);
-                        let _ = app.emit_to("widget", "refresh-requested", ());
-                    }
-                }
-            }
-            "unlock" => {
-                let _ = apply_lock(app, false);
-                if let Some(state) = app.try_state::<AppState>() {
-                    if let Ok(mut prefs) = state.preferences.lock() {
-                        prefs.locked = false;
-                        let _ = persist_preferences(&state.preferences_path, &prefs);
-                        let _ = app.emit_to("widget", "preferences-changed", prefs.clone());
-                    }
-                }
-            }
-            "pin" => {
-                if let Some(state) = app.try_state::<AppState>() {
-                    if let Ok(mut prefs) = state.preferences.lock() {
-                        prefs.pinned_provider = if prefs.pinned_provider.is_some() {
-                            None
-                        } else {
-                            Some("codex".into())
-                        };
-                        let _ = persist_preferences(&state.preferences_path, &prefs);
-                        let _ = app.emit_to("widget", "preferences-changed", prefs.clone());
-                    }
-                }
-            }
-            "language" => {
-                if let Some(state) = app.try_state::<AppState>() {
-                    if let Ok(mut prefs) = state.preferences.lock() {
-                        prefs.language = if prefs.language == "en" {
-                            "zh-CN".into()
-                        } else {
-                            "en".into()
-                        };
-                        let normalized = prefs.clone().normalized();
-                        *prefs = normalized.clone();
-                        let _ = persist_preferences(&state.preferences_path, &normalized);
-                        let english = normalized.language == "en";
-                        let _ = show_menu.set_text(if english {
-                            "Show / Hide"
-                        } else {
-                            "显示 / 隐藏"
-                        });
-                        let _ = refresh_menu.set_text(if english {
-                            "Refresh now"
-                        } else {
-                            "立即刷新"
-                        });
-                        let _ = releases_menu.set_text(release_menu_label(&normalized.language));
-                        let _ = unlock_menu.set_text(if english {
-                            "Unlock widget"
-                        } else {
-                            "解锁悬浮窗"
-                        });
-                        let _ = pin_menu.set_text(if english {
-                            "Pin / Unpin Codex"
-                        } else {
-                            "固定 / 取消固定 Codex"
-                        });
-                        let _ = language_menu.set_text(if english {
-                            "切换到中文"
-                        } else {
-                            "Switch to English"
-                        });
-                        let labels = theme_menu_labels(&normalized.language);
-                        let _ = theme_menu.set_text(labels.theme);
-                        let _ = default_skin_menu.set_text(labels.default_skin);
-                        let _ = theme_system_menu.set_text(labels.system);
-                        let _ = theme_dark_menu.set_text(labels.dark);
-                        let _ = theme_light_menu.set_text(labels.light);
-                        let _ = skin_mecha_light_state.set_text(labels.mecha_light);
-                        let (opacity_label, opacity_reset_label) =
-                            opacity_menu_labels(&normalized.language);
-                        let _ = opacity.set_text(opacity_label);
-                        let _ = opacity_reset.set_text(opacity_reset_label);
-                        let _ = autostart_menu.set_text(if english {
-                            "Start at login"
-                        } else {
-                            "开机启动"
-                        });
-                        let _ = quit_menu.set_text(if english { "Quit" } else { "退出" });
-                        let _ = app.emit_to("widget", "preferences-changed", normalized.clone());
-                    }
-                }
-            }
-            "theme-system"
-            | "theme-dark"
-            | "theme-light"
-            | SKIN_BLUR_MENU_ID
-            | SKIN_COMPUTER_MENU_ID
-            | SKIN_MECHA_LIGHT_MENU_ID => {
-                if let Some(normalized) = apply_theme_menu_selection(app, event.id.as_ref()) {
-                    let _ = theme_system_state.set_checked(normalized.appearance == "system");
-                    let _ = theme_dark_state.set_checked(normalized.appearance == "dark");
-                    let _ = theme_light_state.set_checked(normalized.appearance == "light");
-                    let (blur_checked, computer_checked, mecha_light_checked) =
-                        skin_check_state(&normalized.selected_skin);
-                    let _ = skin_blur_state.set_checked(blur_checked);
-                    let _ = skin_computer_state.set_checked(computer_checked);
-                    let _ = skin_mecha_light_state.set_checked(mecha_light_checked);
-                }
-            }
-            menu_id if opacity_percent_for_menu_id(menu_id).is_some() => {
-                if let Some(normalized) = apply_opacity_menu_selection(app, menu_id) {
-                    for (value, item) in &opacity_items {
-                        let _ = item.set_checked(*value == normalized.opacity_percent);
-                    }
-                }
-            }
-            "autostart" => {
-                let manager = app.autolaunch();
-                let enabled = manager.is_enabled().unwrap_or(false);
-                let result = if enabled {
-                    manager.disable()
-                } else {
-                    manager.enable()
-                };
-                match result {
-                    Ok(()) => {
-                        let _ = autostart_menu.set_checked(!enabled);
-                    }
-                    Err(_) => eprintln!("autostart update failed"),
-                }
-            }
-            "quit" => app.exit(0),
-            _ => {}
-        })
+        .show_menu_on_left_click(false)
+        .tooltip("Codex Monitor")
+        .icon(tauri::include_image!("icons/tray-32.png"))
         .build(app)?;
     Ok(())
 }
@@ -2317,6 +1834,7 @@ pub fn run() {
                 },
             ));
             app.manage(sidebar::SidebarState::default());
+            app.manage(menubar::MenubarState::default());
             app.manage(deepseek::DeepSeekState::default());
             let data_dir = app.path().app_config_dir()?;
             let preferences_path = data_dir.join("preferences.json");
@@ -2331,8 +1849,6 @@ pub fn run() {
                 client,
                 preferences: Mutex::new(preferences.clone()),
                 preferences_path,
-                fetch_lock: tokio::sync::Mutex::new(()),
-                snapshot_cache: Mutex::new(None),
                 #[cfg(debug_assertions)]
                 simulate_short_window_for_testing: Mutex::new(
                     std::env::var("CODEX_MONITOR_SYNTHETIC_QUOTA").as_deref() == Ok("1")
@@ -2362,10 +1878,14 @@ pub fn run() {
             macos_widget::create_widget(app).map_err(std::io::Error::other)?;
             if let Some(window) = app.get_webview_window("widget") {
                 #[cfg(target_os = "macos")]
-                macos_widget::initialize(&window, preferences.always_on_top)
-                    .map_err(std::io::Error::other)?;
-                if preferences.display_mode == "sidebar" {
-                    sidebar::apply_mode(app.handle(), &preferences, &preferences)
+                macos_widget::initialize(
+                    &window,
+                    preferences.always_on_top,
+                    preferences.display_mode == "floating",
+                )
+                .map_err(std::io::Error::other)?;
+                if preferences.display_mode != "floating" {
+                    menubar::apply_mode(app.handle(), &preferences, &preferences)
                         .map_err(std::io::Error::other)?;
                 }
                 #[cfg(not(target_os = "macos"))]
@@ -2383,7 +1903,11 @@ pub fn run() {
             }
             // A fresh launch is an explicit recovery entry, including when the
             // last process saved a hidden or click-through floating window.
-            sidebar::recover(app.handle()).map_err(std::io::Error::other)?;
+            if preferences.display_mode != "menubar" {
+                sidebar::recover(app.handle()).map_err(std::io::Error::other)?;
+            }
+            quota_service::start(app.handle());
+            menubar::update_tray(app.handle(), &quota_service::cached(app.handle()));
             #[cfg(target_os = "windows")]
             sidebar_glass::watch_system_settings(app.handle());
             #[cfg(all(debug_assertions, not(target_os = "macos")))]
@@ -2439,6 +1963,10 @@ pub fn run() {
                 sidebar_glass::sync_sidebar_glass,
                 sidebar::sidebar_action,
                 sidebar::get_autostart,
+                menubar::resize_menubar_panel,
+                menubar::hide_menubar_panel,
+                menubar::get_desktop_platform,
+                operations_menu::open_operations_menu,
                 token_stats::service::get_token_statistics,
                 token_stats::service::refresh_token_statistics,
                 get_snapshots,
@@ -2456,13 +1984,36 @@ pub fn run() {
             ];
             handler(invoke)
         })
+        .on_menu_event(|app, event| operations_menu::handle(app, event.id.as_ref()))
         .on_tray_icon_event(|app, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
+                button_state,
                 ..
             } = event
             {
+                if button_state == MouseButtonState::Down {
+                    if menubar::enabled(app) {
+                        menubar::begin_tray_click(app);
+                    }
+                    return;
+                }
+                if menubar::enabled(app) {
+                    #[cfg(target_os = "macos")]
+                    let control = macos_widget::control_pressed();
+                    #[cfg(not(target_os = "macos"))]
+                    let control = false;
+                    let _ = menubar::finish_tray_click(app, control);
+                    return;
+                }
+                #[cfg(target_os = "macos")]
+                if macos_widget::control_pressed() {
+                    let handle = app.clone();
+                    tauri::async_runtime::spawn_blocking(move || {
+                        let _ = operations_menu::open_at_pointer(handle);
+                    });
+                    return;
+                }
                 if let Some(window) = app.get_webview_window("widget") {
                     show_widget(&window);
                 }
@@ -2488,6 +2039,18 @@ pub fn run() {
             }
             if matches!(event, WindowEvent::Focused(false)) {
                 sidebar::dismiss_menu(window.app_handle());
+                // A tray click takes focus before its release event toggles the
+                // panel. Let that explicit action finish before dismissing.
+                let app = window.app_handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(150)).await;
+                    if app
+                        .get_webview_window("widget")
+                        .is_some_and(|w| !w.is_focused().unwrap_or(false))
+                    {
+                        menubar::dismiss(&app);
+                    }
+                });
             }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -2517,9 +2080,13 @@ pub fn run() {
             if let Some(service) = app_handle.try_state::<token_stats::TokenStatisticsService>() {
                 service.refresh();
             }
-            let _ = app_handle.emit_to("widget", "refresh-requested", ());
+            let handle = app_handle.clone();
+            tauri::async_runtime::spawn(async move {
+                let _ = quota_service::refresh(&handle, true).await;
+            });
         }
         if matches!(event, tauri::RunEvent::Exit) {
+            quota_service::stop(app_handle);
             sidebar_glass::shutdown(app_handle);
             #[cfg(target_os = "macos")]
             macos_widget::stop_pointer_monitors();

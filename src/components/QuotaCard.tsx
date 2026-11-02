@@ -6,7 +6,7 @@ import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsInSimple, ArrowsOutSimple, Cl
 import { memo, type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { clampPercent, formatDateTime, formatResetDate, formatResetTime, quotaTier } from "../lib/format";
 import { copy, normalizeLanguage } from "../lib/i18n";
-import type { Language, ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme } from "../types";
+import type { Language, ProviderSnapshot, WidgetPreferences, WidgetSkin, WidgetTheme, UsageWindow } from "../types";
 import computerOrbBaseUrl from "../../assets/computer-orb-base.svg";
 import computerOrbHealthyUrl from "../../assets/computer-orb-screen-healthy.svg";
 import computerOrbCautionUrl from "../../assets/computer-orb-screen-caution.svg";
@@ -19,8 +19,26 @@ import computerOrbGptUrl from "../../assets/computer-orb-gpt.svg";
 import { MechaShell, MechaProgress } from "./MechaArtwork";
 import { mechaPalette, mechaPercent, mechaTier } from "../lib/mecha";
 import "../mecha.css";
+import { quotaPeriodLabel } from "../lib/menubar";
+import { QuotaProgress } from "./QuotaProgress";
+
+function remainingLabel(window: UsageWindow | null, percent: number, language: Language): string {
+  if (window?.windowSeconds === 604800) return copy[language].weeklyAvailableLabel(percent);
+  if (window?.windowSeconds === 18000) return copy[language].availableLabel(percent);
+  const period = window ? quotaPeriodLabel(window, language) : (language === "zh-CN" ? "额度" : "Quota");
+  return `${period} ${language === "zh-CN" ? "剩余" : "remaining"} ${percent}%`;
+}
+
+function remainingHeading(window: UsageWindow | null, language: Language): string {
+  if (window?.windowSeconds === 604800) return copy[language].weeklyShortRemaining;
+  if (window?.windowSeconds === 18000) return copy[language].shortRemaining;
+  const period = window ? quotaPeriodLabel(window, language, true) : (language === "zh-CN" ? "额度" : "Quota");
+  return `${period} ${language === "zh-CN" ? "剩余" : "remaining"}`;
+}
 
 interface Props {
+  /** The host changes window actions only; quota and statistics share the same layout. */
+  host?: "floating" | "menubar";
   tokens?: TokenStatisticsView;
   snapshot: ProviderSnapshot;
   preferences: WidgetPreferences;
@@ -71,31 +89,8 @@ function localizedBackendMessage(message: string | null, language: Language): st
   return message;
 }
 
-function BlurProgress({ percent, label }: { percent: number; label: string }) {
-  const segmentCount = 20;
-  const availableCount = Math.round((Math.max(0, Math.min(100, percent)) / 100) * segmentCount);
-  return <div className="blur-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-    {Array.from({ length: segmentCount }, (_, index) => {
-      const available = index < availableCount;
-      const endWeight = available && availableCount > 1 ? (index / (availableCount - 1)) * 100 : 0;
-      return <i key={index} className={available ? "is-available" : "is-used"} style={available ? { "--blur-progress-end-weight": `${endWeight}%` } as CSSProperties : undefined} aria-hidden="true" />;
-    })}
-  </div>;
-}
-
-function ComputerProgress({ percent, label }: { percent: number; label: string }) {
-  const segmentCount = 34;
-  const availableCount = Math.round((Math.max(0, Math.min(100, percent)) / 100) * segmentCount);
-  return <div className="computer-progress" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percent}>
-    {Array.from({ length: segmentCount }, (_, index) => {
-      const available = index < availableCount;
-      const endWeight = available && availableCount > 1 ? (index / (availableCount - 1)) * 100 : 0;
-      return <i key={index} className={available ? "is-available" : "is-used"} style={available ? { "--computer-progress-end-weight": `${endWeight}%` } as CSSProperties : undefined} aria-hidden="true" />;
-    })}
-  </div>;
-}
-
 export const QuotaCard = memo(function QuotaCard({
+  host = "floating",
   snapshot,
   tokens,
   preferences,
@@ -117,6 +112,10 @@ export const QuotaCard = memo(function QuotaCard({
 }: Props) {
   const [showCreditTip, setShowCreditTip] = useState(initialShowCreditTip);
   const language = normalizeLanguage(preferences.language);
+  const menubar = host === "menubar";
+  const menuLabel = language === "zh-CN" ? (menubar ? "更多" : "展示模式") : (menubar ? "More" : "Display mode");
+  const closeLabel = language === "zh-CN" ? "收起面板" : "Close panel";
+  const floatingLabel = language === "zh-CN" ? "切换到悬浮窗" : "Switch to floating widget";
   const t = copy[language];
   const rawPrimary = mechaPercent(snapshot.shortWindow?.remainingPercent);
   const rawWeekly = mechaPercent(snapshot.weeklyWindow?.remainingPercent);
@@ -146,32 +145,34 @@ export const QuotaCard = memo(function QuotaCard({
 
   return (
     <main
+      data-host={host}
       className={`quota-card quota-card--height-${expandedHeightMode(snapshot)} quota-card--${snapshot.status} quota-card--${tier}${tokens ? " quota-card--tokens" : ""}${theme ? ` quota-card--theme-${theme}` : ""}${skin === "blur" ? " quota-card--skin-blur" : ""}${skin === "computer" ? " quota-card--skin-computer" : ""}${skin === "mecha-light" ? " quota-card--skin-mecha-light" : ""}`}
       style={skin === "mecha-light" ? { ...style, ...mechaPalette(snapshot) } : style}
-      onMouseEnter={() => onHover(true)}
-      onMouseLeave={() => onHover(false)}
-      onMouseDown={(event) => { if (event.button === 0) void onDrag(); }}
+      onMouseEnter={menubar ? undefined : () => onHover(true)}
+      onMouseLeave={menubar ? undefined : () => onHover(false)}
+      onMouseDown={menubar ? undefined : (event) => { if (event.button === 0) void onDrag(); }}
+      onContextMenu={menubar && onMenu ? event => { event.preventDefault(); onMenu(); } : undefined}
     >
       <div className="aurora" aria-hidden="true" />
       {skin === "mecha-light" ? <MechaShell height={tokens ? (expandedHeightMode(snapshot) === "compact" ? 452 : 506) : 306} /> : null}
-      <span className="sr-only" aria-live="polite">{available && displayPercent !== null ? (displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)) : message}</span>
+      <span className="sr-only" aria-live="polite">{available && displayPercent !== null ? remainingLabel(displayWindow, displayPercent, language) : message}</span>
       {notice ? <div className="operation-notice" role="status">{notice}</div> : null}
-      <header className="card-header">
+      <header className="card-header" style={menubar ? { cursor: "default" } : undefined}>
         <div>
           <p className="eyebrow">Codex-Monitor</p>
-          {snapshot.status !== "stale" ? <p className="updated">{displayingWeeklyAsPrimary ? t.weeklyShortRemaining : t.shortRemaining}</p> : null}
+          {snapshot.status !== "stale" ? <p className="updated">{remainingHeading(displayWindow, language)}</p> : null}
         </div>
-        {!preferences.locked ? (
+        {!preferences.locked || menubar ? (
           <nav className="card-actions" aria-label={t.controls} onMouseDown={(event) => event.stopPropagation()}>
-            {onMenu && <button type="button" onClick={onMenu} aria-label={language === "zh-CN" ? "展示模式" : "Display mode"} title={language === "zh-CN" ? "展示模式" : "Display mode"}><GearSix /></button>}
+            {onMenu && <button type="button" onClick={onMenu} aria-label={menuLabel} title={menuLabel}><GearSix /></button>}
             {providerCount > 1 ? <button onClick={onPrevious} aria-label={t.servicePrevious}><ArrowUp /></button> : null}
             {providerCount > 1 ? <button onClick={onNext} aria-label={t.serviceNext}><ArrowDown /></button> : null}
             <span className={`usage-indicator usage-indicator--${indicatorState}`} role="status" aria-label={indicatorLabel} title={indicatorLabel}><i /></span>
-            <button className={preferences.stayExpanded ? "expand-button expand-button--active" : "expand-button"} onClick={onToggleStayExpanded} aria-pressed={preferences.stayExpanded} aria-label={preferences.stayExpanded ? t.keepExpandedOff : t.keepExpandedOn} title={preferences.stayExpanded ? t.keepExpandedOff : t.keepExpandedOn}>
-              {preferences.stayExpanded ? <ArrowsInSimple weight="bold" /> : <ArrowsOutSimple />}
+            <button className={!menubar && preferences.stayExpanded ? "expand-button expand-button--active" : "expand-button"} onClick={onToggleStayExpanded} aria-pressed={menubar ? undefined : preferences.stayExpanded} aria-label={menubar ? closeLabel : preferences.stayExpanded ? t.keepExpandedOff : t.keepExpandedOn} title={menubar ? closeLabel : preferences.stayExpanded ? t.keepExpandedOff : t.keepExpandedOn}>
+              {menubar || preferences.stayExpanded ? <ArrowsInSimple weight="bold" /> : <ArrowsOutSimple />}
             </button>
-            <button className={preferences.alwaysOnTop ? "pin-button pin-button--active" : "pin-button"} onClick={onLock} aria-pressed={preferences.alwaysOnTop} aria-label={preferences.alwaysOnTop ? t.pinOff : t.pinOn} title={preferences.alwaysOnTop ? t.pinOff : t.pinOn}>
-              {preferences.alwaysOnTop ? <PushPin weight="fill" /> : <PushPinSlash />}
+            <button className={!menubar && preferences.alwaysOnTop ? "pin-button pin-button--active" : "pin-button"} onClick={onLock} aria-pressed={menubar ? undefined : preferences.alwaysOnTop} aria-label={menubar ? floatingLabel : preferences.alwaysOnTop ? t.pinOff : t.pinOn} title={menubar ? floatingLabel : preferences.alwaysOnTop ? t.pinOff : t.pinOn}>
+              {menubar ? <PushPin /> : preferences.alwaysOnTop ? <PushPin weight="fill" /> : <PushPinSlash />}
             </button>
           </nav>
         ) : null}
@@ -179,21 +180,16 @@ export const QuotaCard = memo(function QuotaCard({
 
       {available && displayPercent !== null ? (
         <>
-          <section className="primary-metric" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)}>
+          <section className="primary-metric" aria-label={remainingLabel(displayWindow, displayPercent, language)}>
             <span>{displayPercent}</span><small>%</small>
           </section>
-          {skin === "mecha-light"
-            ? <MechaProgress percent={rawPrimary ?? rawWeekly ?? 0} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
-            : skin === "blur"
-            ? <BlurProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
-            : skin === "computer"
-              ? <ComputerProgress percent={displayPercent} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} />
-              : <div className="progress" role="progressbar" aria-label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent) : t.availableLabel(displayPercent)} aria-valuemin={0} aria-valuemax={100} aria-valuenow={displayPercent}><span style={{ width: `${displayPercent}%` }} /></div>}
+          <QuotaProgress skin={skin} percent={skin === "mecha-light" ? rawPrimary ?? rawWeekly ?? 0 : displayPercent}
+            label={remainingLabel(displayWindow, displayPercent, language)} />
           <p className="reset-time">{formatResetTime(displayWindow?.resetsAt ?? null, new Date(), language)}{displayWindow?.resetsAt ? ` · ${formatDateTime(displayWindow.resetsAt, language)}` : ""}</p>
           <footer className="card-footer">
             <div className="weekly-metric">
-              {!displayingWeeklyAsPrimary ? <>
-                <p>{t.weeklyUntil(formatResetDate(snapshot.weeklyWindow?.resetsAt ?? null, language))}</p>
+              {!displayingWeeklyAsPrimary && snapshot.weeklyWindow ? <>
+                <p>{snapshot.weeklyWindow.windowSeconds === 604800 ? t.weeklyUntil(formatResetDate(snapshot.weeklyWindow.resetsAt, language)) : `${remainingHeading(snapshot.weeklyWindow, language)} · ${formatResetDate(snapshot.weeklyWindow.resetsAt, language)}`}</p>
                 <strong>{weekly ?? "--"}<small>{weekly === null ? "" : "%"}</small></strong>
               </> : null}
               <div className="reset-credit-row" onMouseDown={(event) => event.stopPropagation()}>
@@ -240,7 +236,8 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
   const primary = skin === "mecha-light" ? (rawPrimary === null ? null : clampPercent(rawPrimary)) : snapshot.shortWindow ? clampPercent(snapshot.shortWindow.remainingPercent) : null;
   const weekly = skin === "mecha-light" ? (rawWeekly === null ? null : clampPercent(rawWeekly)) : snapshot.weeklyWindow ? clampPercent(snapshot.weeklyWindow.remainingPercent) : null;
   const displayPercent = primary ?? weekly;
-  const displayingWeeklyAsPrimary = primary === null && weekly !== null;
+  const displayWindow = skin === "mecha-light" && rawPrimary === null ? snapshot.weeklyWindow : snapshot.shortWindow ?? snapshot.weeklyWindow;
+  const displayingWeeklyAsPrimary = primary === null && weekly !== null && snapshot.weeklyWindow?.windowSeconds === 604800;
   const tier = skin === "mecha-light" ? mechaTier(snapshot) : quotaTier(displayPercent);
   const available = snapshot.status === "ok" && displayPercent !== null;
   const computerScreen = tier === "caution"
@@ -273,7 +270,7 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
       onMouseEnter={handleMouseEnter}
       onMouseLeave={() => onHover(false)}
       onMouseDown={(event) => { if (event.button === 0) void onDrag(); }}
-      aria-label={available ? (displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent!) : t.availableLabel(displayPercent!)) : localizedBackendMessage(snapshot.message, activeLanguage) ?? t.unavailableStatus}
+      aria-label={available ? remainingLabel(displayWindow, displayPercent!, activeLanguage) : localizedBackendMessage(snapshot.message, activeLanguage) ?? t.unavailableStatus}
     >
       <div className="aurora" aria-hidden="true" />
       {skin === "mecha-light" ? <MechaShell height={72} orb /> : null}
@@ -299,7 +296,7 @@ export const QuotaOrb = memo(function QuotaOrb({ snapshot, onDrag, onHover, lang
             : <StatusIcon status={snapshot.status} />}
         </section>
       )}
-      {skin === "mecha-light" && available ? <MechaProgress percent={rawPrimary ?? rawWeekly ?? 0} label={displayingWeeklyAsPrimary ? t.weeklyAvailableLabel(displayPercent!) : t.availableLabel(displayPercent!)} orb /> : null}
+      {skin === "mecha-light" && available ? <MechaProgress percent={rawPrimary ?? rawWeekly ?? 0} label={remainingLabel(displayWindow, displayPercent!, activeLanguage)} orb /> : null}
     </main>
   );
 });

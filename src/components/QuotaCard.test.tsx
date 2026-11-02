@@ -154,3 +154,53 @@ describe("expanded product title", () => {
     }
   }
 });
+
+it("labels a non-five-hour period by its actual duration in the card and orb", () => {
+  const actual = { ...snapshot, shortWindow: { ...snapshot.shortWindow!, windowSeconds: 7200 }, weeklyWindow: null };
+  const view = render(<QuotaCard snapshot={actual} preferences={preferences} providerCount={1}
+    onPrevious={vi.fn()} onNext={vi.fn()} onTogglePin={vi.fn()} onLock={vi.fn()}
+    onToggleStayExpanded={vi.fn()} onDrag={vi.fn()} onHover={vi.fn()} />);
+  expect(screen.getByText("2 小时 剩余")).toBeTruthy();
+  expect(screen.getByRole("progressbar", { name: "2 小时额度 剩余 74%" })).toBeTruthy();
+  expect(screen.queryByText(/本周剩余/)).toBeNull();
+  view.unmount();
+  render(<QuotaOrb snapshot={actual} onDrag={vi.fn()} onHover={vi.fn()} />);
+  expect(screen.getByRole("main").getAttribute("aria-label")).toBe("2 小时额度 剩余 74%");
+});
+
+it("does not label a one-day secondary period as weekly", () => {
+  const actual = { ...snapshot, shortWindow: null, weeklyWindow: { ...snapshot.weeklyWindow!, windowSeconds: 86400 } };
+  const view = render(<QuotaOrb snapshot={actual} onDrag={vi.fn()} onHover={vi.fn()} />);
+  expect(screen.getByRole("main").getAttribute("aria-label")).toBe("1 天额度 剩余 42%");
+  expect(view.container.querySelector(".orb-weekly-badge")).toBeNull();
+});
+
+it.each(["default", "blur", "computer", "mecha-light"] as const)("reuses the exact %s quota/statistics content and styling for the menu-bar host", skin => {
+  const props = { snapshot, preferences, providerCount: 1, skin, theme: "light" as const,
+    tokens: { ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot(), loading: false },
+    onPrevious: vi.fn(), onNext: vi.fn(), onTogglePin: vi.fn(), onLock: vi.fn(),
+    onToggleStayExpanded: vi.fn(), onDrag: vi.fn(), onHover: vi.fn(), onMenu: vi.fn() };
+  const view = render(<QuotaCard {...props} host="floating" />);
+  const parts = [".primary-metric", ".progress, .blur-progress, .computer-progress, .mecha-progress", ".reset-time", ".card-footer", ".token-grid"];
+  const before = parts.map(selector => view.container.querySelector(selector)?.outerHTML);
+  const classes = screen.getByRole("main").className;
+  const style = screen.getByRole("main").getAttribute("style");
+  view.rerender(<QuotaCard {...props} host="menubar" />);
+  expect(screen.getByRole("main").className).toBe(classes);
+  expect(screen.getByRole("main").getAttribute("style")).toBe(style);
+  expect(parts.map(selector => view.container.querySelector(selector)?.outerHTML)).toEqual(before);
+  expect(screen.getByRole("button", { name: "总览" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "按模型" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "额度周" })).toBeTruthy();
+  fireEvent.mouseEnter(screen.getByRole("main"));
+  fireEvent.mouseLeave(screen.getByRole("main"));
+  fireEvent.mouseDown(screen.getByRole("main"), { button: 0 });
+  expect(props.onHover).not.toHaveBeenCalled();
+  expect(props.onDrag).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "更多" }));
+  fireEvent.click(screen.getByRole("button", { name: "收起面板" }));
+  fireEvent.click(screen.getByRole("button", { name: "切换到悬浮窗" }));
+  expect(props.onMenu).toHaveBeenCalledOnce();
+  expect(props.onToggleStayExpanded).toHaveBeenCalledOnce();
+  expect(props.onLock).toHaveBeenCalledOnce();
+});

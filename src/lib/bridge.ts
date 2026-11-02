@@ -29,6 +29,33 @@ function enqueueWidgetTransition<T>(operation: () => Promise<T>): Promise<T> {
 
 export const isTauri = () => "__TAURI_INTERNALS__" in window;
 
+export async function getDesktopPlatform(): Promise<"macos" | "windows" | "other"> {
+  if (!isTauri()) return "other";
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke("get_desktop_platform");
+}
+
+export function resizeMenubarPanel(height: number): Promise<void> {
+  if (!isTauri()) return Promise.resolve();
+  return enqueueWidgetTransition(async () => {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("resize_menubar_panel", { height });
+  });
+}
+
+export async function hideMenubarPanel(): Promise<void> {
+  if (!isTauri()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("hide_menubar_panel");
+}
+
+/** Both the panel button and tray right-click use the same native commands. */
+export async function openOperationsMenu(): Promise<void> {
+  if (!isTauri()) return;
+  const { invoke } = await import("@tauri-apps/api/core");
+  await invoke("open_operations_menu");
+}
+
 export type SidebarPhase = "handle" | "rail" | "detail" | "menu";
 export interface SidebarViewport { width: number; height: number; scale: number }
 
@@ -254,11 +281,15 @@ export async function listenDesktopEvents(handlers: {
   onPreferences: (value: WidgetPreferences) => void;
   onRefresh: () => void;
   onRelease: () => void;
+  onSnapshots?: (snapshots: ProviderSnapshot[]) => void;
+  onOperationFailed?: () => void;
 }): Promise<() => void> {
   if (!isTauri()) return () => undefined;
   const { listen } = await import("@tauri-apps/api/event");
   const unlistenPreferences = await listen<WidgetPreferences>("preferences-changed", (event) => handlers.onPreferences(event.payload));
   const unlistenRefresh = await listen("refresh-requested", handlers.onRefresh);
   const unlistenRelease = await listen("release-page-requested", handlers.onRelease);
-  return () => { unlistenPreferences(); unlistenRefresh(); unlistenRelease(); };
+  const unlistenSnapshots = await listen<ProviderSnapshot[]>("snapshots-updated", event => handlers.onSnapshots?.(event.payload));
+  const unlistenFailure = await listen("operation-failed", () => handlers.onOperationFailed?.());
+  return () => { unlistenPreferences(); unlistenRefresh(); unlistenRelease(); unlistenSnapshots(); unlistenFailure(); };
 }
