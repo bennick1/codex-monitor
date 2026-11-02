@@ -60,9 +60,9 @@ v1.3.1 keeps application compatibility version **4** and adds a supplemental req
 1. Sign in to Codex on this machine, then launch Codex Monitor.
 2. Hover over the orb to view quota and Token Statistics. Pin the card to keep it expanded.
 3. Hover or focus each Token value to see the exact count, such as `12,685,398` for `1268.54万`.
-4. Use the tray menu to refresh, open the manual release download page, switch among the Default, Blur, Computer, and Mecha Light skins, set overall opacity, change language/appearance, show or hide the widget, or quit.
+4. Use the tray menu to switch display modes, choose a skin, change language/appearance, check for updates, or quit. Window controls appear only in the modes where they apply; manual downloads remain available in the update window.
 
-macOS 应用没有 Dock 或 Command-Tab 入口。悬浮窗模式显示菜单栏图标，侧边栏模式从齿轮进入菜单；悬浮卡片也提供菜单按钮。全屏 Space 和睡眠唤醒需单独完成实机验收。
+macOS 应用没有 Dock 或 Command-Tab 入口。在展示方式中选择“仅菜单栏”，即可在菜单栏查看实际周期的剩余额度，点击展开与悬浮窗相同的完整卡片，保留额度区、统计内容、页签和四套皮肤。悬浮窗和侧边栏仍可切回，升级不会改变原有模式。实现、试用方法和实机验证边界见[菜单栏模式记录](docs/MENUBAR-MODE-IMPLEMENTATION.md)；全屏 Space、睡眠唤醒和 Windows 仍需相应实机验收。
 
 Both readers respect `CODEX_HOME`; otherwise they use your home directory's `.codex` folder (`%USERPROFILE%\.codex` on Windows). The token collector scans `sessions` and `archived_sessions`, independently of quota login/network availability. Fast can also use the narrowly scoped diagnostic metadata described above, through a read-only connection; an unavailable source does not block accounting. Initial scans and bounded historical request replay may take time. Cleaned logs without other trustworthy evidence can leave historical Turns Unknown, while previously collected statistics and request evidence remain in the local database.
 

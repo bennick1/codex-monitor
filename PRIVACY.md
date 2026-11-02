@@ -31,7 +31,7 @@ Confirmed statistics and the minimal evidence needed to prevent recounting remai
 
 It does not copy or persist Codex access tokens, credentials, account IDs, raw quota responses, prompts, answers, reasoning text, code, tool contents, conversation titles, original JSONL lines, raw diagnostic records, or `tags_json`. All Token Statistics processing and storage stays on the current machine, protected by the current user's filesystem permissions; none of these statistics are uploaded.
 
-在线额度由一个 Rust 后台调度器刷新，隐藏面板不停止刷新。最后有效额度仅保存在内存；账户边界使用只在内存比较的摘要，前端只接收不含身份的进程内轮次。退出或切换账户时清除上个账户的额度，不持久化账号标识、凭据或额度响应。菜单栏模式复用同一受信任窗口与既有鼠标点击监听，用于外部点击收起面板，不增加远程窗口权限。
+在线额度由一个 Rust 后台调度器刷新，隐藏面板不停止刷新。用于显示的最新快照缓存仅保存在内存；账户边界使用只在内存比较的摘要，前端只接收不含身份的进程内轮次。退出或切换账户时清除上个账户的显示缓存，不持久化账号标识、凭据或原始额度响应。既有额度周统计继续在本机数据库记录成功的周额度观测（重置时间、观测时间、规范化剩余百分比），用于历史统计，不作为新账户的额度缓存。菜单栏模式复用同一受信任窗口与既有鼠标点击监听，用于外部点击收起面板，不增加远程窗口权限。
 
 ## What It Sends
 
