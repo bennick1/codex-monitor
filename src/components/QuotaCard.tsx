@@ -126,19 +126,23 @@ export const QuotaCard = memo(function QuotaCard({
   const displayingWeeklyAsPrimary = primary === null && weekly !== null;
   const staleAge = Date.now() - new Date(snapshot.updatedAt).getTime();
   const staleExpired = snapshot.status === "stale" && staleAge > 30 * 60_000;
+  const lastSuccessLabel = `${language === "zh-CN" ? "最后成功" : "Last success"} ${formatDateTime(snapshot.updatedAt, language)}`;
+  const staleLabel = `${language === "zh-CN" ? "已过期" : "Stale"} · ${lastSuccessLabel}`;
+  const resetLabel = `${formatResetTime(displayWindow?.resetsAt ?? null, new Date(), language)}${displayWindow?.resetsAt ? ` · ${formatDateTime(displayWindow.resetsAt, language)}` : ""}`;
   const available = quotaAvailable(snapshot);
   const tier = skin === "mecha-light" ? mechaTier(snapshot) : quotaTier(displayPercent);
   const indicatorState = isConsuming ? "active" : snapshot.status === "ok" ? "ok" : snapshot.status === "stale" ? "stale" : "error";
-  const indicatorLabel = isConsuming
+  const indicatorLabel = snapshot.status === "stale"
+    ? `${t.dataStale} · ${lastSuccessLabel}`
+    : isConsuming
     ? t.active
     : snapshot.status === "ok"
       ? t.dataSynced
-      : snapshot.status === "stale"
-        ? t.dataStale
-        : snapshot.status === "signed_out"
-          ? t.notSignedIn
-          : t.unavailableStatus;
+      : snapshot.status === "signed_out"
+        ? t.notSignedIn
+        : t.unavailableStatus;
   const message = localizedBackendMessage(snapshot.message, language);
+  const errorDescription = `${message ?? t.errorUnavailable}${staleExpired ? ` · ${lastSuccessLabel}` : ""}`;
   const creditExpirations = useMemo(() => (snapshot.resetCreditExpiresAt ?? []).map((value, index) => {
     return t.creditItem(index, formatDateTime(value, language));
   }), [language, snapshot.resetCreditExpiresAt, t]);
@@ -185,7 +189,7 @@ export const QuotaCard = memo(function QuotaCard({
           </section>
           <QuotaProgress skin={skin} percent={skin === "mecha-light" ? rawPrimary ?? rawWeekly ?? 0 : displayPercent}
             label={remainingLabel(displayWindow, displayPercent, language)} />
-          <p className="reset-time">{formatResetTime(displayWindow?.resetsAt ?? null, new Date(), language)}{displayWindow?.resetsAt ? ` · ${formatDateTime(displayWindow.resetsAt, language)}` : ""}</p>
+          <p className="reset-time" title={snapshot.status === "stale" ? resetLabel : undefined} aria-label={snapshot.status === "stale" ? `${staleLabel} · ${resetLabel}` : undefined}>{snapshot.status === "stale" ? staleLabel : resetLabel}</p>
           <footer className="card-footer">
             <div className="weekly-metric">
               {!displayingWeeklyAsPrimary && snapshot.weeklyWindow ? <>
@@ -212,7 +216,7 @@ export const QuotaCard = memo(function QuotaCard({
             ? <div className="status-icon status-icon--computer" aria-hidden="true"><ComputerErrorArtwork status={snapshot.status} /></div>
             : <div className="status-icon" aria-hidden="true"><StatusIcon status={snapshot.status} expired={staleExpired} /></div>}
           <strong>{snapshot.status === "signed_out" ? t.signedInRequired : staleExpired ? t.staleExpired : t.temporarilyUnavailable}</strong>
-          <p>{message ?? t.errorUnavailable}</p>
+          <p title={staleExpired ? errorDescription : undefined} aria-label={staleExpired ? errorDescription : undefined}>{staleExpired ? lastSuccessLabel : errorDescription}</p>
           {snapshot.status === "stale" ? (
             <button type="button" className="error-refresh-button" onMouseDown={(event) => event.stopPropagation()} onClick={onRefresh} disabled={!onRefresh} aria-label={t.refreshQuota}>
               <ArrowClockwise />

@@ -5,6 +5,7 @@ import { QuotaCard, QuotaOrb } from "./QuotaCard";
 import { tokenSnapshot } from "../test/tokenFixtures";
 import { INITIAL_TOKEN_VIEW } from "../lib/tokenStatisticsController";
 import { copy } from "../lib/i18n";
+import { formatDateTime } from "../lib/format";
 import type { ProviderSnapshot, WidgetPreferences, WidgetSkin } from "../types";
 
 afterEach(cleanup);
@@ -203,4 +204,54 @@ it.each(["default", "blur", "computer", "mecha-light"] as const)("reuses the exa
   expect(props.onMenu).toHaveBeenCalledOnce();
   expect(props.onToggleStayExpanded).toHaveBeenCalledOnce();
   expect(props.onLock).toHaveBeenCalledOnce();
+});
+
+describe("stale quota last-success text", () => {
+  for (const host of ["floating", "menubar"] as const) {
+    for (const language of ["zh-CN", "en"] as const) {
+      const cardProps = { host, preferences: { ...preferences, language }, providerCount: 1,
+        tokens: { ...INITIAL_TOKEN_VIEW, snapshot: tokenSnapshot(), loading: false },
+        onPrevious: vi.fn(), onNext: vi.fn(), onTogglePin: vi.fn(), onLock: vi.fn(),
+        onToggleStayExpanded: vi.fn(), onDrag: vi.fn(), onHover: vi.fn() };
+
+      it(`shows the stale status and last success in the existing reset line for ${host} / ${language}`, () => {
+        const updatedAt = new Date(Date.now() - 5 * 60_000).toISOString();
+        const resetsAt = new Date(Date.now() + 45 * 60_000).toISOString();
+        const stale: ProviderSnapshot = { ...snapshot, status: "stale", updatedAt,
+          shortWindow: { ...snapshot.shortWindow!, resetsAt } };
+        const lastSuccess = `${language === "zh-CN" ? "最后成功" : "Last success"} ${formatDateTime(updatedAt, language)}`;
+        const status = `${copy[language].dataStale} · ${lastSuccess}`;
+        const view = render(<QuotaCard {...cardProps} snapshot={stale} isConsuming />);
+        const reset = view.container.querySelector(".reset-time")!;
+        expect(reset.textContent).toBe(`${language === "zh-CN" ? "已过期" : "Stale"} · ${lastSuccess}`);
+        expect(reset.getAttribute("title")).toContain(formatDateTime(resetsAt, language));
+        expect(reset.getAttribute("aria-label")).toContain(reset.getAttribute("title"));
+        expect(screen.getByRole("status", { name: status }).getAttribute("title")).toBe(status);
+        expect(screen.getByRole("progressbar")).toBeTruthy();
+        expect(view.container.querySelectorAll(".reset-time")).toHaveLength(1);
+        expect(reset.children).toHaveLength(0);
+        const resetText = reset.getAttribute("title");
+        view.rerender(<QuotaCard {...cardProps} snapshot={{ ...stale, status: "ok" }} />);
+        expect(view.container.querySelector(".reset-time")!.textContent).toBe(resetText);
+        expect(view.container.querySelector(".reset-time")!.hasAttribute("title")).toBe(false);
+      });
+
+      it(`keeps the expired error paragraph concise and exposes its reason for ${host} / ${language}`, () => {
+        const updatedAt = new Date(Date.now() - 31 * 60_000).toISOString();
+        const lastSuccess = `${language === "zh-CN" ? "最后成功" : "Last success"} ${formatDateTime(updatedAt, language)}`;
+        const description = `${copy[language].errorUnavailable} · ${lastSuccess}`;
+        const view = render(<QuotaCard {...cardProps} snapshot={{ ...snapshot, status: "stale", updatedAt }} />);
+        expect(screen.getByText(copy[language].staleExpired)).toBeTruthy();
+        const paragraph = view.container.querySelector(".error-state p")!;
+        expect(paragraph.textContent).toBe(lastSuccess);
+        expect(paragraph.getAttribute("title")).toBe(description);
+        expect(paragraph.getAttribute("aria-label")).toBe(description);
+        expect(view.container.querySelectorAll(".error-state p")).toHaveLength(1);
+        expect(paragraph.children).toHaveLength(0);
+        expect(screen.queryByRole("progressbar")).toBeNull();
+        expect(screen.getByRole("status", { name: `${copy[language].dataStale} · ${lastSuccess}` })).toBeTruthy();
+        expect(screen.getByRole("region", { name: language === "zh-CN" ? "Token 用量" : "Token usage" })).toBeTruthy();
+      });
+    }
+  }
 });
