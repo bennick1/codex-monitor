@@ -1,13 +1,10 @@
 import { formatTokenCount, formatTokenCountExact } from "./tokenFormat";
 import type { ProviderSnapshot } from "../types";
+import { quotaWindows } from "./menubar";
 
-// Sidebar presentation only; keep all server windows available to the floating widget.
+// Available periods are data-driven; a plan name does not establish capacity.
 export function sidebarQuotaWindows(snapshot: ProviderSnapshot) {
-  const pro = /^pro(?:$|[\s_-]|lite)/i.test(snapshot.plan?.trim() ?? "");
-  return [
-    ...(!pro && snapshot.shortWindow ? [{ kind: "short" as const, value: snapshot.shortWindow }] : []),
-    ...(snapshot.weeklyWindow ? [{ kind: "weekly" as const, value: snapshot.weeklyWindow }] : []),
-  ];
+  return quotaWindows(snapshot);
 }
 
 export interface DailyUsage { date: string; tokens: string }

@@ -38,14 +38,32 @@ describe("merged floating and sidebar preferences", () => {
       sidebarSide: "top" as const, sidebarOpacity: .35, sidebarScale: 1.2,
       sidebarGlassEnabled: false, autoCheckUpdates: false, locked: true };
     expect(normalizePreferences(saved)).toEqual(saved);
-    expect(normalizePreferences({ ...saved, displayMode: "sidebar" })).toEqual({ ...saved, displayMode: "sidebar", locked: false });
+    expect(normalizePreferences({ ...saved, displayMode: "sidebar" })).toEqual({ ...saved, displayMode: "sidebar", locked: true });
   });
 
   it("normalizes malformed sidebar values without affecting floating preferences", () => {
     const result = normalizePreferences({ ...DEFAULT_PREFERENCES, displayMode: "sidebar", opacityPercent: 75,
       sidebarOpacity: Number.NaN, sidebarScale: Number.POSITIVE_INFINITY, selectedSkin: "mecha-light", locked: true });
     expect(result).toMatchObject({ displayMode: "sidebar", sidebarOpacity: .9, sidebarScale: 1,
-      opacityPercent: 75, selectedSkin: "mecha-light", locked: false });
+      opacityPercent: 75, selectedSkin: "mecha-light", locked: true });
     expect(normalizePreferences({ sidebarOpacity: .05, sidebarScale: 3 })).toMatchObject({ sidebarOpacity: .2, sidebarScale: 1.3 });
+  });
+});
+
+
+describe("menu bar preferences", () => {
+  it("keeps older modes and defaults to short-period preference without switching modes", () => {
+    expect(normalizePreferences({})).toMatchObject({ displayMode: "floating", menubarQuotaDisplay: "short" });
+    expect(normalizePreferences({ displayMode: "sidebar" })).toMatchObject({ displayMode: "sidebar", menubarQuotaDisplay: "short" });
+  });
+  it.each(["floating", "sidebar", "menubar"] as const)("preserves all per-mode parameters across %s round trips", displayMode => {
+    const saved = { ...DEFAULT_PREFERENCES, displayMode, menubarQuotaDisplay: "both" as const,
+      locked: true, opacityPercent: 65, sidebarSide: "top" as const, sidebarOpacity: .4,
+      sidebarScale: 1.2, sidebarGlassEnabled: false, selectedSkin: "computer" as const };
+    expect(normalizePreferences(JSON.parse(JSON.stringify(saved)))).toEqual(saved);
+  });
+  it("rejects unknown display choices without changing skin or mode", () => {
+    expect(normalizePreferences({ displayMode: "menubar", menubarQuotaDisplay: "auto" as never, selectedSkin: "blur" }))
+      .toMatchObject({ displayMode: "menubar", menubarQuotaDisplay: "short", selectedSkin: "blur" });
   });
 });

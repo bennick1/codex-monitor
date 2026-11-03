@@ -398,7 +398,13 @@ pub fn apply_mode(
                     .set_position(rect.position)
                     .map_err(|_| "widget position unavailable")?;
             } else {
-                window.center().map_err(|_| "widget position unavailable")?;
+                if let Some((x, y)) = next.floating_position {
+                    window
+                        .set_position(PhysicalPosition::new(x, y))
+                        .map_err(|_| "widget position unavailable")?;
+                } else {
+                    window.center().map_err(|_| "widget position unavailable")?;
+                }
             }
             window
                 .set_min_size(Some(tauri::LogicalSize::new(80.0, 80.0)))
@@ -415,7 +421,9 @@ pub fn apply_mode(
                 .geometry
                 .lock()
                 .map_err(|_| "widget unavailable")? = None;
-            crate::show_widget(&window);
+            if next.display_mode != "menubar" {
+                crate::show_widget(&window);
+            }
         }
     }
     Ok(())
@@ -470,9 +478,14 @@ pub struct SidebarViewport {
 
 // Reopen is also the escape hatch for a hidden/click-through legacy widget.
 pub fn recover(app: &AppHandle) -> Result<(), String> {
+    if crate::menubar::enabled(app) {
+        return crate::menubar::show(app);
+    }
     let state = app.state::<AppState>();
     let mut preferences = crate::preferences_lock(&state).clone();
-    preferences.locked = false;
+    if preferences.display_mode == "floating" {
+        preferences.locked = false;
+    }
     crate::apply_lock(app, false)?;
     crate::persist_preferences(&state.preferences_path, &preferences)?;
     *crate::preferences_lock(&state) = preferences.clone();

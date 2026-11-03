@@ -6,8 +6,9 @@ import App from "./App";
 import { tokenSnapshot, totals } from "./test/tokenFixtures";
 import type { WidgetPreferences } from "./types";
 
-const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn(), save: vi.fn(), drag: vi.fn(), phase: vi.fn(), regions: vi.fn(), account: vi.fn(), deepseek: vi.fn(), sideListen: vi.fn(), autostart: vi.fn(), desktop: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), tokenListen: vi.fn(), desktopListen: vi.fn(), refreshTokens: vi.fn(), expand: vi.fn(), quota: vi.fn(), preferences: vi.fn(), save: vi.fn(), drag: vi.fn(), phase: vi.fn(), regions: vi.fn(), account: vi.fn(), deepseek: vi.fn(), sideListen: vi.fn(), autostart: vi.fn(), desktop: vi.fn(), platform: vi.fn(), panelResize: vi.fn(), panelHide: vi.fn(), menu: vi.fn() }));
 vi.mock("./lib/bridge", () => ({
+  getDesktopPlatform: api.platform, resizeMenubarPanel: api.panelResize, hideMenubarPanel: api.panelHide, openOperationsMenu: api.menu,
   getTokenStatistics: api.get, listenTokenStatisticsUpdated: api.tokenListen, refreshTokenStatistics: api.refreshTokens,
   fetchSnapshots: api.quota, getPreferences: api.preferences, listenDesktopEvents: api.desktopListen,
   setSidebarPhase: api.phase, syncSidebarRegions: api.regions, getAccountUsage: api.account, getDeepSeekUsage: api.deepseek, listenSidebarRecovery: api.sideListen, listenSidebarDismiss: api.sideListen, listenSidebarPointer: api.sideListen, listenDeepSeekReady: api.sideListen,
@@ -29,7 +30,7 @@ function render(node: ReactElement) {
 }
 beforeEach(() => {
   vi.useFakeTimers(); vi.resetAllMocks();
-  api.desktop.mockReturnValue(true);
+  api.desktop.mockReturnValue(true); api.platform.mockResolvedValue("macos"); api.panelResize.mockResolvedValue(undefined); api.panelHide.mockResolvedValue(undefined); api.menu.mockResolvedValue(undefined);
   api.get.mockResolvedValue(tokenSnapshot()); api.tokenListen.mockResolvedValue(() => {}); api.desktopListen.mockResolvedValue(() => {});
   api.save.mockImplementation(async value => { api.preferences.mockResolvedValue(value); }); api.autostart.mockResolvedValue(false); api.phase.mockResolvedValue(undefined); api.account.mockRejectedValue(new Error("synthetic unavailable")); api.deepseek.mockResolvedValue({ status: "signed_out", balance: null, spent: null }); api.sideListen.mockResolvedValue(() => {});
   api.regions.mockResolvedValue(undefined);
@@ -430,4 +431,88 @@ it("retains an earlier confirmed save if a later save and its read fail", async 
   api.preferences.mockRejectedValue(new Error("read unavailable"));
   await act(async () => pending[1].reject(new Error("latest save failed"))); await flush();
   expect(slider.value).toBe("120");
+});
+
+
+describe("menu bar application integration", () => {
+  it("shows the complete expanded card and bypasses floating drag, hover and expansion preferences", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, displayMode: "menubar", opacityPercent: 60, locked: true, stayExpanded: true });
+    const view = render(<App />); await flush();
+    const main = screen.getByRole("main");
+    expect(main.dataset.host).toBe("menubar");
+    expect(main.className).toContain("quota-card--tokens");
+    expect(main.className).toContain("quota-card--height-full");
+    expect(screen.getByRole("region", { name: "Token 用量" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "查看统计" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "返回额度" })).toBeNull();
+    expect(view.container.style.opacity).toBe("");
+    expect(view.container.style.transform).toBe("");
+    expect(view.container.classList.contains("widget-visual-root")).toBe(false);
+    expect(api.panelResize).toHaveBeenLastCalledWith(514);
+    api.expand.mockClear(); api.drag.mockClear(); api.quota.mockClear();
+    fireEvent.mouseEnter(main); fireEvent.mouseLeave(main); fireEvent.mouseDown(main, { button: 0 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
+    expect(api.expand).not.toHaveBeenCalled();
+    expect(api.drag).not.toHaveBeenCalled();
+    expect(api.quota).not.toHaveBeenCalled();
+  });
+
+  it("consumes backend notifications and keeps the existing weekly-only height without online polling", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, displayMode: "menubar" });
+    render(<App />); await flush();
+    api.quota.mockClear();
+    fireEvent.focus(window);
+    fireEvent(document, new Event("visibilitychange"));
+    await act(async () => { await vi.advanceTimersByTimeAsync(10 * 60_000); });
+    expect(api.quota).not.toHaveBeenCalled();
+    act(() => api.desktopListen.mock.calls.at(-1)![0].onSnapshots([{ ...quota, shortWindow: null, accountGeneration: 3 }]));
+    expect(screen.getAllByRole("progressbar")).toHaveLength(1);
+    expect(screen.getByRole("main").className).toContain("quota-card--height-compact");
+    expect(api.panelResize).toHaveBeenLastCalledWith(460);
+    expect(screen.getByRole("region", { name: "Token 用量" })).toBeTruthy();
+    act(() => api.desktopListen.mock.calls.at(-1)![0].onSnapshots([{ ...quota, shortWindow: null, weeklyWindow: null, status: "signed_out", accountGeneration: 4 }]));
+    expect(screen.queryByRole("progressbar")).toBeNull();
+    expect(screen.getByRole("main").className).toContain("quota-card--signed_out");
+  });
+
+  it("routes existing header controls to working host actions without changing floating preferences", async () => {
+    const saved = { ...prefs, displayMode: "menubar", alwaysOnTop: false, stayExpanded: false, opacityPercent: 75 };
+    api.preferences.mockResolvedValue(saved);
+    render(<App />); await flush();
+    fireEvent.click(screen.getByRole("button", { name: "更多" })); await flush();
+    expect(api.menu).toHaveBeenCalledOnce();
+    fireEvent.contextMenu(screen.getByRole("main")); await flush();
+    expect(api.menu).toHaveBeenCalledTimes(2);
+    fireEvent.click(screen.getByRole("button", { name: "收起面板" })); await flush();
+    expect(api.panelHide).toHaveBeenCalledOnce();
+    fireEvent.keyDown(window, { key: "Escape" }); await flush();
+    expect(api.panelHide).toHaveBeenCalledTimes(2);
+    expect(api.save).not.toHaveBeenCalled();
+    const floating = screen.getByRole("button", { name: "切换到悬浮窗" });
+    expect(floating.hasAttribute("aria-pressed")).toBe(false);
+    fireEvent.click(floating); await flush();
+    expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ ...saved, displayMode: "floating" }));
+  });
+
+  it("keeps model and quota-week tabs directly usable in the same expanded card", async () => {
+    api.preferences.mockResolvedValue({ ...prefs, displayMode: "menubar" });
+    render(<App />); await flush();
+    fireEvent.click(screen.getByRole("button", { name: "按模型" }));
+    expect(screen.getByRole("group", { name: "统计周期" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "额度周" }));
+    expect(screen.getByRole("button", { name: "额度周" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByText("当前额度周不可用")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "总览" }));
+    expect(screen.getByLabelText("本周: 1,200")).toBeTruthy();
+    expect(api.save).not.toHaveBeenCalled();
+    expect(api.panelHide).not.toHaveBeenCalled();
+  });
+
+  it("does not offer the macOS-only mode in a Windows display menu", async () => {
+    api.platform.mockResolvedValue("windows");
+    render(<App />); await flush(); fireEvent.mouseEnter(screen.getByRole("main")); await flush();
+    fireEvent.click(screen.getByRole("button", { name: "展示模式" }));
+    expect(screen.queryByRole("button", { name: "仅菜单栏" })).toBeNull();
+    expect(screen.getByRole("button", { name: "切换到侧边栏" })).toBeTruthy();
+  });
 });

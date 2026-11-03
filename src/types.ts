@@ -4,6 +4,7 @@ export type Language = "zh-CN" | "en";
 export type WidgetTheme = "light" | "dark";
 export type AppearancePreference = "system" | WidgetTheme;
 export type WidgetSkin = "default" | "blur" | "computer" | "mecha-light";
+export type MenubarQuotaDisplay = "short" | "weekly" | "both";
 export interface UsageWindow {
   remainingPercent: number;
   resetsAt: string | null;
@@ -11,6 +12,8 @@ export interface UsageWindow {
 }
 
 export interface ProviderSnapshot {
+  /** Opaque process-local account revision; never an account identifier. */
+  accountGeneration?: number;
   provider: ProviderId;
   displayName: string;
   plan: string | null;
@@ -26,7 +29,10 @@ export interface ProviderSnapshot {
 export interface WidgetPreferences {
   autoCheckUpdates?: boolean;
   deepseekEnabled?: boolean;
-  displayMode?: "floating" | "sidebar";
+  displayMode?: "floating" | "sidebar" | "menubar";
+  menubarQuotaDisplay?: MenubarQuotaDisplay;
+  /** Native-owned position for returning to the floating mode. */
+  floatingPosition?: [number, number] | null;
   sidebarSide?: "left" | "right" | "top";
   sidebarOpacity?: number;
   sidebarGlassEnabled?: boolean;

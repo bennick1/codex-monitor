@@ -3,6 +3,7 @@ use std::{fs, path::PathBuf};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, AUTHORIZATION};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 use crate::models::{ProviderSnapshot, UsageWindow};
 
@@ -14,6 +15,46 @@ const MAX_AUTH_BYTES: u64 = 256 * 1024;
 struct Auth {
     access_token: String,
     account_id: Option<String>,
+}
+
+// Never serialized, persisted, logged or sent to a WebView. Comparing an opaque
+// digest lets the quota cache follow the login without retaining credentials.
+#[derive(Clone, PartialEq, Eq)]
+pub(crate) enum SessionScope {
+    SignedOut,
+    Authenticated([u8; 32]),
+    Synthetic(u64),
+}
+
+impl Auth {
+    fn scope(&self) -> SessionScope {
+        let subject = self
+            .access_token
+            .split('.')
+            .nth(1)
+            .and_then(|payload| URL_SAFE_NO_PAD.decode(payload).ok())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .and_then(|value| value.get("sub")?.as_str().map(str::to_owned));
+        let mut digest = Sha256::new();
+        if self.account_id.is_some() || subject.is_some() {
+            for part in [self.account_id.as_deref(), subject.as_deref()] {
+                let part = part.unwrap_or("").as_bytes();
+                digest.update(part.len().to_le_bytes());
+                digest.update(part);
+            }
+        } else {
+            // Without a stable account identity, a changed token invalidates
+            // the cache conservatively rather than borrowing another login.
+            digest.update(self.access_token.as_bytes());
+        }
+        SessionScope::Authenticated(digest.finalize().into())
+    }
+}
+
+pub(crate) fn session_scope() -> SessionScope {
+    load_auth()
+        .map(|auth| auth.scope())
+        .unwrap_or(SessionScope::SignedOut)
 }
 
 fn auth_path() -> Option<PathBuf> {
@@ -152,10 +193,11 @@ fn collect_reset_credit_expirations(value: &Value) -> Vec<String> {
 }
 
 fn scale_ratio_field(key: &str, value: f64) -> bool {
+    let lower = key.to_ascii_lowercase();
     matches!(
         key,
         "remaining_ratio" | "remainingRatio" | "used_ratio" | "usedRatio" | "utilization"
-    ) || (!key.contains("percent") && !key.contains("pct") && value <= 1.0)
+    ) || (!lower.contains("percent") && !lower.contains("pct") && value <= 1.0)
 }
 
 fn parse_window(value: Option<&Value>) -> Option<UsageWindow> {
@@ -198,8 +240,11 @@ fn parse_window(value: Option<&Value>) -> Option<UsageWindow> {
         };
         100.0 - used_percent
     };
+    if !remaining_percent.is_finite() || !(0.0..=100.0).contains(&remaining_percent) {
+        return None;
+    }
     Some(UsageWindow {
-        remaining_percent: remaining_percent.clamp(0.0, 100.0),
+        remaining_percent,
         resets_at: timestamp(
             value,
             &[
@@ -228,24 +273,57 @@ fn parse_window(value: Option<&Value>) -> Option<UsageWindow> {
     })
 }
 
-fn find_window<'a>(
-    rate_limit: &'a Value,
-    names: &[&str],
-    expected_seconds: u64,
-) -> Option<&'a Value> {
+const PRIMARY_NAMES: &[&str] = &[
+    "primary_window",
+    "primaryWindow",
+    "short_window",
+    "shortWindow",
+    "five_hour_window",
+    "fiveHourWindow",
+    "5h",
+    "primary",
+];
+const SECONDARY_NAMES: &[&str] = &[
+    "secondary_window",
+    "secondaryWindow",
+    "weekly_window",
+    "weeklyWindow",
+    "week_window",
+    "weekWindow",
+    "weekly",
+    "secondary",
+];
+
+fn is_weekly(window: &UsageWindow) -> bool {
+    window.window_seconds.abs_diff(604_800) <= 60
+}
+
+fn named_window(rate_limit: &Value, names: &[&str]) -> Result<Option<UsageWindow>, ()> {
     for name in names {
-        if let Some(value) = rate_limit.get(*name) {
-            let Some(window) = parse_window(Some(value)) else {
-                continue;
-            };
-            if window.window_seconds == 0
-                || (expected_seconds > 0 && window.window_seconds.abs_diff(expected_seconds) <= 60)
-            {
-                return Some(value);
-            }
+        if let Some(value) = rate_limit.get(*name).filter(|value| !value.is_null()) {
+            // A present but malformed cycle is a failed response, not evidence
+            // that the account lost that cycle. Preserve the last good snapshot.
+            return parse_window(Some(value)).map(Some).ok_or(());
         }
     }
+    Ok(None)
+}
 
+fn parse_usage_windows(
+    rate_limit: &Value,
+) -> Result<(Option<UsageWindow>, Option<UsageWindow>), ()> {
+    let primary = named_window(rate_limit, PRIMARY_NAMES)?;
+    let mut secondary = named_window(rate_limit, SECONDARY_NAMES)?;
+    let mut short = None;
+    if let Some(window) = primary {
+        if is_weekly(&window) {
+            if secondary.is_none() {
+                secondary = Some(window);
+            }
+        } else {
+            short = Some(window);
+        }
+    }
     for key in [
         "windows",
         "limit_windows",
@@ -257,27 +335,34 @@ fn find_window<'a>(
             continue;
         };
         for item in items {
+            let name = pick_string(item, &["name", "type", "id", "window", "label"])
+                .unwrap_or("")
+                .to_ascii_lowercase();
+            let named_primary = PRIMARY_NAMES
+                .iter()
+                .any(|key| name == key.to_ascii_lowercase());
+            let named_secondary = SECONDARY_NAMES
+                .iter()
+                .any(|key| name == key.to_ascii_lowercase());
             let Some(window) = parse_window(Some(item)) else {
+                if named_primary || named_secondary {
+                    return Err(());
+                }
                 continue;
             };
-            let matches_duration =
-                expected_seconds > 0 && window.window_seconds.abs_diff(expected_seconds) <= 60;
-            let matches_name = pick_string(item, &["name", "type", "id", "window", "label"])
-                .map(|text| {
-                    let lower = text.to_ascii_lowercase();
-                    names.iter().any(|name| {
-                        lower == name.to_ascii_lowercase()
-                            || lower.contains(&name.to_ascii_lowercase())
-                    })
-                })
-                .unwrap_or(false);
-            if matches_duration || matches_name {
-                return Some(item);
+            if is_weekly(&window) || named_secondary {
+                if secondary.is_none() {
+                    secondary = Some(window);
+                }
+            } else if (named_primary || window.window_seconds > 0) && short.is_none() {
+                short = Some(window);
             }
         }
     }
-
-    None
+    if short.is_none() && secondary.is_none() {
+        return Err(());
+    }
+    Ok((short, secondary))
 }
 
 fn safe_http_failure(status: reqwest::StatusCode) -> (&'static str, &'static str) {
@@ -332,6 +417,24 @@ pub async fn fetch_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
         Ok(value) => value,
         Err(message) => return ProviderSnapshot::failure("signed_out", message),
     };
+    fetch_authenticated(client, auth).await
+}
+
+pub(crate) async fn fetch_snapshot_for_scope(
+    client: &reqwest::Client,
+    expected: &SessionScope,
+) -> ProviderSnapshot {
+    let auth = match load_auth() {
+        Ok(value) => value,
+        Err(message) => return ProviderSnapshot::failure("signed_out", message),
+    };
+    if &auth.scope() != expected {
+        return ProviderSnapshot::failure("loading", "Account changed. Refreshing quota.");
+    }
+    fetch_authenticated(client, auth).await
+}
+
+async fn fetch_authenticated(client: &reqwest::Client, auth: Auth) -> ProviderSnapshot {
     let request_headers = match headers(&auth) {
         Ok(value) => value,
         Err(message) => return ProviderSnapshot::failure("signed_out", message),
@@ -368,43 +471,15 @@ pub async fn fetch_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
         .get("rate_limit")
         .or_else(|| usage.get("rateLimit"))
         .unwrap_or(&usage);
-    let short_window = parse_window(find_window(
-        rate_limit,
-        &[
-            "primary_window",
-            "primaryWindow",
-            "short_window",
-            "shortWindow",
-            "five_hour_window",
-            "fiveHourWindow",
-            "5h",
-            "primary",
-        ],
-        18_000,
-    ));
-    let weekly_window = parse_window(find_window(
-        rate_limit,
-        &[
-            "secondary_window",
-            "secondaryWindow",
-            "weekly_window",
-            "weeklyWindow",
-            "week_window",
-            "weekWindow",
-            "weekly",
-            "secondary",
-            "primary_window",
-            "primaryWindow",
-            "primary",
-        ],
-        604_800,
-    ));
-    if short_window.is_none() && weekly_window.is_none() {
-        return ProviderSnapshot::failure(
-            "unavailable",
-            "Quota response does not contain a recognized usage window.",
-        );
-    }
+    let (short_window, weekly_window) = match parse_usage_windows(rate_limit) {
+        Ok(windows) => windows,
+        Err(()) => {
+            return ProviderSnapshot::failure(
+                "unavailable",
+                "Quota response does not contain valid usage windows.",
+            )
+        }
+    };
 
     let usage_credits = usage
         .get("rate_limit_reset_credits")
@@ -454,6 +529,7 @@ pub async fn fetch_snapshot(client: &reqwest::Client) -> ProviderSnapshot {
     };
 
     ProviderSnapshot {
+        account_generation: None,
         provider: "codex".into(),
         display_name: "CODEX".into(),
         plan: pick_string(&usage, &["plan_type", "planType"]).map(|value| value.to_uppercase()),
@@ -547,44 +623,112 @@ mod tests {
                 {"name": "primary", "remainingPercent": 51, "windowSeconds": 18000}
             ]
         });
-        let short = parse_window(find_window(
-            &rate_limit,
-            &["primary_window", "primary"],
-            18_000,
-        ))
-        .unwrap();
-        let weekly = parse_window(find_window(
-            &rate_limit,
-            &["secondary_window", "weekly"],
-            604_800,
-        ))
-        .unwrap();
-        assert_eq!(short.remaining_percent, 51.0);
-        assert_eq!(weekly.remaining_percent, 88.0);
+        let (short, weekly) = parse_usage_windows(&rate_limit).unwrap();
+        assert_eq!(short.unwrap().remaining_percent, 51.0);
+        assert_eq!(weekly.unwrap().remaining_percent, 88.0);
     }
 
     #[test]
-    fn does_not_treat_a_weekly_primary_field_as_a_short_window() {
-        let value = serde_json::json!({
-            "primary_window": {"remainingPercent": 98, "windowSeconds": 604800},
-            "weekly_window": {"remainingPercent": 98, "windowSeconds": 604800}
-        });
-        assert!(find_window(&value, &["primary_window", "primary"], 18_000).is_none());
-        assert!(find_window(&value, &["weekly_window", "weekly"], 604_800).is_some());
+    fn weekly_primary_is_not_duplicated_as_a_short_cycle() {
+        for value in [
+            serde_json::json!({"primary_window": {"remainingPercent":98,"windowSeconds":604800},"weekly_window":{"remainingPercent":98,"windowSeconds":604800}}),
+            serde_json::json!({"primary": {"remainingPercent":98,"windowSeconds":604800}}),
+        ] {
+            let (short, weekly) = parse_usage_windows(&value).unwrap();
+            assert!(short.is_none());
+            let weekly = weekly.unwrap();
+            assert_eq!(weekly.remaining_percent, 98.0);
+            assert_eq!(weekly.window_seconds, 604_800);
+        }
     }
 
     #[test]
-    fn recognizes_a_weekly_primary_field_as_weekly_fallback() {
-        let value = serde_json::json!({
-            "primary": {"remainingPercent": 98, "windowSeconds": 604800}
-        });
-        let weekly = parse_window(find_window(
-            &value,
-            &["weekly_window", "weekly", "primary_window", "primary"],
-            604_800,
-        ))
-        .unwrap();
-        assert_eq!(weekly.remaining_percent, 98.0);
-        assert_eq!(weekly.window_seconds, 604_800);
+    fn recognizes_actual_short_duration_instead_of_assuming_five_hours() {
+        let value =
+            serde_json::json!({"primary_window": {"remainingPercent":19,"windowSeconds":7200}});
+        let (short, weekly) = parse_usage_windows(&value).unwrap();
+        assert_eq!(short.unwrap().window_seconds, 7200);
+        assert!(weekly.is_none());
+        let value = serde_json::json!({"primary_window":{"remainingPercent":7}});
+        let (short, weekly) = parse_usage_windows(&value).unwrap();
+        assert_eq!(short.unwrap().window_seconds, 0);
+        assert!(weekly.is_none());
+    }
+
+    #[test]
+    fn secondary_cycle_preserves_its_actual_duration() {
+        let value =
+            serde_json::json!({"secondary_window":{"remainingPercent":72,"windowSeconds":86400}});
+        let (short, secondary) = parse_usage_windows(&value).unwrap();
+        assert!(short.is_none());
+        assert_eq!(secondary.unwrap().window_seconds, 86400);
+    }
+
+    #[test]
+    fn missing_null_and_malformed_cycles_are_not_equivalent() {
+        let weekly = serde_json::json!({"remainingPercent":42,"windowSeconds":604800});
+        for value in [
+            serde_json::json!({"weekly_window":weekly}),
+            serde_json::json!({"primary_window":null,"weekly_window":weekly}),
+        ] {
+            let (short, secondary) = parse_usage_windows(&value).unwrap();
+            assert!(short.is_none());
+            assert!(secondary.is_some());
+        }
+        for value in [
+            serde_json::json!({}),
+            serde_json::json!({"primary_window":{"windowSeconds":18000},"weekly_window":weekly}),
+            serde_json::json!({"primary_window":{"remainingPercent":101},"weekly_window":weekly}),
+            serde_json::json!({"windows":[{"name":"primary","remainingPercent":"unknown"},weekly]}),
+        ] {
+            assert!(parse_usage_windows(&value).is_err());
+        }
+    }
+
+    #[test]
+    fn percent_boundaries_are_preserved_and_invalid_values_are_rejected() {
+        for percent in [0.0, 0.01, 0.99, 1.0, 99.99, 100.0] {
+            let value = serde_json::json!({"remainingPercent":percent});
+            assert_eq!(
+                parse_window(Some(&value)).unwrap().remaining_percent,
+                percent
+            );
+        }
+        for percent in [-1.0, 100.01, 1000.0] {
+            assert!(parse_window(Some(&serde_json::json!({"remainingPercent":percent}))).is_none());
+            assert!(parse_window(Some(&serde_json::json!({"usedPercent":percent}))).is_none());
+        }
+    }
+
+    #[test]
+    fn login_scope_is_stable_across_token_rotation_but_separates_accounts_and_users() {
+        let token = |subject: &str, suffix: &str| {
+            format!(
+                "header.{}.{}",
+                URL_SAFE_NO_PAD.encode(serde_json::json!({"sub":subject}).to_string()),
+                suffix
+            )
+        };
+        let auth = |account: &str, subject: &str, suffix: &str| Auth {
+            access_token: token(subject, suffix),
+            account_id: Some(account.into()),
+        };
+        assert!(
+            auth("account-a", "user-a", "old").scope()
+                == auth("account-a", "user-a", "new").scope()
+        );
+        assert!(
+            auth("account-a", "user-a", "old").scope()
+                != auth("account-b", "user-a", "new").scope()
+        );
+        assert!(
+            auth("account-a", "user-a", "old").scope()
+                != auth("account-a", "user-b", "new").scope()
+        );
+        let anonymous = |token: &str| Auth {
+            access_token: token.into(),
+            account_id: None,
+        };
+        assert!(anonymous("old").scope() != anonymous("new").scope());
     }
 }
