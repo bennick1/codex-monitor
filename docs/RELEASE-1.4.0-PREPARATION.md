@@ -173,4 +173,8 @@ Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明�
 
 第三轮 QA [41595078604](https://github.com/bennick1/codex-monitor/actions/runs/41595078604) 的 A 已通过实际 VERSIONINFO、x64 GUI 及完整 NSIS 内部摘要核对；B 也已构建和签名，但既有 `updater-qa.mjs` 复制整个缓存 bundle，将仍留在缓存中的 A 安装器混入 B 快照，单包门槛再次正确拒绝。Windows 快照改为仅复制当前 QA 名称/版本对应的唯一 EXE 及其 `.sig`，拒绝覆盖既有快照，保留 A 和共享编译缓存；macOS 原逻辑不变。包收集器的唯一安装器检查不放宽。这三次失败及后续成功必须区分，失败诊断材料不是供人工验收的测试包。
 
+第四轮 QA [41596807578](https://github.com/bennick1/codex-monitor/actions/runs/41596807578) 的 A/B 均已通过 Windows 版本、x64 GUI 和 NSIS 内部完整字节来源校验，随后打包前跟踪文件检查失败。锁定的 `tauri-build 2.6.3` / `tauri-utils 2.9.3` 会在应用及 verifier 构建时生成权限 schema；提交中的 Windows schema 比桌面 schema 多出五个已移除 process 插件权限条目。后续只接受 **未暂存的 `src-tauri/gen/schemas/windows-schema.json`，且新字节与本次 HEAD 已提交的 `desktop-schema.json` 完全相等** 这一已知生成结果，记录前后及预期摘要和差异；其余跟踪文件变化、暂存、重命名或删除继续阻止打包。没有 reset 隐藏差异，也没有忽略整个生成目录；实际下一轮结果另行核对。
+
+普通 push CI [41596692901](https://github.com/bennick1/codex-monitor/actions/runs/41596692901) 首次在既有 Windows Rust 并发刷新测试中出现完成事件 generation=6、随后查询 generation=7 的时序失败，同源 PR CI [41596698380](https://github.com/bennick1/codex-monitor/actions/runs/41596698380) 已成功。只重跑失败的 Windows job 后 push CI 成功；没有改产品、测试断言或忽略项。保留这次波动记录，不扩大为原生升级缺陷或静默豁免检查。
+
 本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。

@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { inspectPayload } from "./updater-artifacts.mjs";
 import { deriveNsisBinaryIdentity } from "./windows-nsis-provenance.mjs";
+import { auditWindowsQaSource } from "./windows-qa-source.mjs";
 
 const identifier = "app.codexmonitor.updater-test.local";
 const productName = "Codex Monitor Updater QA";
@@ -63,7 +64,12 @@ async function makePackage(root, output) {
   if (process.platform !== "win32") throw new Error("Assemble on the Windows build runner");
   const sourceSha = cli("git", ["rev-parse", "HEAD"]);
   if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== sourceSha) throw new Error("Checkout differs from dispatched SHA");
-  if (cli("git", ["status", "--porcelain", "--untracked-files=no"])) throw new Error("Tracked source changed during QA build");
+  const sourceValidation = await auditWindowsQaSource();
+  await writeFile(join(root, "source-diagnostics.json"), JSON.stringify(sourceValidation, null, 2));
+  if (!sourceValidation.accepted || sourceValidation.sourceSha !== sourceSha) {
+    console.error(JSON.stringify({ reason: sourceValidation.reason, trackedChanges: sourceValidation.trackedChanges, diffstat: sourceValidation.diffstat }));
+    throw new Error("QA source provenance rejected; see public source-diagnostics.json");
+  }
   const publicKey = (await readFile(join(root, "test.key.pub"), "utf8")).trim();
   const verifier = process.env.CODEX_MONITOR_SIGNATURE_VERIFY_BIN;
   if (!verifier) throw new Error("Existing mature signature verifier is required");
@@ -95,7 +101,7 @@ async function makePackage(root, output) {
   await copyFile(join("scripts", "windows-updater-qa", "README.zh-CN.txt"), join(output, "README.zh-CN.txt"));
   const provenance = {
     schema: 1, qa: true, releaseBuild: false, nativeAcceptance: "PENDING",
-    sourceSha, repository: "bennick1/codex-monitor", identifier, productName,
+    sourceSha, sourceValidation, repository: "bennick1/codex-monitor", identifier, productName,
     endpoint, publicKeySha256: hash(publicKey), generatedAt: new Date().toISOString(),
     runUrl: process.env.GITHUB_RUN_ID ? `https://github.com/bennick1/codex-monitor/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
     tools: { node: process.version, rust: cli("rustc", ["--version"]), tauri: cli(process.execPath, ["node_modules/@tauri-apps/cli/tauri.js", "--version"]) },

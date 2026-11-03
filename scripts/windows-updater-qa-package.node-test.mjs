@@ -4,8 +4,72 @@ import { validateOverlay, validateRecords, inspectPe } from "./windows-updater-q
 import { mkdtemp, mkdir, readFile, writeFile, readdir, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { copyVersionedWindowsBundle } from "./windows-qa-bundle.mjs";
+import { auditWindowsQaSource } from "./windows-qa-source.mjs";
+
+async function sourceFixture(run) {
+  const directory = await mkdtemp(join(tmpdir(), "cm-qa-source-provenance-"));
+  const git = args => execFileSync("git", args, { cwd: directory, stdio: "pipe" });
+  try {
+    git(["init", "--quiet"]);
+    git(["config", "core.autocrlf", "false"]);
+    await mkdir(join(directory, "src-tauri", "gen", "schemas"), { recursive: true });
+    await writeFile(join(directory, "src-tauri/gen/schemas/windows-schema.json"), '{"stale":"generated"}\n');
+    await writeFile(join(directory, "src-tauri/gen/schemas/desktop-schema.json"), '{"current":"generated"}\n');
+    await writeFile(join(directory, "src-tauri/build.rs"), "fn main() {}\n");
+    git(["add", "src-tauri"]);
+    git(["-c", "user.name=QA Fixture", "-c", "user.email=qa-fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "Synthetic source fixture"]);
+    await run(directory, git);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+test("source guard accepts only exact generated Windows schema and records its full public evidence", async () => sourceFixture(async directory => {
+  const clean = await auditWindowsQaSource(directory);
+  assert.equal(clean.accepted, true);
+  assert.deepEqual(clean.generatedOutputs, []);
+  const expected = await readFile(join(directory, "src-tauri/gen/schemas/desktop-schema.json"));
+  const windows = join(directory, "src-tauri/gen/schemas/windows-schema.json");
+  await writeFile(windows, expected);
+  const report = await auditWindowsQaSource(directory);
+  assert.equal(report.accepted, true);
+  assert.deepEqual(report.trackedChanges, [{ status: " M", path: "src-tauri/gen/schemas/windows-schema.json" }]);
+  assert.equal(report.generatedOutputs[0].currentSha256, report.generatedOutputs[0].expectedSha256);
+  assert.notEqual(report.generatedOutputs[0].previousSha256, report.generatedOutputs[0].currentSha256);
+  assert.match(report.generatedOutputs[0].diff, /-\{"stale":"generated"\}/);
+  assert.match(report.generatedOutputs[0].diff, /\+\{"current":"generated"\}/);
+  assert.deepEqual(await readFile(windows), expected, "audit never restores or edits the changed schema");
+}));
+
+test("source guard rejects real source mutation with names/statistics but no source-content disclosure", async () => sourceFixture(async directory => {
+  await writeFile(join(directory, "src-tauri/build.rs"), "unapproved-source-content\n");
+  const report = await auditWindowsQaSource(directory);
+  assert.equal(report.accepted, false);
+  assert.equal(report.trackedChanges[0].path, "src-tauri/build.rs");
+  assert.match(report.diffstat, /build.rs/);
+  assert.equal(JSON.stringify(report).includes("unapproved-source-content"), false);
+}));
+
+test("source guard rejects unexpected schema bytes and records hashes without its unapproved content", async () => sourceFixture(async directory => {
+  await writeFile(join(directory, "src-tauri/gen/schemas/windows-schema.json"), '{"unapproved":"schema-content"}\n');
+  const report = await auditWindowsQaSource(directory);
+  assert.equal(report.accepted, false);
+  assert.notEqual(report.generatedOutputs[0].currentSha256, report.generatedOutputs[0].expectedSha256);
+  assert.equal(JSON.stringify(report).includes("schema-content"), false);
+}));
+
+for (const change of ["staged", "rename", "delete"]) test(`source guard rejects ${change} changes even for generated schema`, async () => sourceFixture(async (directory, git) => {
+  const schema = "src-tauri/gen/schemas/windows-schema.json";
+  if (change === "staged") {
+    await writeFile(join(directory, schema), await readFile(join(directory, "src-tauri/gen/schemas/desktop-schema.json")));
+    git(["add", schema]);
+  } else if (change === "rename") git(["mv", schema, "src-tauri/gen/schemas/renamed-schema.json"]);
+  else await rm(join(directory, schema));
+  const report = await auditWindowsQaSource(directory);
+  assert.equal(report.accepted, false);
+  assert.equal(report.generatedOutputs.length, 0);
+  if (change === "rename") assert.equal(report.trackedChanges[0].originalPath, schema);
+}));
 
 test("Windows B snapshot selects only exact B installer/signature and preserves A/shared cache", async () => {
   const directory = await mkdtemp(join(tmpdir(), "cm-qa-versioned-bundle-"));
