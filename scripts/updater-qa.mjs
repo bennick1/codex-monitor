@@ -24,7 +24,10 @@ if (mode === "prepare") {
   // The CLI can print key content: suppress all output, including failure output.
   if (generated.status !== 0) throw new Error("Test signer generation failed; inspect CLI usage without printing key material");
   await chmod(join(root, "test.key"), 0o600);
-  for (const version of ["0.0.1", "0.0.2"]) await writeFile(join(root, `${version}.json`), JSON.stringify({ version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", bundle: { createUpdaterArtifacts: true, macOS: { signingIdentity: "-" } } }, null, 2));
+  // NSIS finds/kills prior processes by executable name. Keep Windows QA's
+  // name distinct from production as well as its identifier and install path.
+  const windowsIdentity = process.platform === "win32" ? { mainBinaryName: "codex-monitor-updater-qa" } : {};
+  for (const version of ["0.0.1", "0.0.2"]) await writeFile(join(root, `${version}.json`), JSON.stringify({ version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", ...windowsIdentity, bundle: { createUpdaterArtifacts: true, macOS: { signingIdentity: "-" } } }, null, 2));
   console.log(`QA配置与独立测试密钥已生成：${root}`);
 } else if (mode === "build") {
   if (!["0.0.1", "0.0.2"].includes(argument)) throw new Error("QA version must be A=0.0.1 or B=0.0.2");
@@ -33,6 +36,7 @@ if (mode === "prepare") {
   const overlayPath = join(root, `${argument}.json`);
   const overlay = JSON.parse(await readFile(overlayPath, "utf8"));
   if (overlay.identifier !== "app.codexmonitor.updater-test.local" || overlay.version !== argument || overlay.productName !== "Codex Monitor Updater QA") throw new Error("Unexpected QA overlay identity/version");
+  if (process.platform === "win32" && overlay.mainBinaryName !== "codex-monitor-updater-qa") throw new Error("Windows QA requires an independent executable name");
   overlay.plugins = { updater: { pubkey, endpoints: [endpoint], dangerousInsecureTransportProtocol: true } };
   await writeFile(overlayPath, JSON.stringify(overlay, null, 2));
   const target = join(root, "target-build");

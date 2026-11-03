@@ -5,7 +5,7 @@ if ($env:OS -ne 'Windows_NT' -or -not [Environment]::Is64BitProcess) { throw 'Us
 $PackageRoot = Split-Path -Parent $PSScriptRoot
 $QaRuntime = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CodexMonitorUpdaterQA-CM-RELEASE-ENABLEMENT-20261103'
 $QaInstall = Join-Path $QaRuntime 'installed'
-$QaExe = Join-Path $QaInstall 'codex-monitor.exe'
+$QaExe = Join-Path $QaInstall 'codex-monitor-updater-qa.exe'
 $QaHome = Join-Path $QaRuntime 'empty-codex-home'
 $QaConfig = Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'app.codexmonitor.updater-test.local'
 $QaData = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'app.codexmonitor.updater-test.local'
@@ -32,7 +32,7 @@ function Assert-NoReparse([string]$File) {
 }
 
 function Assert-QaPackage {
-    if ($QaSource.schema -ne 1 -or $QaSource.qa -ne $true -or $QaSource.releaseBuild -ne $false -or $QaSource.sourceSha -notmatch '^[a-f0-9]{40}$' -or $QaSource.identifier -ne 'app.codexmonitor.updater-test.local' -or $QaSource.productName -ne 'Codex Monitor Updater QA' -or $QaSource.endpoint -ne 'http://127.0.0.1:18765/latest.json') { throw 'Not a verified isolated QA package.' }
+    if ($QaSource.schema -ne 1 -or $QaSource.qa -ne $true -or $QaSource.releaseBuild -ne $false -or $QaSource.sourceSha -notmatch '^[a-f0-9]{40}$' -or $QaSource.identifier -ne 'app.codexmonitor.updater-test.local' -or $QaSource.productName -ne 'Codex Monitor Updater QA' -or $QaSource.binaryName -ne 'codex-monitor-updater-qa.exe' -or $QaSource.endpoint -ne 'http://127.0.0.1:18765/latest.json') { throw 'Not a verified isolated QA package.' }
     foreach ($entry in Get-Content -LiteralPath (Join-Path $PackageRoot 'SHA256SUMS')) {
         if ($entry -notmatch '^([a-f0-9]{64})  ([A-Za-z0-9_./-]+)$') { throw 'Invalid checksum entry.' }
         $expected = $Matches[1]
@@ -54,9 +54,9 @@ function Assert-QaSession {
 }
 
 function Get-QaProcesses {
-    $found = @(Get-CimInstance Win32_Process -Filter "Name = 'codex-monitor.exe'")
+    $found = @(Get-CimInstance Win32_Process -Filter "Name = 'codex-monitor-updater-qa.exe'")
     foreach ($item in $found) {
-        if (-not $item.ExecutablePath) { throw 'Cannot inspect a codex-monitor.exe process. Stop and ask the maintainer; do not kill an unknown process.' }
+        if (-not $item.ExecutablePath) { throw 'Cannot inspect a codex-monitor-updater-qa.exe process. Stop and ask the maintainer; do not kill an unknown process.' }
         if ($item.ExecutablePath -eq $QaExe) { [pscustomobject]@{ pid = $item.ProcessId; executable = $item.ExecutablePath; createdAt = $item.CreationDate.ToString('o') } }
     }
 }
@@ -72,7 +72,7 @@ function Get-QaBinary {
     $version = '{0}.{1}.{2}' -f $v.FileMajorPart, $v.FileMinorPart, $v.FileBuildPart
     $expected = @($QaSource.versions | Where-Object { $_.version -eq $version })
     $actual = (Get-FileHash -LiteralPath $QaExe -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($v.ProductName -ne 'Codex Monitor Updater QA' -or $expected.Count -ne 1 -or $actual -ne $expected[0].binarySha256) { throw 'Installed executable is not an exact A/B binary from this QA package.' }
+    if ($v.ProductName -ne 'Codex Monitor Updater QA' -or $expected.Count -ne 1 -or $expected[0].binaryName -ne 'codex-monitor-updater-qa.exe' -or $actual -ne $expected[0].binarySha256) { throw 'Installed executable is not an exact A/B binary from this QA package.' }
     [pscustomobject]@{ version = $version; binarySha256 = $actual; executable = $QaExe; productName = $v.ProductName }
 }
 

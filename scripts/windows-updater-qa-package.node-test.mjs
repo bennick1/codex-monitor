@@ -109,24 +109,28 @@ test("QA prepare preserves empty password and spaces/metacharacters as direct ar
     const result = spawnSync(process.execPath, [resolve("scripts/updater-qa.mjs"), "prepare", qaOutput], { cwd: directory, encoding: "utf8" });
     assert.equal(result.status, 0, result.stderr);
     assert.deepEqual(JSON.parse(await readFile(join(directory, "captured-argv.json"), "utf8")), ["signer", "generate", "--ci", "-p", "", "-w", join(qaOutput, "test.key")]);
+    for (const version of ["0.0.1", "0.0.2"]) {
+      const prepared = JSON.parse(await readFile(join(qaOutput, `${version}.json`), "utf8"));
+      assert.equal(prepared.mainBinaryName, process.platform === "win32" ? "codex-monitor-updater-qa" : undefined, "only Windows QA overrides the executable name");
+    }
     const second = spawnSync(process.execPath, [resolve("scripts/updater-qa.mjs"), "prepare", qaOutput], { cwd: directory, encoding: "utf8" });
     assert.notEqual(second.status, 0, "existing QA key must not be overwritten");
     assert.equal(await readFile(join(qaOutput, "test.key"), "utf8"), "synthetic-test-key");
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
-const overlay = () => ({ version: "0.0.1", identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", bundle: { createUpdaterArtifacts: true }, plugins: { updater: { pubkey: "synthetic-public", endpoints: ["http://127.0.0.1:18765/latest.json"], dangerousInsecureTransportProtocol: true } } });
-test("QA overlay rejects production identity, versions, and non-loopback manifests", () => {
+const overlay = () => ({ version: "0.0.1", identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", mainBinaryName: "codex-monitor-updater-qa", bundle: { createUpdaterArtifacts: true }, plugins: { updater: { pubkey: "synthetic-public", endpoints: ["http://127.0.0.1:18765/latest.json"], dangerousInsecureTransportProtocol: true } } });
+test("QA overlay requires isolated executable name, identity, versions, and loopback manifest", () => {
   validateOverlay(overlay(), "0.0.1");
-  for (const patch of [{ identifier: "app.quotafloat.desktop" }, { version: "1.4.0" }, { productName: "Codex Monitor" }, { bundle: { createUpdaterArtifacts: false } }, { plugins: { updater: { pubkey: "public", endpoints: ["https://example.invalid/latest.json"], dangerousInsecureTransportProtocol: true } } }]) assert.throws(() => validateOverlay({ ...overlay(), ...patch }, "0.0.1"));
+  for (const patch of [{ identifier: "app.quotafloat.desktop" }, { version: "1.4.0" }, { productName: "Codex Monitor" }, { mainBinaryName: undefined }, { mainBinaryName: "codex-monitor" }, { mainBinaryName: "../codex-monitor-updater-qa" }, { bundle: { createUpdaterArtifacts: false } }, { plugins: { updater: { pubkey: "public", endpoints: ["https://example.invalid/latest.json"], dangerousInsecureTransportProtocol: true } } }]) assert.throws(() => validateOverlay({ ...overlay(), ...patch }, "0.0.1"));
 });
-const record = version => ({ identity: { version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA" }, binarySha256: "b".repeat(64), payloadIdentity: { binarySha256: "b".repeat(64) }, signatureVerified: true, publicKey: "fixture-public" });
+const record = version => ({ identity: { version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", binaryName: "codex-monitor-updater-qa.exe" }, binarySha256: "b".repeat(64), payloadIdentity: { binaryName: "codex-monitor-updater-qa.exe", binarySha256: "b".repeat(64) }, signatureVerified: true, publicKey: "fixture-public" });
 test("both exact QA payload identities and shared verified key are required", () => {
   const records = [record("0.0.1"), record("0.0.2")];
   validateRecords(records, "fixture-public", "a".repeat(40));
   assert.throws(() => validateRecords(records.slice(0, 1), "fixture-public", "a".repeat(40)));
   assert.throws(() => validateRecords(records, "other-key", "a".repeat(40)));
   assert.throws(() => validateRecords(records, "fixture-public", "main"));
-  for (const patch of [{ signatureVerified: false }, { binarySha256: "c".repeat(64) }, { identity: { ...records[1].identity, version: "0.0.1" } }]) assert.throws(() => validateRecords([records[0], { ...records[1], ...patch }], "fixture-public", "a".repeat(40)));
+  for (const patch of [{ signatureVerified: false }, { binarySha256: "c".repeat(64) }, { identity: { ...records[1].identity, version: "0.0.1" } }, { identity: { ...records[1].identity, binaryName: "codex-monitor.exe" } }, { payloadIdentity: { ...records[1].payloadIdentity, binaryName: "codex-monitor.exe" } }]) assert.throws(() => validateRecords([records[0], { ...records[1], ...patch }], "fixture-public", "a".repeat(40)));
 });
 test("actual Windows payload must be x64 GUI PE, not installer shell or console", () => {
   const bytes = Buffer.alloc(256);

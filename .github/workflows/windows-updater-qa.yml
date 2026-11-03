@@ -111,7 +111,7 @@ jobs:
             outputs/windows-updater-qa/test.key.pub
             outputs/windows-updater-qa/0.0.1-identity.json
             outputs/windows-updater-qa/0.0.2-identity.json
-            outputs/windows-updater-qa/target-build/release/codex-monitor.exe
+            outputs/windows-updater-qa/target-build/release/codex-monitor-updater-qa.exe
             outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe
             outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe.sig
             outputs/windows-updater-qa/target-0.0.2/release/bundle/nsis/*-setup.exe

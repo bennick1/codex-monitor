@@ -17,6 +17,7 @@ QA 私钥只在 CI 临时 runner 生成，不在此包；没有使用或附带�
 01-Install-A：核对显示的独立路径，输入 INSTALL QA，安装 A。
     安装采用固定 current-user QA 路径；脚本随后校验版本及二进制 SHA-256。
     正式应用标识 app.quotafloat.desktop 不被使用。QA 标识为 app.codexmonitor.updater-test.local。
+    QA 可执行文件与进程名为 codex-monitor-updater-qa.exe，独立于正式版 codex-monitor.exe。
 02-Start-QA：真实启动 A。保存 Windows 支持的展示模式、皮肤、位置、透明度及自动检查设置；建议关闭自动检查。
     记录皮肤/模式/开关。通过 QA 系统托盘完整退出，确认 QA 消失。
 03-Seed-Stats-and-Start-A：只在退出的独立 QA 数据库加入一次合成统计，再启动 A。

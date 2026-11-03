@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateGate } from "./release-gate.mjs";
-import { validateInventories } from "./updater-artifacts.mjs";
+import { validateInventories, selectWindowsPayloadMember } from "./updater-artifacts.mjs";
 import { deriveNsisBinaryIdentity } from "./windows-nsis-provenance.mjs";
 
 function rawWindowsPe() {
@@ -17,6 +17,21 @@ function rawWindowsPe() {
   Buffer.from("__TAURI_BUNDLE_TYPE_VAR_UNK").copy(bytes, 512);
   return bytes;
 }
+
+const windowsProductionIdentity = { identifier: "app.quotafloat.desktop", productName: "Codex Monitor", version: "1.4.0" };
+const windowsQaIdentity = { identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", version: "0.0.1", binaryName: "codex-monitor-updater-qa.exe" };
+test("Windows NSIS provenance binds separate production and QA process names", () => {
+  assert.equal(selectWindowsPayloadMember("Path = installer.exe\r\nPath = codex-monitor.exe\r\nPath = uninstall.exe\r\n", windowsProductionIdentity), "codex-monitor.exe");
+  assert.equal(selectWindowsPayloadMember("Path = $INSTDIR\\codex-monitor-updater-qa.exe\r\n", windowsQaIdentity), "$INSTDIR\\codex-monitor-updater-qa.exe");
+  assert.throws(() => selectWindowsPayloadMember("Path = codex-monitor.exe\n", windowsQaIdentity), /exactly one isolated/);
+  assert.throws(() => selectWindowsPayloadMember("Path = codex-monitor-updater-qa.exe\n", windowsProductionIdentity), /exactly one isolated/);
+});
+test("Windows NSIS provenance rejects mixed, duplicate, unsafe or spoofed executable identities", () => {
+  for (const listing of ["Path = codex-monitor.exe\nPath = codex-monitor-updater-qa.exe\n", "Path = codex-monitor-updater-qa.exe\nPath = CODEX-MONITOR-UPDATER-QA.EXE\n", "Path = ../codex-monitor-updater-qa.exe\n", "Path = C:\\codex-monitor-updater-qa.exe\n"]) assert.throws(() => selectWindowsPayloadMember(listing, windowsQaIdentity));
+  const qaListing = "Path = codex-monitor-updater-qa.exe\n";
+  for (const patch of [{ binaryName: undefined }, { binaryName: "codex-monitor.exe" }, { binaryName: "../codex-monitor-updater-qa.exe" }, { identifier: "other.app" }, { productName: "Codex Monitor" }, { version: "1.4.0" }]) assert.throws(() => selectWindowsPayloadMember(qaListing, { ...windowsQaIdentity, ...patch }));
+  assert.throws(() => selectWindowsPayloadMember("Path = codex-monitor.exe\n", { ...windowsProductionIdentity, binaryName: "codex-monitor-updater-qa.exe" }));
+});
 
 test("Windows NSIS provenance derives only the official bundle marker patch without mutating raw input", () => {
   const raw = rawWindowsPe();

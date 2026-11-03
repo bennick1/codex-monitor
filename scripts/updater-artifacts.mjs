@@ -20,6 +20,19 @@ const safeArchivePath = name => {
   if (!name || name.startsWith("/") || name.startsWith("-") || /^[A-Za-z]:/.test(name) || name.includes("\\") || name.split("/").includes("..") || /[\x00-\x1f*?\[\]]/.test(name)) throw new Error("Unsafe archive member path");
   return name;
 };
+export function selectWindowsPayloadMember(listing, identity) {
+  const production = identity?.identifier === "app.quotafloat.desktop" && identity.productName === "Codex Monitor";
+  const qa = identity?.identifier === "app.codexmonitor.updater-test.local" && identity.productName === "Codex Monitor Updater QA" && ["0.0.1", "0.0.2"].includes(identity.version);
+  if (!production && !qa) throw new Error("Unsupported Windows payload identity");
+  const expected = qa ? "codex-monitor-updater-qa.exe" : "codex-monitor.exe";
+  if ((qa || identity.binaryName !== undefined) && identity.binaryName !== expected) throw new Error("Windows executable name does not match its isolated identity");
+  // Refuse a mixed production/QA installer, duplicate members, or an old QA
+  // build that still shares the production process name used by NSIS.
+  const executables = [...listing.matchAll(/^Path = (.+)$/gm)].map(match => match[1].trim()).filter(name => /(?:^|[\\/])codex-monitor(?:-updater-qa)?\.exe$/i.test(name));
+  if (executables.length !== 1 || executables[0].replaceAll("\\", "/").split("/").at(-1).toLowerCase() !== expected) throw new Error(`Expected exactly one isolated ${expected} inside NSIS installer`);
+  safeArchivePath(executables[0].replaceAll("\\", "/"));
+  return executables[0];
+}
 export function inspectPayload(platform, artifact, provenance) {
   const command = (name, args, options = {}) => execFileSync(name, args, { maxBuffer: 256 * 1024 * 1024, ...options });
   let binary;
@@ -45,10 +58,8 @@ export function inspectPayload(platform, artifact, provenance) {
   } else if (platform === "windows") {
     const sevenZip = process.platform === "win32" ? join(process.env.ProgramFiles ?? "C:\\Program Files", "7-Zip", "7z.exe") : "7z";
     const listing = command(sevenZip, ["l", "-slt", artifact], { encoding: "utf8" });
-    const executables = [...listing.matchAll(/^Path = (.+)$/gm)].map(match => match[1].trim()).filter(name => /(?:^|[\\/])codex-monitor\.exe$/i.test(name));
-    if (executables.length !== 1) throw new Error("Expected exactly one codex-monitor.exe inside NSIS installer");
-    safeArchivePath(executables[0].replaceAll("\\", "/"));
-    binary = command(sevenZip, ["x", "-so", artifact, executables[0]]);
+    const executable = selectWindowsPayloadMember(listing, provenance.identity);
+    binary = command(sevenZip, ["x", "-so", artifact, executable]);
     // The VERSIONINFO-verified build binary must be byte-identical to the NSIS member.
     identity = provenance.identity;
   } else throw new Error("Unknown payload platform");

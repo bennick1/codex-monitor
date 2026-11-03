@@ -10,6 +10,7 @@ import { auditWindowsQaSource } from "./windows-qa-source.mjs";
 
 const identifier = "app.codexmonitor.updater-test.local";
 const productName = "Codex Monitor Updater QA";
+const binaryName = "codex-monitor-updater-qa.exe";
 const endpoint = "http://127.0.0.1:18765/latest.json";
 const versions = ["0.0.1", "0.0.2"];
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
@@ -17,7 +18,7 @@ const sha = async file => hash(await readFile(file));
 const cli = (name, args, options = {}) => execFileSync(name, args, { encoding: "utf8", ...options }).trim();
 
 export function validateOverlay(overlay, version) {
-  if (!versions.includes(version) || overlay.version !== version || overlay.identifier !== identifier || overlay.productName !== productName || overlay.bundle?.createUpdaterArtifacts !== true) throw new Error("Unexpected QA identity/version");
+  if (!versions.includes(version) || overlay.version !== version || overlay.identifier !== identifier || overlay.productName !== productName || overlay.mainBinaryName !== binaryName.slice(0, -4) || overlay.bundle?.createUpdaterArtifacts !== true) throw new Error("Unexpected QA identity/version");
   if (overlay.plugins?.updater?.endpoints?.length !== 1 || overlay.plugins.updater.endpoints[0] !== endpoint || overlay.plugins.updater.dangerousInsecureTransportProtocol !== true || !overlay.plugins.updater.pubkey?.trim()) throw new Error("Expected isolated QA public key and loopback endpoint");
 }
 
@@ -41,11 +42,11 @@ async function source(root, version) {
 async function snapshot(root, version) {
   if (process.platform !== "win32") throw new Error("Record actual VERSIONINFO on Windows");
   const { installer } = await source(root, version);
-  const binary = join(root, "target-build", "release", "codex-monitor.exe");
+  const binary = join(root, "target-build", "release", binaryName);
   const pe = inspectPe(await readFile(binary));
   const info = JSON.parse(cli("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "$v=(Get-Item -LiteralPath $env:CM_QA_BINARY).VersionInfo; @{ productName=$v.ProductName; version=('{0}.{1}.{2}' -f $v.FileMajorPart,$v.FileMinorPart,$v.FileBuildPart) } | ConvertTo-Json -Compress"], { env: { ...process.env, CM_QA_BINARY: binary } }));
   if (info.productName !== productName || info.version !== version) throw new Error("QA actual binary VERSIONINFO mismatch");
-  const record = { identity: { identifier, ...info }, ...deriveNsisBinaryIdentity(await readFile(binary)), ...pe };
+  const record = { identity: { identifier, binaryName, ...info }, ...deriveNsisBinaryIdentity(await readFile(binary)), ...pe };
   record.payloadIdentity = inspectPayload("windows", installer, record);
   await writeFile(join(root, `${version}-identity.json`), JSON.stringify(record, null, 2), { flag: "wx" });
   console.log(`Verified ${version} Windows x64 GUI binary and exact NSIS member`);
@@ -55,7 +56,7 @@ export function validateRecords(records, publicKey, sourceSha) {
   if (!/^[a-f0-9]{40}$/.test(sourceSha)) throw new Error("Expected exact source commit");
   if (records.length !== 2) throw new Error("Both QA versions required");
   for (const [index, record] of records.entries()) {
-    if (record.identity?.version !== versions[index] || record.identity?.identifier !== identifier || record.identity?.productName !== productName || !/^[a-f0-9]{64}$/.test(record.binarySha256) || record.payloadIdentity?.binarySha256 !== record.binarySha256) throw new Error("Unverified QA payload identity");
+    if (record.identity?.version !== versions[index] || record.identity?.identifier !== identifier || record.identity?.productName !== productName || record.identity?.binaryName !== binaryName || record.payloadIdentity?.binaryName !== binaryName || !/^[a-f0-9]{64}$/.test(record.binarySha256) || record.payloadIdentity?.binarySha256 !== record.binarySha256) throw new Error("Unverified QA payload identity");
     if (record.publicKey !== publicKey || record.signatureVerified !== true) throw new Error("QA signatures must use the same verified public key");
   }
 }
@@ -101,11 +102,11 @@ async function makePackage(root, output) {
   await copyFile(join("scripts", "windows-updater-qa", "README.zh-CN.txt"), join(output, "README.zh-CN.txt"));
   const provenance = {
     schema: 1, qa: true, releaseBuild: false, nativeAcceptance: "PENDING",
-    sourceSha, sourceValidation, repository: "bennick1/codex-monitor", identifier, productName,
+    sourceSha, sourceValidation, repository: "bennick1/codex-monitor", identifier, productName, binaryName,
     endpoint, publicKeySha256: hash(publicKey), generatedAt: new Date().toISOString(),
     runUrl: process.env.GITHUB_RUN_ID ? `https://github.com/bennick1/codex-monitor/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
     tools: { node: process.version, rust: cli("rustc", ["--version"]), tauri: cli(process.execPath, ["node_modules/@tauri-apps/cli/tauri.js", "--version"]) },
-    versions: await Promise.all(records.map(async (record, index) => ({ version: versions[index], installer: names[index], installerSha256: await sha(join(output, names[index])), buildBinarySha256: record.buildBinarySha256, binarySha256: record.binarySha256, bundleType: record.bundleType, bundleMarkerOffset: record.bundleMarkerOffset, signatureVerified: true, payloadIdentity: record.payloadIdentity }))),
+    versions: await Promise.all(records.map(async (record, index) => ({ version: versions[index], binaryName, installer: names[index], installerSha256: await sha(join(output, names[index])), buildBinarySha256: record.buildBinarySha256, binarySha256: record.binarySha256, bundleType: record.bundleType, bundleMarkerOffset: record.bundleMarkerOffset, signatureVerified: true, payloadIdentity: record.payloadIdentity }))),
   };
   await writeFile(join(output, "QA-SOURCE.json"), JSON.stringify(provenance, null, 2));
   const all = [...(await readdir(output)).filter(name => name !== "scripts"), ...(await readdir(join(output, "scripts"))).map(name => `scripts/${name}`)].sort();
