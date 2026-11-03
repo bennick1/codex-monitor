@@ -177,4 +177,6 @@ Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明�
 
 普通 push CI [41596692901](https://github.com/bennick1/codex-monitor/actions/runs/41596692901) 首次在既有 Windows Rust 并发刷新测试中出现完成事件 generation=6、随后查询 generation=7 的时序失败，同源 PR CI [41596698380](https://github.com/bennick1/codex-monitor/actions/runs/41596698380) 已成功。只重跑失败的 Windows job 后 push CI 成功；没有改产品、测试断言或忽略项。保留这次波动记录，不扩大为原生升级缺陷或静默豁免检查。
 
+第五轮 QA [41599679167](https://github.com/bennick1/codex-monitor/actions/runs/41599679167) 在 `563cc915968c8ddd93cf59c0c087bddc83efc93a` 完成 A/B 实际内部来源校验、精确生成 schema 校验、两个 EXE 的真实验签和包组装。Windows PowerShell 5.1 / `winsqlite3.dll` 已执行空目录、schema、源根限制、13,023 合成样本、重复拒绝和完整性检查；回环清单、B 字节下载和私有路径 404 也已执行，最后服务退出码断言失败，未交付测试包。[PowerShell 官方问题 #5421](https://github.com/PowerShell/PowerShell/issues/5421) 记录重定向输出的 `Start-Process -PassThru` 在未保留进程句柄时可能返回空退出码，与本次症状一致。修正 CI 观察进程的方式并增加构建前真实正常/异常退出码回归；继续要求服务确实退出、退出码为 0、端口不再监听，不将空退出码视为成功。测试端服务及 A/B 产品代码没有因此修改；成功与否以修复后完整运行结果为准。
+
 本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。

@@ -40,9 +40,17 @@ if ($integrity[0][0] -ne 'ok') { throw 'Synthetic database failed integrity chec
 Write-Host 'PASS: actual Windows SQLite interop, empty-home guard, schema, root guard, 13,023 sample, duplicate refusal and integrity.'
 
 $server = $null
+$serverExitStatus = @{ phase = 'starting'; pid = $null; handleRetained = $false; waitCompleted = $null; exitCode = $null }
 try {
     $serverScript = Join-Path $kit 'scripts/server.ps1'
     $server = Start-Process powershell.exe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $serverScript + '"')) -RedirectStandardOutput (Join-Path $QaEvidence 'server-out.txt') -RedirectStandardError (Join-Path $QaEvidence 'server-error.txt') -PassThru
+    # Windows PowerShell 5.1 must retain this handle before a redirected child
+    # exits, otherwise Start-Process can leave ExitCode null (PowerShell #5421).
+    $serverHandle = $server.Handle
+    $serverExitStatus.pid = $server.Id
+    $serverExitStatus.handleRetained = $serverHandle -ne [IntPtr]::Zero
+    if (-not $serverExitStatus.handleRetained) { throw 'Could not retain QA server process handle.' }
+    $serverExitStatus.phase = 'readiness'
     $ready = $false
     for ($i = 0; $i -lt 50; $i++) {
         if ($server.HasExited) { throw 'QA server exited before readiness.' }
@@ -53,6 +61,7 @@ try {
         } catch { Start-Sleep -Milliseconds 200 }
     }
     if (-not $ready) { throw 'QA server did not become ready.' }
+    $serverExitStatus.phase = 'requests'
     $manifest = $response.Content | ConvertFrom-Json
     if ($manifest.version -ne '0.0.2' -or $manifest.platforms.'windows-x86_64'.url -ne 'http://127.0.0.1:18765/B-0.0.2-setup.exe') { throw 'Wrong QA manifest.' }
     $listeners = @(Get-NetTCPConnection -LocalPort 18765 -State Listen)
@@ -66,11 +75,29 @@ try {
     try { Invoke-WebRequest 'http://127.0.0.1:18765/test.key' -UseBasicParsing | Out-Null } catch { $status = [int]$_.Exception.Response.StatusCode }
     if ($status -ne 404) { throw 'Server exposed a non-allowlisted path.' }
     [IO.File]::WriteAllText((Join-Path $QaRuntime 'stop-server'), 'CI smoke complete')
-    if (-not $server.WaitForExit(10000) -or $server.ExitCode -ne 0) { throw 'QA server did not stop cleanly.' }
+    $serverExitStatus.phase = 'shutdown'
+    $serverExitStatus.waitCompleted = $server.WaitForExit(10000)
+    if ($serverExitStatus.waitCompleted) {
+        $server.WaitForExit()
+        $serverExitStatus.exitCode = $server.ExitCode
+    }
+    if (-not $serverExitStatus.waitCompleted -or $null -eq $serverExitStatus.exitCode -or $serverExitStatus.exitCode -ne 0) { throw 'QA server did not stop cleanly; see server-exit-status.json.' }
     if (@(Get-NetTCPConnection -LocalPort 18765 -State Listen -ErrorAction SilentlyContinue).Count) { throw 'QA port remained open after stop.' }
+    $serverExitStatus.phase = 'passed'
     Write-Host 'PASS: packaged loopback server, manifest-only request, exact B download, private-path 404 and shutdown.'
     Write-Host 'No application installation, UI or native upgrade was tested; human Windows acceptance remains PENDING.'
+} catch {
+    Write-Host ('QA server exit status: ' + ($serverExitStatus | ConvertTo-Json -Compress))
+    foreach ($name in @('server-out.txt', 'server-error.txt')) {
+        $log = Join-Path $QaEvidence $name
+        if (Test-Path -LiteralPath $log -PathType Leaf) {
+            Write-Host ("Controlled QA server log: $name")
+            Get-Content -LiteralPath $log -Tail 80 | ForEach-Object { Write-Host $_ }
+        }
+    }
+    throw
 } finally {
+    Write-QaJson (Join-Path $QaEvidence 'server-exit-status.json') $serverExitStatus
     if ($server -and -not $server.HasExited) {
         [IO.File]::WriteAllText((Join-Path $QaRuntime 'stop-server'), 'CI cleanup')
         if (-not $server.WaitForExit(10000)) { Stop-Process -Id $server.Id -Force }

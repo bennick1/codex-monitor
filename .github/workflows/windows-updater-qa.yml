@@ -44,6 +44,9 @@ jobs:
             [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
             if ($errors.Count) { throw ($errors | Out-String) }
           }
+      - name: Test redirected Windows PowerShell process exit codes
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows-updater-qa/ci-smoke-process.ps1
       - name: Generate runner-local QA key and build A
         run: |
           node scripts/updater-qa.mjs prepare outputs/windows-updater-qa
@@ -82,6 +85,11 @@ jobs:
           @{ sourceSha = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; nativeAcceptance = 'PENDING'; qa = $true } | ConvertTo-Json | Set-Content (Join-Path $root 'failure-source.json') -Encoding utf8
           git status --short --untracked-files=no | Set-Content (Join-Path $root 'tracked-status.txt') -Encoding utf8
           git diff --stat HEAD -- | Set-Content (Join-Path $root 'tracked-diffstat.txt') -Encoding utf8
+          $evidence = Join-Path $env:LOCALAPPDATA 'CodexMonitorUpdaterQA-CM-RELEASE-ENABLEMENT-20261103/evidence'
+          foreach ($name in @('server-out.txt', 'server-error.txt', 'server-exit-status.json')) {
+            $file = Join-Path $evidence $name
+            if (Test-Path -LiteralPath $file -PathType Leaf) { Copy-Item -LiteralPath $file -Destination (Join-Path $root $name) }
+          }
       - name: Preserve only public QA failure evidence
         if: failure()
         uses: actions/upload-artifact@v4
@@ -92,6 +100,14 @@ jobs:
             outputs/windows-updater-qa/source-diagnostics.json
             outputs/windows-updater-qa/tracked-status.txt
             outputs/windows-updater-qa/tracked-diffstat.txt
+            outputs/windows-updater-qa/process-smoke/process-exit-status.json
+            outputs/windows-updater-qa/process-smoke/exit-0-out.txt
+            outputs/windows-updater-qa/process-smoke/exit-0-error.txt
+            outputs/windows-updater-qa/process-smoke/exit-7-out.txt
+            outputs/windows-updater-qa/process-smoke/exit-7-error.txt
+            outputs/windows-updater-qa/server-out.txt
+            outputs/windows-updater-qa/server-error.txt
+            outputs/windows-updater-qa/server-exit-status.json
             outputs/windows-updater-qa/test.key.pub
             outputs/windows-updater-qa/0.0.1-identity.json
             outputs/windows-updater-qa/0.0.2-identity.json
