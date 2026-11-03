@@ -1726,14 +1726,86 @@ fn resized_position_in_bounds(
 }
 
 fn setup_tray(app: &tauri::App) -> tauri::Result<()> {
-    let menu = operations_menu::build(app.handle())?;
-    TrayIconBuilder::with_id("main")
-        .menu(&menu)
+    let builder = TrayIconBuilder::with_id("main")
         .show_menu_on_left_click(false)
         .tooltip("Codex Monitor")
-        .icon(tauri::include_image!("icons/tray-32.png"))
-        .build(app)?;
+        .icon(tauri::include_image!("icons/tray-32.png"));
+    // AppKit can handle a status item's attached menu before tray-icon's
+    // left-click flag is consulted. Keep macOS menu presentation explicit.
+    #[cfg(not(target_os = "macos"))]
+    let builder = builder.menu(&operations_menu::build(app.handle())?);
+    builder.build(app)?;
     Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+enum TrayClickAction {
+    PanelPress,
+    PanelRelease,
+    Menu,
+    ShowWidget,
+    Ignore,
+}
+
+fn tray_click_action(
+    manual_menu: bool,
+    menubar: bool,
+    button: MouseButton,
+    state: MouseButtonState,
+    control: bool,
+) -> TrayClickAction {
+    match (button, state) {
+        (MouseButton::Left, MouseButtonState::Down) if menubar => TrayClickAction::PanelPress,
+        (MouseButton::Left, MouseButtonState::Up) if manual_menu && control => {
+            TrayClickAction::Menu
+        }
+        (MouseButton::Right, MouseButtonState::Up) if manual_menu => TrayClickAction::Menu,
+        (MouseButton::Left, MouseButtonState::Up) if menubar => TrayClickAction::PanelRelease,
+        (MouseButton::Left, MouseButtonState::Up) => TrayClickAction::ShowWidget,
+        _ => TrayClickAction::Ignore,
+    }
+}
+
+#[cfg(test)]
+mod tray_click_tests {
+    use super::*;
+
+    #[test]
+    fn normal_menubar_click_has_one_panel_action_and_never_opens_a_menu() {
+        let actions = [MouseButtonState::Down, MouseButtonState::Up]
+            .map(|state| tray_click_action(true, true, MouseButton::Left, state, false));
+        assert_eq!(
+            actions,
+            [TrayClickAction::PanelPress, TrayClickAction::PanelRelease]
+        );
+    }
+
+    #[test]
+    fn context_click_opens_once_in_every_mac_host_and_supports_control_left() {
+        for menubar in [false, true] {
+            let right = [MouseButtonState::Down, MouseButtonState::Up]
+                .map(|state| tray_click_action(true, menubar, MouseButton::Right, state, false));
+            assert_eq!(right, [TrayClickAction::Ignore, TrayClickAction::Menu]);
+            assert_eq!(
+                tray_click_action(true, menubar, MouseButton::Left, MouseButtonState::Up, true),
+                TrayClickAction::Menu
+            );
+        }
+    }
+
+    #[test]
+    fn windows_right_click_stays_owned_by_the_existing_native_menu() {
+        for state in [MouseButtonState::Down, MouseButtonState::Up] {
+            assert_eq!(
+                tray_click_action(false, false, MouseButton::Right, state, false),
+                TrayClickAction::Ignore
+            );
+        }
+        assert_eq!(
+            tray_click_action(false, false, MouseButton::Left, MouseButtonState::Up, false),
+            TrayClickAction::ShowWidget
+        );
+    }
 }
 
 fn show_widget(window: &tauri::WebviewWindow) {
@@ -1987,35 +2059,37 @@ pub fn run() {
         .on_menu_event(|app, event| operations_menu::handle(app, event.id.as_ref()))
         .on_tray_icon_event(|app, event| {
             if let TrayIconEvent::Click {
-                button: MouseButton::Left,
+                button,
                 button_state,
                 ..
             } = event
             {
-                if button_state == MouseButtonState::Down {
-                    if menubar::enabled(app) {
-                        menubar::begin_tray_click(app);
-                    }
-                    return;
-                }
-                if menubar::enabled(app) {
-                    #[cfg(target_os = "macos")]
-                    let control = macos_widget::control_pressed();
-                    #[cfg(not(target_os = "macos"))]
-                    let control = false;
-                    let _ = menubar::finish_tray_click(app, control);
-                    return;
-                }
                 #[cfg(target_os = "macos")]
-                if macos_widget::control_pressed() {
-                    let handle = app.clone();
-                    tauri::async_runtime::spawn_blocking(move || {
-                        let _ = operations_menu::open_at_pointer(handle);
-                    });
-                    return;
-                }
-                if let Some(window) = app.get_webview_window("widget") {
-                    show_widget(&window);
+                let control = macos_widget::control_pressed();
+                #[cfg(not(target_os = "macos"))]
+                let control = false;
+                match tray_click_action(
+                    cfg!(target_os = "macos"),
+                    menubar::enabled(app),
+                    button,
+                    button_state,
+                    control,
+                ) {
+                    TrayClickAction::PanelPress => menubar::begin_tray_click(app),
+                    TrayClickAction::PanelRelease => {
+                        let _ = menubar::finish_tray_click(app, false);
+                    }
+                    TrayClickAction::Menu => {
+                        // Also clear a possible Control-left press before the
+                        // menu starts tracking; it must not block dismissal.
+                        let _ = menubar::finish_tray_click(app, true);
+                    }
+                    TrayClickAction::ShowWidget => {
+                        if let Some(window) = app.get_webview_window("widget") {
+                            show_widget(&window);
+                        }
+                    }
+                    TrayClickAction::Ignore => {}
                 }
             }
         })

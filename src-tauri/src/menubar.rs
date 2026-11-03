@@ -372,6 +372,7 @@ pub fn toggle(app: &AppHandle) -> Result<(), String> {
 }
 
 pub fn begin_tray_click(app: &AppHandle) {
+    debug_note("tray left press");
     if let Some(state) = app.try_state::<MenubarState>() {
         state.visible_at_press.store(
             app.get_webview_window("widget")
@@ -386,8 +387,10 @@ pub fn finish_tray_click(app: &AppHandle, control: bool) -> Result<(), String> {
     let state = app.state::<MenubarState>();
     let pressed = state.tray_pressed.swap(false, Ordering::AcqRel);
     if control {
+        debug_note("tray context menu request");
         return crate::operations_menu::open_at_pointer(app.clone());
     }
+    debug_note("tray left release");
     if !pressed {
         return toggle(app);
     }

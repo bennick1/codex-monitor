@@ -1,7 +1,10 @@
 //! One command tree for the tray's native menu and the panel's More button.
 //! The tree is rebuilt from committed preferences, never from optimistic checks.
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+#[cfg(not(target_os = "macos"))]
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::Duration,
+};
 
 use tauri::{
     menu::{CheckMenuItem, Menu, MenuItem, MenuItemKind, PredefinedMenuItem, Submenu},
@@ -394,8 +397,17 @@ pub fn build(app: &AppHandle) -> tauri::Result<Menu<Wry>> {
     Ok(menu)
 }
 
+#[cfg(not(target_os = "macos"))]
 static REFRESH_QUEUED: AtomicBool = AtomicBool::new(false);
 
+#[cfg(target_os = "macos")]
+pub fn refresh(_app: &AppHandle) -> Result<(), String> {
+    // macOS builds the shared command tree when explicitly opened. Attaching
+    // an NSMenu here would let AppKit steal ordinary left clicks again.
+    Ok(())
+}
+
+#[cfg(not(target_os = "macos"))]
 pub fn refresh(app: &AppHandle) -> Result<(), String> {
     if crate::menubar::menu_is_open(app) {
         // Keep the tracked NSMenu alive. Poll the actual tracking state instead
