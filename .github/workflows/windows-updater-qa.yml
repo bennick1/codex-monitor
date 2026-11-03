@@ -30,7 +30,10 @@ jobs:
       - run: npm run check:updater-policy
       - run: npm audit --audit-level=high
       - run: node --test scripts/windows-updater-qa-package.node-test.mjs
-      - run: node --test scripts/release-updater.node-test.mjs
+      # The full suite also creates macOS tar/plist fixtures; existing Linux
+      # frontend and macOS CI continue to run all cases. Exercise the new
+      # Windows provenance cases here before building actual NSIS packages.
+      - run: node --test --test-name-pattern="^Windows NSIS provenance" scripts/release-updater.node-test.mjs
       - name: Check Windows PowerShell scripts
         shell: powershell
         run: |

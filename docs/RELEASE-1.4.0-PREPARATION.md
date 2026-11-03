@@ -169,4 +169,6 @@ Windows 安装、主动检查前不下载、真实下载和验签、确认安装
 
 Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明。维护者完成审核安排、离线恢复备份并审阅真实 Windows 结果后，才能收敛正式发布决定；PR 合并与最终发布仍需分别明确授权。Signed Release 最终会公开 Release/latest，没有 dry-run，本轮未触发它。
 
+第二轮 QA [41594332925](https://github.com/bennick1/codex-monitor/actions/runs/41594332925) 在构建前暴露新增任务错误地把完整发布测试中的 macOS tar/plist 用例放在 Windows 执行，因归档路径格式被安全校验拒绝。调整为 Windows QA 执行三项新增 NSIS 回归；原有 Linux frontend 和 macOS 签名归档步骤仍执行全部 30 项，没有跳过或降低原必需检查。此失败属于 QA 任务接线问题，不是 Windows 原生升级结果。
+
 本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。
