@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile, mkdir, writeFile, readdir, chmod, access, cp, open } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
+import { copyVersionedWindowsBundle } from "./windows-qa-bundle.mjs";
 const [mode, directory = "outputs/updater-qa", argument = "normal"] = process.argv.slice(2);
 const root = resolve(directory);
 const port = 18765;
@@ -37,7 +38,11 @@ if (mode === "prepare") {
   const target = join(root, "target-build");
   const env = { ...process.env, CODEX_MONITOR_RELEASE_BUILD: "", CODEX_MONITOR_UPDATER_TEST_BUILD: "1", CODEX_MONITOR_UPDATER_TEST_ENDPOINT: endpoint, CODEX_MONITOR_UPDATER_PUBLIC_KEY: pubkey, TAURI_SIGNING_PRIVATE_KEY: key, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "", CARGO_TARGET_DIR: target, CODEX_HOME: join(root, "empty-codex-home") };
   run("npx", ["tauri", "build", "--bundles", process.platform === "darwin" ? "app,dmg" : "nsis", "--config", join(root, `${argument}.json`)], env);
-  await cp(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), { recursive: true, force: false, errorOnExist: true });
+  if (process.platform === "win32") {
+    await copyVersionedWindowsBundle(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), argument);
+  } else {
+    await cp(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), { recursive: true, force: false, errorOnExist: true });
+  }
 } else if (mode === "serve") {
   if (!["normal", "missing", "bad-signature", "older", "same", "missing-platform", "bad-download", "slow", "chunked", "interrupted", "bad-install"].includes(argument)) throw new Error("Unknown server scenario");
   const bundle = join(root, "target-0.0.2", "release", "bundle");

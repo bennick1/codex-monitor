@@ -171,4 +171,6 @@ Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明�
 
 第二轮 QA [41594332925](https://github.com/bennick1/codex-monitor/actions/runs/41594332925) 在构建前暴露新增任务错误地把完整发布测试中的 macOS tar/plist 用例放在 Windows 执行，因归档路径格式被安全校验拒绝。调整为 Windows QA 执行三项新增 NSIS 回归；原有 Linux frontend 和 macOS 签名归档步骤仍执行全部 30 项，没有跳过或降低原必需检查。此失败属于 QA 任务接线问题，不是 Windows 原生升级结果。
 
+第三轮 QA [41595078604](https://github.com/bennick1/codex-monitor/actions/runs/41595078604) 的 A 已通过实际 VERSIONINFO、x64 GUI 及完整 NSIS 内部摘要核对；B 也已构建和签名，但既有 `updater-qa.mjs` 复制整个缓存 bundle，将仍留在缓存中的 A 安装器混入 B 快照，单包门槛再次正确拒绝。Windows 快照改为仅复制当前 QA 名称/版本对应的唯一 EXE 及其 `.sig`，拒绝覆盖既有快照，保留 A 和共享编译缓存；macOS 原逻辑不变。包收集器的唯一安装器检查不放宽。这三次失败及后续成功必须区分，失败诊断材料不是供人工验收的测试包。
+
 本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。

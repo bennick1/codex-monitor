@@ -1,10 +1,39 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { validateOverlay, validateRecords, inspectPe } from "./windows-updater-qa-package.mjs";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, readdir, access, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { copyVersionedWindowsBundle } from "./windows-qa-bundle.mjs";
+
+test("Windows B snapshot selects only exact B installer/signature and preserves A/shared cache", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "cm-qa-versioned-bundle-"));
+  try {
+    const bundle = join(directory, "shared", "bundle");
+    await mkdir(join(bundle, "nsis"), { recursive: true });
+    const name = version => `Codex Monitor Updater QA_${version}_x64-setup.exe`;
+    for (const version of ["0.0.1", "0.0.2"]) {
+      await writeFile(join(bundle, "nsis", name(version)), `synthetic-${version}-installer`);
+      await writeFile(join(bundle, "nsis", `${name(version)}.sig`), `synthetic-${version}-signature`);
+    }
+    await writeFile(join(bundle, "nsis", "unrelated.exe"), "must not be copied");
+    const destinationA = join(directory, "target-A", "release", "bundle");
+    const destinationB = join(directory, "target-B", "release", "bundle");
+    await copyVersionedWindowsBundle(bundle, destinationA, "0.0.1");
+    await copyVersionedWindowsBundle(bundle, destinationB, "0.0.2");
+    assert.deepEqual((await readdir(join(destinationB, "nsis"))).sort(), [name("0.0.2"), `${name("0.0.2")}.sig`].sort());
+    assert.equal(await readFile(join(destinationB, "nsis", name("0.0.2")), "utf8"), "synthetic-0.0.2-installer");
+    assert.equal(await readFile(join(destinationA, "nsis", name("0.0.1")), "utf8"), "synthetic-0.0.1-installer");
+    assert.equal(await readFile(join(bundle, "nsis", name("0.0.1")), "utf8"), "synthetic-0.0.1-installer");
+    assert.equal((await readdir(join(bundle, "nsis"))).length, 5);
+    await assert.rejects(copyVersionedWindowsBundle(bundle, destinationB, "0.0.2"), { code: "EEXIST" });
+    await rm(join(bundle, "nsis", `${name("0.0.2")}.sig`));
+    const missingSignature = join(directory, "missing-signature", "bundle");
+    await assert.rejects(copyVersionedWindowsBundle(bundle, missingSignature, "0.0.2"), { code: "ENOENT" });
+    await assert.rejects(access(missingSignature), { code: "ENOENT" });
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
 
 test("QA prepare preserves empty password and spaces/metacharacters as direct argv", async () => {
   const directory = await mkdtemp(join(tmpdir(), "cm-qa-safe-argv-"));
