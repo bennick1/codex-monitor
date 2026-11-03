@@ -182,3 +182,27 @@ Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明�
 第六轮 QA [41602579984](https://github.com/bennick1/codex-monitor/actions/runs/41602579984) 的 Windows PowerShell 5.1 退出码 0/7 前置回归已通过，随后因隔离复核发现下述问题主动取消，未交付旧包。[Tauri CLI 2.11.4 的 NSIS 模板](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle/windows/nsis/utils.nsh#L20-L43) 按 EXE 名称查找/关闭当前用户进程；QA 原先仅更换标识和产品名，仍与正式版共用 `codex-monitor.exe`，不足以保证安装时不影响正式进程。仅在 Windows QA overlay 使用既有官方 `mainBinaryName=codex-monitor-updater-qa`，使安装器、实际主程序、启动器和进程记录统一为 **`codex-monitor-updater-qa.exe`**。不改正式名称、Mac QA、产品源码或依赖。包内来源检查只允许与正式/QA 身份严格对应的唯一 EXE，拒绝两种名称混入、重复、路径逃逸或身份伪装，完整字节摘要要求继续保留；新增两项回归后完整发布脚本测试为 32 项。该 QA 构建输入已变化，因此最终 A/B 必须来自修复后的新源码，不能交付前述旧包。现有应用的 QA 启动检查先要求合成额度和空 `CODEX_HOME`，再启动统计服务；若 Windows 安装重启未保留环境，会拒绝启动，测试人员须如实回传，不能用启动器补启动冒充自动重启通过。
 
 本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。
+
+### 本轮可交付结果（配置完成，正式发布待决）
+
+实现及最终 Windows QA 来源：`1351ba6a47966a665e1ba1f708589e9a482e7f53`。同源 [push CI 41604078185](https://github.com/bennick1/codex-monitor/actions/runs/41604078185)、[PR CI 41604086442](https://github.com/bennick1/codex-monitor/actions/runs/41604086442) 和 [Windows QA 41604157789](https://github.com/bennick1/codex-monitor/actions/runs/41604157789) 全部成功。常规 CI 继续执行 443 个前端测试、32 个发布脚本测试、audit 0、Windows Rust 221 passed / 2 ignored、macOS Rust 240 passed / 2 ignored、fmt/clippy 及双平台打包；QA 专项 11/11、Windows NSIS 专项 5/5、PowerShell 语法和退出码 0/7 回归通过。没有手动重建未受影响的普通 unsigned 候选。
+
+最终 QA 构建设备为 **GitHub Windows Server 2025 x64**（`windows-2025-vs2026`），Node **v22.23.4**、Rust **1.99.1**、官方 Tauri CLI **2.11.4**；辅助脚本实际由 Windows PowerShell 5.1 执行。A/B 均通过真实 VERSIONINFO、x64 GUI、独立 EXE 名称、官方 NSIS 标记转换后的完整安装字节来源和现有验签实现。唯一跟踪生成变化是前述 Windows schema，其当前/预期 SHA-256 均为 `bbcbbb4adac63c1591d4f299470566e8f70235e731f3904037952cd6a267126a`，实际差异保存在包内 `QA-SOURCE.json`，没有隐藏源码变更。
+
+Windows helper 实际通过空 CODEX_HOME 拒绝规则、SQLite schema/源根限制、13,023 Token 合成样本、拒绝重复写入、完整性检查；回环服务器实际通过仅请求清单不取包、随后下载的 B 字节相等、非白名单路径 404、仅绑定 127.0.0.1、退出码 0 与端口关闭。**没有在 runner 安装或启动 A/B 应用，没有执行原生升级/UI 验收。**
+
+| 交付物 | 可复核结果 |
+| --- | --- |
+| [完整 Windows A/B QA ZIP · 13216162301](https://github.com/bennick1/codex-monitor/actions/runs/41604157789/artifacts/13216162301) | 10,803,406 bytes；GitHub 保留至 2026-12-03 08:47:04 UTC。本机已实际下载；CRC、API ZIP digest、18 个文件白名单及全部内部摘要核对通过；仅公开安装器/签名/公钥、来源与操作工具，无私钥或数据库 |
+| ZIP SHA-256 | `04d0ddfcca43431f76611536e984d2153ee5f09c8c618056274962594138aed9` |
+| A 安装器 / 包内主程序 SHA-256 | `ee4a00f311112e63e3ef0b6d93ff1deeeaae66850377de4cbdcd966b5c86fd9e` / `0896b0cd2a3ddcf0120b9075447b1db8a7012132b609ef31ef23d7c8b33752a0` |
+| B 安装器 / 包内主程序 SHA-256 | `cb8327e20fc4fdd5b9e19564f8667eae86c5cda06810cde95db06e0bba763c11` / `1d0f7a5ee3f173cc698f45a3138b5673ef0ba4853699aee2946de2d9e72be269` |
+| 下载后的独立验证 | 在本机再次以包内 QA 公钥对 A/B EXE 和对应 `.sig` 使用原有成熟 verifier 验证，均通过；QA 公钥摘要与生产公钥不同。此复核不运行 EXE |
+
+本机完整包在原工作区 ignored `outputs/release-enable-20261103/codex-monitor-windows-updater-qa.zip`，展开内容在同目录 `windows-qa-kit/`；`windows-qa-run.json`、`windows-qa-artifact.json`、`windows-qa-success.log`、`downloaded-qa-verification.json` 是公开证据。测试人员完整解压后从 **`README.zh-CN.txt` / `01-Install-A.cmd`** 接续；不要单独转发或直接运行 B。只需已授权的 Windows 10/11 x64、Windows PowerShell 5.1 和已安装 WebView2，不需 Node/Rust/Python。操作与反馈表均在该包中，证据写入独立 QA runtime 的 `evidence`。
+
+Windows 实机仍待完成：A 安装/启动并保存展示设置、皮肤和非空合成统计；主动检查但未点击下载前无取包；真实下载/验签、单独确认安装；A 退出和 B 自动启动的 PID、实际路径/版本/二进制核对；设置/13,023 统计保留以及浮窗/侧边栏/托盘/更新入口；完整退出后冷启动复核；退出 QA/停止服务并确认正式安装及真实数据未覆盖。负责人为维护者安排的测试人员，维护者审阅回传；本轮没有用 CI 或解包代签这些结果，正式 release notes 继续保留待测。
+
+当前正式发布决定为 **待决，不能发布**：维护者尚需指定已核实有仓库权限的审核身份、PR 批准数量、禁止自审与管理员绕过规则，并完成独立离线恢复备份；测试人员须完成上述 Windows 实测。既有 Intel/多屏/睡眠及 OS 提示等未接受风险保持原边界，须由维护者明确审阅。本轮已完成的是 **密钥配置和固定本地文件密钥验签**；**正式发布包签名、正式 CI 签名成功及在线生产升级均未执行/未验收**。合并与最终发布仍须分别授权，没有合并、tag、Release 或 Signed Release 操作。
+
+实现提交正常推送后独立 fetch 确认为 0/0，main 保持 `691f7dd1a9abe6bdb12bd0b2e81bb703775b40c1`；准备 worktree 干净，原工作区 519 项历史未跟踪材料及其状态摘要未变。此后的本节交付记录是仅文档提交，不改变 QA 来源与已通过材料；最终记录 HEAD 的 CI、同步结果与 PR 状态在 PR #2 和最终交付再次独立核对，不把实现提交 CI 冒称最终记录提交的 CI。
