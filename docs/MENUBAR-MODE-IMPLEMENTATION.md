@@ -1,5 +1,7 @@
 # 菜单栏模式实施记录 · CM-MENUBAR-20261102-R1
 
+> 前文保留 R1 开发及合成试用的历史事实。2026-11-03 的依赖安全、真实账户、CI 与制品收尾见文末 `CM-MENUBAR-CLOSEOUT-20261103`，不将历史未覆盖项自动标记为通过。
+
 ## 范围与版本
 
 用户于 2026-11-02 确认 R1：菜单栏展开直接复用现有悬浮窗展开后的完整卡片；撤回紧凑卡片、工具栏重排、额外压缩高度、统计二级页。用户随后确认没有其他新增或撤回条款。本记录以此为准。
@@ -115,3 +117,85 @@ QA 标识为 `app.codexmonitor.menubar.validation`，与正式 `app.quotafloat.d
 进入新模式：浮窗卡片齿轮 → 仅菜单栏，或侧边栏设置 → 展示模式 → 仅菜单栏。菜单栏展开后可通过原图钉位置“切换到悬浮窗”，或更多 → 展示方式切换。更多中的“立即刷新”刷新在线额度；统计仍使用各自原有来源和时间口径。
 
 本轮开发成果已由用户确认本地试用验收通过，并授权推送功能分支；其他平台与上述未覆盖原生条件待验，正式发布未执行。以后若发布新版本，须重新核对版本、跨平台安装升级、生产 updater 签名与平台签名，并遵循 `docs/RELEASE.md`。旧 v1.3.1 用户仍需手动安装首个带 updater 的版本。
+
+
+## 收尾 · CM-MENUBAR-CLOSEOUT-20261103
+
+### 基线与依赖安全修复
+
+本轮沿用原 worktree 和 `agent/menubar-quota`。开工独立 fetch：远端功能分支仍为 `5874d0f8dad357f3fa0ae29cf8c635b752ce21d9`，`origin/main` 仍为 `5b84121dcc2987eb8581e1a8f2ebfb31667cbbf1`，功能分支 ahead 6 / behind 0、工作树干净。主工作区的旧分支及历史未跟踪文件未动。Git 直连先出现 HTTP2 错误及超时，随后通过本机已有系统代理成功；未更改 Git 持久配置。
+
+旧 [push CI 41561906970](https://github.com/bennick1/codex-monitor/actions/runs/41561906970) 已到终态：frontend 的 443 项测试和构建通过，仅 audit 失败；macOS Universal 和 Windows desktop 均成功，包含制品上传。
+
+| 依赖 | 原声明 / 原锁定 | 本轮声明 / 新锁定 | 范围与理由 |
+| --- | --- | --- | --- |
+| Vite（直接开发依赖） | `^7.1.5` / `7.3.6` | `^7.3.7` / `7.3.7` | 同主版本补丁；修复开发服务器及包内编辑器中间件告警 |
+| Vitest（直接开发依赖） | `^4.1.11` / `4.1.11` | `^4.1.12` / `4.1.12` | 同主版本补丁；带入 mocker 安全修复 |
+| `@vitest/{expect,mocker,pretty-format,runner,snapshot,spy,utils}`（传递依赖） | `4.1.11` | `4.1.12` | Vitest 自身的精确版本依赖必须同步 |
+
+Vite 的 high 对应 [GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm)，7.x 修复版本为 7.3.7；同次更新覆盖审计中的 GHSA-698v-4r3x-3vcv、GHSA-r825-w8mm-5pxw、GHSA-9jrq-w75r-8gcw、GHSA-rq7h-c2jc-7f22。Vitest → `@vitest/mocker` 对应 [GHSA-qxg6-89mg-rqv8](https://github.com/advisories/GHSA-qxg6-89mg-rqv8) 和 [GHSA-xp26-3454-mjgp](https://github.com/advisories/GHSA-xp26-3454-mjgp)，4.x 修复版本为 4.1.12。Vite 仍要求 Node `^20.19.0 || >=22.12.0`，Vitest 仍支持 Node 22，符合本地 Node 22.23.1 与 CI Node 22。
+
+npm 10.9.8 的定向更新触发 arborist `edgesOut` 异常，未生成变更；在任务输出目录用临时 npm 11.21.1 解析锁文件，保留仍满足范围的 chai 6.2.2、tinyrainbow 3.1.1，避免附带升级。最终使用仓库原有 npm 10.9.8 成功执行 `npm ci`。没有更改全局工具链、npm 脚本、审计门槛、Rust 输入、签名或发布配置，没有使用 `audit fix --force`。
+
+产品/依赖成果提交：`9f34e3b6b45a3a9b0f7b0a18faa851fb73cc7c14`，仅修改 `package.json` 和 `package-lock.json`。相对已验收产品源码 `d82362f`，应用源码、组件、皮肤和统计口径没有变更；其间额外差异仅为历史记录/截图以及本轮两份依赖文件。
+
+| 本轮本地检查 | 实际结果 |
+| --- | --- |
+| `npm ci` | 成功，可按锁文件安装 |
+| `npm test` | 26 个测试文件、443 项测试通过 |
+| `npm run build` | TypeScript 与 Vite 7.3.7 生产构建通过 |
+| `npm audit --audit-level=high` | 通过；从 1 high + 2 moderate 降至 0 告警（包括开发依赖） |
+| `npm run check:updater-policy` | 通过，仍仅代表静态策略检查 |
+| `git diff --check` | 通过 |
+
+Rust 源码、Cargo 清单和锁文件未变，本地复用前轮 240 passed / 2 ignored、fmt、clippy 的有效证据；本轮新 push CI 另按原配置重新执行双平台检查。所有自动化继续使用合成数据和临时目录，真实账户仅用于下述原生验证。
+
+
+### 真实账户原生验证
+
+本轮普通试用 App 从产品/依赖 SHA `9f34e3b6b45a3a9b0f7b0a18faa851fb73cc7c14` 以 release 模式构建，命令仍为 `npm run tauri -- build --bundles app --config '{"bundle":{"createUpdaterArtifacts":false}}'`，成功。实际启动路径为原任务输出目录下 `closeout-20261103/Codex Monitor.app`，本机 **arm64 App，非 Universal、非 DMG**；构建记录时间为 2026-11-03 10:15:35（Asia/Shanghai）。二进制 SHA-256 为 `e9e4480f6856f66cf4f29d4ba03894cbed5feaa7e841d451dc015e673fde7b23`，与前轮普通 App 相同：依赖补丁没有改变本轮产出的应用二进制。构建命令在本轮 SHA 上实际执行，未将旧包改名冒充重建。
+
+已先核实并正常退出 Applications 中的旧 Monitor 与隔离合成 QA。10:11:51 在无 Monitor 进程写入时备份既有偏好、窗口状态及统计库/WAL/SHM，备份库 `PRAGMA quick_check` 为 `ok`。备份仅留在任务输出目录，未备份或复制认证文件；未覆盖 Applications 中的正式安装。实际运行进程先为 6357，重启后为 6793，均指向上述普通试用路径。未启动隔离试用 `.command`，进程无合成额度、fixture、加速轮询或 updater-test 环境；release 构建也不开放 debug 合成路径。`CODEX_HOME` 未被覆盖，沿用默认现有登录态和正式应用数据目录。
+
+以下时间均为 2026-11-03 Asia/Shanghai。只读取已有额度观测表中的时间、周期重置和百分比作为脱敏证据，不读取或输出账号标识、令牌、认证响应；没有修改数据库结构或清空历史。
+
+| 项目 | 实际结果 |
+| --- | --- |
+| 首次读取 | 启动后卡片由 loading 转为“额度数据已同步”，实测真实周剩余 **83%**；重置 **11/7 07:36**，服务解析后的精确重置为 `2026-11-06T23:36:45Z`。仅周额度，无 5 小时区、无无效周期菜单。首次请求没有新增该次 quota observation；代码在统计 source root 尚未就绪时会跳过写入，但未单独采集当时 root 状态，因此不将此推测当作已证实原因。首次成功依据原生卡片状态，不伪造数据库时间。 |
+| 同一来源 | 菜单栏 `update_tray` 与 `widget` 的 `snapshots-updated` 在同一 `publish` 中使用同一 `QuotaService` 快照；账户作用域在请求前后校验，本轮无账户切换。菜单栏向下取整、卡片沿用原精度，规则未改。系统菜单栏文字无法由当前窗口截图工具完整捕获，未伪称取得菜单栏和卡片的独立数值截图。 |
+| 手动刷新 | 原生“立即刷新”完成，新增成功观测为 **10:17:44.339**，周剩余 83%，重置不变；该观测只在实际成功请求后写入，非缓存读取时间。 |
+| 关闭后的正常后台刷新 | 收起面板后不再对 Monitor 发出 Reopen/读取窗口操作；在 **10:23:26**、重新打开面板之前，只读数据库发现 **10:22:46.782** 的新成功记录。距手动成功 **302.443 秒**，符合生产五分钟调度加请求/轮询耗时。仍为 83% 不影响成功结论。随后重新打开卡片，显示已同步、周剩余 83%。没有缩短刷新周期或主动消耗额度。 |
+| 正常退出与重启 | 通过应用“退出 Codex Monitor”，进程消失；重新启动同一 App 后保持 `displayMode=menubar`、`selectedSkin=mecha-light`、`menubarQuotaDisplay=weekly`、原 `appearance=dark` 偏好。**10:25:57.665** 再次真实取数成功，周剩余 **82%**，重置不变；Reopen 后卡片显示 82% 和已同步。额度变化来自正常账户活动，本轮未制造付费请求。 |
+| 最小交互 | 完整卡片可恢复、收起；卡片右键和更多打开共享菜单；手动刷新有效；原总览/按模型/额度周可达。系统托盘普通左键开关及右键入口保留前轮用户验收，相关源码及本轮普通 App 二进制均未变；本轮工具未重新完成系统托盘物理左/右键实测，不将 Reopen 冒称为左键。 |
+| 更新入口 | 原软件更新窗口可达，显示当前 1.3.1 和“在线更新未配置，请打开版本下载页”；未下载、安装更新或改签名配置。 |
+
+正常成功态卡片沿用原“已同步”指示，未为验证新增时间 UI。最后成功时间取自现有成功观测记录；菜单栏 tooltip 本身使用同一快照的 `updated_at`，未将两个共享缓存的界面当成独立准确性证明。没有可用的独立官方额度页面/客户端对照证据，本轮证明的是正常认证取数、快照流转、手动/后台刷新及重启恢复，不宣称服务端绝对准确性已经独立校验。
+
+原四皮肤/R1 样式和此前用户的合成试用视觉验收保留，不重新设计或要求全部皮肤重验。真实账户验证未发现需修改的取数链路，因此产品源码没有新增修复。配置和历史统计保留，试用 App 留在菜单栏模式供继续使用。
+
+### 产品提交 CI、制品与同步
+
+产品/依赖 SHA、试用构建 SHA、以下 CI 的 `head_sha` 均为 **`9f34e3b6b45a3a9b0f7b0a18faa851fb73cc7c14`**。原界面/业务源码的最后修改仍为 `d82362f`；这两个概念不混用。
+
+[本次产品 push CI 41564892592](https://github.com/bennick1/codex-monitor/actions/runs/41564892592)：事件 `push`，分支 `agent/menubar-quota`，最终 `completed / success`。
+
+| Job | 终态与关键结果 |
+| --- | --- |
+| [frontend](https://github.com/bennick1/codex-monitor/actions/runs/41564892592/job/125683934676) | success；npm ci、updater policy、26 项发布脚本测试、443 项前端测试、TypeScript/生产构建、audit 全部通过，audit 为 0 告警 |
+| [macOS Universal desktop](https://github.com/bennick1/codex-monitor/actions/runs/41564892592/job/125683934979) | success；fmt、Rust tests、clippy、签名归档身份绑定测试、Universal 打包、上传通过 |
+| [Windows desktop](https://github.com/bennick1/codex-monitor/actions/runs/41564892592/job/125683934961) | success；fmt、Rust tests、clippy、打包、Windows GUI subsystem 检查、上传通过 |
+
+| 制品 | 来源与实际完整性核对 |
+| --- | --- |
+| [codex-monitor-macos-universal-unsigned](https://github.com/bennick1/codex-monitor/actions/runs/41564892592/artifacts/13197639696) | ID `13197639696`，33,009,087 bytes；ZIP SHA-256 `2a23de500fd78496f4473505b24878f43ab8c88c7ccfe5d64973c8e691911659` 与 GitHub digest 一致，ZIP 校验通过。内含 `.app` 与 `Codex Monitor_1.3.1_universal.dmg`；App 主程序 `lipo -archs` 为 `x86_64 arm64`。DMG SHA-256 `2910dedd27ffdf21d1508d837933d754034561585e63dd064bf011232a69de6d`，`hdiutil verify` 为 VALID。 |
+| [codex-monitor-windows-unsigned](https://github.com/bennick1/codex-monitor/actions/runs/41564892592/artifacts/13199515252) | ID `13199515252`，12,532,752 bytes；ZIP SHA-256 `ef33c722062d90af2badab49197b6600abb87ae728023fd09877a1d60eead472` 与 GitHub digest 一致，ZIP 校验通过。内含 x64 MSI（7,368,704 bytes）和 NSIS setup EXE（5,413,938 bytes）。 |
+
+两份制品都核实绑定本次 `9f34e3b`、未过期，保留期至 2026-11-17。已在本机任务输出目录下载核验。CI 的 Universal DMG 成功解决本轮交付的 Mac 包来源问题，无需再次修本机历史 DMG 脚本；本机 arm64 App 的原生验证不等于 Intel 实机验证。制品属于普通 unsigned CI，不是 Signed Release；没有 Developer ID/notarization 或正式更新签名验收。
+
+产品提交普通 push 后已独立 fetch，local HEAD 和 `origin/agent/menubar-quota` 均为 `9f34e3b6b45a3a9b0f7b0a18faa851fb73cc7c14`，remote-only/local-only **0/0**。本节作为后续**仅文档记录提交**：只修改本文，产品、依赖、构建输入和工作流不变；上面的原生结果、构建与制品明确属于 `9f34e3b`。记录提交自身的 SHA、push CI 终态和再次同步核验以本轮最终回复提供，不把产品 CI 冒称为记录提交的 CI。
+
+### 保留项与后续边界
+
+真实账户首次取数、手动刷新、正常后台刷新与重启恢复已补齐。仍未覆盖真实账户切换、断网恢复、睡眠唤醒、开机自启、全屏 Space、菜单栏自动隐藏、多屏/混合 DPI、Control-click/长按、Intel/Windows 实机及完整在线升级；本轮仅保留已确认托盘左/右键验收，没有新增系统菜单栏全景截图。Windows 编译/打包现已通过，不再写成“Windows 未编译”，但不等于 Windows 实机验收。
+
+只在功能分支提交和普通推送；未合并/写 main、强推、更改正式版本、打 tag、创建 Release、触发 Signed Release、修改发布/签名配置或安装覆盖正式应用。后续合并准备可使用上述精确 SHA 和证据；正式发布继续单独处理平台安装/升级、updater 与平台签名及发布授权。
