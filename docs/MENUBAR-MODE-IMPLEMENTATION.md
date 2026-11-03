@@ -8,7 +8,7 @@
 - 开工 fetch 后的 `origin/main`：`5b84121dcc2987eb8581e1a8f2ebfb31667cbbf1`，与任务书基线一致。
 - 分支：`agent/menubar-quota`。
 - 独立 worktree：`/Users/bennick/Work/Codex/codex-monitor/outputs/menubar-20261102/worktree`。
-- 主功能提交：`c120a2e1c229a78b1224c3149fbe331c02b41935`；状态文案修复提交 `1feb28dae3c2423390636850ab62a8d3318b13f1`，也是最终构建源码。
+- 主功能提交：`c120a2e1c229a78b1224c3149fbe331c02b41935`；状态文案修复 `1feb28dae3c2423390636850ab62a8d3318b13f1`；菜单栏原生点击修复 `d82362fa905fd4ad5b467e53532c62856949211b` 为本次构建源码。
 - 原工作区的旧功能分支和未跟踪历史材料保留。本轮没有写入 main、推送、打 tag、创建 Release、触发 Signed Release 或安装覆盖正式应用。
 - 正式源码版本仍为 `1.3.1`；此开发分支不代表已发布的新版本。
 
@@ -34,6 +34,16 @@ macOS 增加持久化的“仅菜单栏”模式。菜单栏显示真实周期�
 
 Windows 不开放仅菜单栏；读到该模式时安全归一化为浮窗。原浮窗、侧边栏和更新路径保留。无新增框架或依赖版本升级；只为已有 AppKit 绑定启用必要 feature，锁文件未改变。
 
+### 2026-11-03 菜单栏点击修正
+
+用户实测旧试用版时发现：普通左键点击菜单栏图标展开操作菜单，而不是详情。此前的应用窗口和卡片交互检查没有覆盖系统托盘入口，不能替代这项实测。
+
+锁定依赖中的 macOS 托盘实现会在创建及 `set_menu` 时向 NSStatusItem 绑定原生菜单；`show_menu_on_left_click(false)` 只改内部标志。旧实现仍在创建和额度刷新时绑定菜单，存在 AppKit 抢先处理点击的路径。现改为 macOS 不绑定自动菜单，也不在刷新时重新绑定：普通左键按下记录可见状态、释放只开关完整卡片；右键释放和 Control-click 显式打开共享操作菜单。浮窗和侧边栏同样保留右键入口。Windows 继续使用原生托盘菜单。卡片组件和样式没有改动。
+
+新增三项点击路由回归通过，覆盖左键单一面板动作、两种 macOS 宿主的右键/Control-click，以及 Windows 原生菜单归属。2026-11-03 启动修复后的隔离 QA 包，用户实际点击顶部“周 42%”后明确确认：“左键开关详情、右键菜单均正常”。这项确认只覆盖普通左键开关和右键菜单，不扩展为全部视觉或平台验收。
+
+修复版重新检查了 Reopen 完整卡片、更多、手动刷新和 Esc 收起；[当前 Default 卡片截图](menubar-evidence/click-fix-default-card.jpg)来自该构建。QA 于 2026-11-03 09:32（Asia/Shanghai）启动，后台间隔恢复为五分钟；完成检查后保持运行，供用户继续体验。普通 `.app` 已从相同源码重建，未自动启动或安装到正式应用位置。
+
 ## 自动化与构建
 
 环境：macOS 27.0.1 (26A434)，arm64；Node 22.23.1，npm 10.9.8；Rust stable 1.99.1。Rust 工具链位于本任务输出目录，未改全局工具链设置。自动化只使用合成数据和临时目录。
@@ -44,7 +54,7 @@ Windows 不开放仅菜单栏；读到该模式时安全归一化为浮窗。原
 | `npm test` | 最终 R1 全量 443 项通过 |
 | `npm run build` | 通过，含 TypeScript 检查 |
 | `npm run check:updater-policy` | 通过；属于静态策略检查 |
-| `cargo test --manifest-path src-tauri/Cargo.toml --locked` | 237 通过，0 失败，2 个原有 ignored |
+| `cargo test --manifest-path src-tauri/Cargo.toml --locked` | 点击修复后全量 240 通过，0 失败，2 个原有 ignored |
 | `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check` | 通过 |
 | `cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings` | 通过 |
 | `git diff --check` | 通过 |
@@ -58,13 +68,14 @@ Windows 不开放仅菜单栏；读到该模式时安全归一化为浮窗。原
 
 QA 标识为 `app.codexmonitor.menubar.validation`，与正式 `app.quotafloat.desktop` 分离。使用隔离 CODEX_HOME、配置和数据库；只加载合成额度，不读取真实账户凭据。QA 执行的是本地编译的 Tauri 桌面应用，截图来自真实应用窗口，不是浏览器样例。
 
-[四套皮肤并排对照](menubar-evidence/index.html)。每对采用相同合成周额度 `42.9`、同一空 Token 数据、浅色、100% 不透明度和同一系统缩放；原始截图均为 314×460，未重绘或缩放。额度、字体、间距、皮肤壳体、统计区和页签一致；顶部宿主图标/选中状态及悬停效果不同，因此不声称整图逐像素相等。健康态截图采自 `c120a2e`，后续仅补 stale 文案，健康态渲染输入与代码未变。
+[四套皮肤并排对照](menubar-evidence/index.html)。每对采用相同合成周额度 `42.9`、同一空 Token 数据、浅色、100% 不透明度和同一系统缩放；原始截图均为 314×460，未重绘或缩放。额度、字体、间距、皮肤壳体、统计区和页签一致；顶部宿主图标/选中状态及悬停效果不同，因此不声称整图逐像素相等。健康态截图采自 `c120a2e`，后续仅补 stale 文案和原生点击路由，健康态渲染代码未变。
 
 | 场景 | 真实桌面结果与证据 |
 | --- | --- |
 | 四皮肤完整卡片 | 四对 A/B 截图已检查；直接复用同组件，均为 314×460；见上方对照页 |
+| 系统菜单栏入口 | `d82362f` 隔离 QA：2026-11-03 用户实测确认“左键开关详情、右键菜单均正常”；原生无内容日志也记录左键按下/释放、面板开关和右键菜单请求 |
 | weekly-only | 仅周额度，无 5 小时空位，无周期选择；合成值 42.9 按原卡片精度显示 43，菜单栏格式函数向下取整为 42 |
-| 隐藏时后台调度 | 最终源码于 16:24:14 启动，到 16:25:08 完成 6 次成功刷新（含首次），没有面板主动显示记录；QA 间隔为 10 秒，生产仍为五分钟 |
+| 隐藏时后台调度 | `1feb28d` 于 16:24:14 启动，到 16:25:08 完成 6 次成功刷新（含首次），没有面板主动显示记录；QA 间隔为 10 秒，生产仍为五分钟 |
 | 卡片交互 | 原总览 / 按模型 / 额度周可切换；[额度周截图](menubar-evidence/mecha-menubar-quota-week.jpg)。更多、收起、切回浮窗均可用；Esc 后有原生隐藏记录；打开更新窗口时面板可正常失焦收起 |
 | 共享菜单 | 齿轮更多、卡片右键均打开同一原生菜单，皮肤与模式命令生效；[菜单局部截图](menubar-evidence/native-more-menu-partial.jpg)仅含落在应用窗口内的部分 |
 | 同账户失败 | 真实桌面进程接受合成失败状态，保留 42.9 原值和最后成功 16:25，四套皮肤未裁切：[Default](menubar-evidence/default-stale.jpg)、[Blur](menubar-evidence/blur-stale.jpg)、[Computer](menubar-evidence/computer-stale.jpg)、[Mecha](menubar-evidence/mecha-light-stale.jpg) |
@@ -74,11 +85,11 @@ QA 标识为 `app.codexmonitor.menubar.validation`，与正式 `app.quotafloat.d
 | 持久化/重新打开 | 重启保持 menubar、已选皮肤/周期，macOS Reopen 打开临时完整卡片；单周期确认后选择回退到 weekly |
 | 重复启动 | 原 QA 进程存活，第二进程退出码 0；恢复后仍是菜单栏完整卡片，没有切回浮窗 |
 | 更新 | [原更新窗口](menubar-evidence/update-window.jpg)可达；未配置 updater 时“打开版本下载页”按钮存在。未下载、安装或替换版本 |
-| 退出 | 原生菜单退出后，QA PID 已不存在；测试结束时无本任务 QA 进程继续刷新 |
+| 退出 | 前轮原生菜单退出后，QA PID 已不存在；本轮通过同一退出菜单正常停止旧版，以便更换点击修复构建 |
 
-以上失败/账户轮次为隔离合成输入，验证了真实桌面、后台调度和缓存边界，不代表真实网络或真实账户集成已经通过。退出时 QA 偏好为 menubar / default / weekly，正式配置未改。
+以上失败/账户轮次为隔离合成输入，验证了真实桌面、后台调度和缓存边界，不代表真实网络或真实账户集成已经通过。当前 QA 使用 menubar / default / weekly；本轮交付时保持运行，正式配置未改。
 
-桌面工具只能捕获应用窗口，不能完整捕获系统菜单栏及越出应用窗口的原生菜单。因此“菜单栏图标+文字”的完整截图、直接点击托盘入口的唯一性、Control-click/长按、完整原生菜单截图需人工核验，不能以编译或应用窗口截图替代。
+桌面工具只能捕获应用窗口，不能完整捕获系统菜单栏及越出应用窗口的原生菜单。普通左键与右键已由用户实测确认；“菜单栏图标+文字”的完整截图、Control-click/长按、完整原生菜单截图仍未覆盖，不能以编译或应用窗口截图替代。
 
 仍未覆盖：真实断网/联网及睡眠唤醒、真实账户切换和认证、开机自启、真实更新安装/重启、系统浅深外观切换、全屏 Space、菜单栏自动隐藏、多显示器插拔/负坐标/混合DPI实机、Windows 编译与实机。相关逻辑与合成回归不能替代这些实机条件。冷启动隐藏有进程观察，瞬时闪窗没有录屏逐帧证据；不宣称全部原生验收通过。
 
@@ -87,9 +98,9 @@ QA 标识为 `app.codexmonitor.menubar.validation`，与正式 `app.quotafloat.d
 - 普通试用应用：`/Users/bennick/Work/Codex/codex-monitor/outputs/menubar-20261102/deliverables/Codex Monitor.app`。
 - 隔离合成试用启动器：`/Users/bennick/Work/Codex/codex-monitor/outputs/menubar-20261102/deliverables/菜单栏隔离试用.command`（可双击，或在终端运行该文件）。
 - 隔离 QA 应用：`/Users/bennick/Work/Codex/codex-monitor/outputs/menubar-20261102/worktree/src-tauri/target/debug/bundle/macos/Codex Monitor Menubar QA.app`。请通过上方启动器打开，保证合成环境和独立 CODEX_HOME 被正确设置。
-- 源码 SHA：`1feb28dae3c2423390636850ab62a8d3318b13f1`。
-- 普通应用构建时间：`2026-11-02T16:24:43.033908+08:00`；架构 **arm64 / Apple Silicon，非 Universal、非 Intel 构建**。
-- 二进制 SHA-256：`01adb30655bf9e6d0241d3e7e5868ffa34b33d653d65193894b2e416292436e3`。
+- 源码 SHA：`d82362fa905fd4ad5b467e53532c62856949211b`。
+- 普通应用构建时间：`2026-11-03T09:33:03.440328+08:00`；架构 **arm64 / Apple Silicon，非 Universal、非 Intel 构建**。
+- 二进制 SHA-256：`e9e4480f6856f66cf4f29d4ba03894cbed5feaa7e841d451dc015e673fde7b23`。
 - 机器可读记录：`/Users/bennick/Work/Codex/codex-monitor/outputs/menubar-20261102/deliverables/build-manifest.json`。
 - 构建命令：`npm run tauri -- build --bundles app --config '{"bundle":{"createUpdaterArtifacts":false}}'`；结果成功。`app,dmg` 联合构建的 DMG 封装脚本失败，随后 app-only 构建成功；本轮不交付 DMG。
 - 版本仍为 `1.3.1`；普通应用只含 linker ad-hoc 签名，没有 Developer ID、notarization 或完整 bundle 资源封印。QA 包采用本地 ad-hoc 签名，也不代表 Apple 验证或正式发布。
