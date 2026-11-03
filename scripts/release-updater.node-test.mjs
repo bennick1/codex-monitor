@@ -2,6 +2,57 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { validateGate } from "./release-gate.mjs";
 import { validateInventories } from "./updater-artifacts.mjs";
+import { deriveNsisBinaryIdentity } from "./windows-nsis-provenance.mjs";
+
+function rawWindowsPe() {
+  const bytes = Buffer.alloc(1024);
+  bytes.writeUInt16LE(0x5a4d, 0);
+  bytes.writeUInt32LE(64, 0x3c);
+  bytes.writeUInt32LE(0x4550, 64);
+  bytes.writeUInt16LE(0x8664, 68);
+  bytes.writeUInt16LE(240, 84);
+  bytes.writeUInt16LE(0x20b, 88);
+  bytes.writeUInt16LE(2, 156);
+  bytes.writeUInt32LE(16, 196);
+  Buffer.from("__TAURI_BUNDLE_TYPE_VAR_UNK").copy(bytes, 512);
+  return bytes;
+}
+
+test("Windows NSIS provenance derives only the official bundle marker patch without mutating raw input", () => {
+  const raw = rawWindowsPe();
+  const before = Buffer.from(raw);
+  const expected = Buffer.from(raw);
+  Buffer.from("__TAURI_BUNDLE_TYPE_VAR_NSS").copy(expected, 512);
+  const identity = deriveNsisBinaryIdentity(raw);
+  assert.deepEqual(raw, before);
+  assert.deepEqual(identity, { buildBinarySha256: createHash("sha256").update(raw).digest("hex"), binarySha256: createHash("sha256").update(expected).digest("hex"), bundleType: "nsis", bundleMarkerOffset: 512 });
+  assert.notEqual(identity.binarySha256, identity.buildBinarySha256);
+  const unrelatedMutation = Buffer.from(expected); unrelatedMutation[800] ^= 1;
+  assert.notEqual(createHash("sha256").update(unrelatedMutation).digest("hex"), identity.binarySha256, "unrelated payload changes still fail the exact hash comparison");
+});
+test("Windows NSIS provenance fails closed on missing, ambiguous, or already patched markers", () => {
+  for (const marker of ["__TAURI_BUNDLE_TYPE_VAR_NSS", "__TAURI_BUNDLE_TYPE_VAR_MSI", "__TAURI_BUNDLE_TYPE_VAR_BAD"]) {
+    const bytes = rawWindowsPe(); Buffer.from(marker).copy(bytes, 512);
+    assert.throws(() => deriveNsisBinaryIdentity(bytes), /one unpatched/);
+  }
+  const duplicate = rawWindowsPe(); Buffer.from("__TAURI_BUNDLE_TYPE_VAR_UNK").copy(duplicate, 700);
+  assert.throws(() => deriveNsisBinaryIdentity(duplicate), /one unpatched/);
+});
+test("Windows NSIS provenance rejects signed, truncated, non-GUI or non-x64 PE input", () => {
+  for (const offset of [232, 236]) {
+    const signed = rawWindowsPe(); signed.writeUInt32LE(8, offset);
+    assert.throws(() => deriveNsisBinaryIdentity(signed), /Authenticode/);
+  }
+  for (const [offset, value] of [[68, 0x14c], [88, 0x10b], [156, 3], [84, 80]]) {
+    const bytes = rawWindowsPe(); bytes.writeUInt16LE(value, offset);
+    assert.throws(() => deriveNsisBinaryIdentity(bytes), /x64 GUI/);
+  }
+  const noDirectory = rawWindowsPe(); noDirectory.writeUInt32LE(4, 196);
+  assert.throws(() => deriveNsisBinaryIdentity(noDirectory), /certificate directory/);
+  assert.throws(() => deriveNsisBinaryIdentity(rawWindowsPe().subarray(0, 100)));
+  const hugeOffset = rawWindowsPe(); hugeOffset.writeUInt32LE(0xffffffff, 0x3c);
+  assert.throws(() => deriveNsisBinaryIdentity(hugeOffset), /PE header/);
+});
 const sha = "a".repeat(40);
 const gate = { event: "workflow_dispatch", repo: "bennick1/codex-monitor", ref: "refs/heads/main", version: "1.4.0", cargoVersion: "1.4.0", tauriVersion: "1.4.0", latestVersion: "v1.3.1", tagExists: false, sourceSha: sha };
 test("canonical manual main with newer coherent version", () => assert.equal(validateGate(gate).tag, "v1.4.0"));

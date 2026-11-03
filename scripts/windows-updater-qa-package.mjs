@@ -5,6 +5,7 @@ import { copyFile, mkdir, readFile, readdir, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { inspectPayload } from "./updater-artifacts.mjs";
+import { deriveNsisBinaryIdentity } from "./windows-nsis-provenance.mjs";
 
 const identifier = "app.codexmonitor.updater-test.local";
 const productName = "Codex Monitor Updater QA";
@@ -43,7 +44,7 @@ async function snapshot(root, version) {
   const pe = inspectPe(await readFile(binary));
   const info = JSON.parse(cli("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "$v=(Get-Item -LiteralPath $env:CM_QA_BINARY).VersionInfo; @{ productName=$v.ProductName; version=('{0}.{1}.{2}' -f $v.FileMajorPart,$v.FileMinorPart,$v.FileBuildPart) } | ConvertTo-Json -Compress"], { env: { ...process.env, CM_QA_BINARY: binary } }));
   if (info.productName !== productName || info.version !== version) throw new Error("QA actual binary VERSIONINFO mismatch");
-  const record = { identity: { identifier, ...info }, binarySha256: await sha(binary), ...pe };
+  const record = { identity: { identifier, ...info }, ...deriveNsisBinaryIdentity(await readFile(binary)), ...pe };
   record.payloadIdentity = inspectPayload("windows", installer, record);
   await writeFile(join(root, `${version}-identity.json`), JSON.stringify(record, null, 2), { flag: "wx" });
   console.log(`Verified ${version} Windows x64 GUI binary and exact NSIS member`);
@@ -98,7 +99,7 @@ async function makePackage(root, output) {
     endpoint, publicKeySha256: hash(publicKey), generatedAt: new Date().toISOString(),
     runUrl: process.env.GITHUB_RUN_ID ? `https://github.com/bennick1/codex-monitor/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
     tools: { node: process.version, rust: cli("rustc", ["--version"]), tauri: cli(process.execPath, ["node_modules/@tauri-apps/cli/tauri.js", "--version"]) },
-    versions: await Promise.all(records.map(async (record, index) => ({ version: versions[index], installer: names[index], installerSha256: await sha(join(output, names[index])), binarySha256: record.binarySha256, signatureVerified: true, payloadIdentity: record.payloadIdentity }))),
+    versions: await Promise.all(records.map(async (record, index) => ({ version: versions[index], installer: names[index], installerSha256: await sha(join(output, names[index])), buildBinarySha256: record.buildBinarySha256, binarySha256: record.binarySha256, bundleType: record.bundleType, bundleMarkerOffset: record.bundleMarkerOffset, signatureVerified: true, payloadIdentity: record.payloadIdentity }))),
   };
   await writeFile(join(output, "QA-SOURCE.json"), JSON.stringify(provenance, null, 2));
   const all = [...(await readdir(output)).filter(name => name !== "scripts"), ...(await readdir(join(output, "scripts"))).map(name => `scripts/${name}`)].sort();

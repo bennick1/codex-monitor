@@ -25,10 +25,12 @@ jobs:
         with:
           workspaces: src-tauri -> ../outputs/windows-updater-qa/target-build
           key: windows-updater-qa
+          cache-on-failure: true
       - run: npm ci
       - run: npm run check:updater-policy
       - run: npm audit --audit-level=high
       - run: node --test scripts/windows-updater-qa-package.node-test.mjs
+      - run: node --test scripts/release-updater.node-test.mjs
       - name: Check Windows PowerShell scripts
         shell: powershell
         run: |
@@ -68,6 +70,30 @@ jobs:
           path: outputs/windows-updater-qa-share/
           if-no-files-found: error
           retention-days: 30
+      - name: Record public failure diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'outputs/windows-updater-qa'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          @{ sourceSha = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; nativeAcceptance = 'PENDING'; qa = $true } | ConvertTo-Json | Set-Content (Join-Path $root 'failure-source.json') -Encoding utf8
+      - name: Preserve only public QA failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-monitor-windows-qa-diagnostics-${{ github.sha }}
+          path: |
+            outputs/windows-updater-qa/failure-source.json
+            outputs/windows-updater-qa/test.key.pub
+            outputs/windows-updater-qa/0.0.1-identity.json
+            outputs/windows-updater-qa/0.0.2-identity.json
+            outputs/windows-updater-qa/target-build/release/codex-monitor.exe
+            outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe
+            outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe.sig
+            outputs/windows-updater-qa/target-0.0.2/release/bundle/nsis/*-setup.exe
+            outputs/windows-updater-qa/target-0.0.2/release/bundle/nsis/*-setup.exe.sig
+          if-no-files-found: warn
+          retention-days: 7
       - name: Remove ephemeral runner QA private key
         if: always()
         shell: pwsh

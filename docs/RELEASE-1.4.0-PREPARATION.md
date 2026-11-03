@@ -163,6 +163,8 @@ desktop (macos-latest, codex-monitor-macos-universal-unsigned, npm run tauri -- 
 
 本轮 QA 工具最小修正：`updater-qa.mjs prepare` 改为直接调用已安装的官方 CLI，避免 Windows `shell:true` 经过 `cmd.exe` 丢失空密码参数。不修改产品、正式版本、依赖或发布工作流；新 A/B 包使用本轮更新后的 QA 工具生成。新增包只白名单复制安装器、公开签名/公钥、来源及操作脚本，不上传 QA 私钥、构建缓存、账户资料或数据库。测试端无需 Node/Rust/Python，使用系统 PowerShell 和 `winsqlite3.dll`，仅在已退出的独立 QA 数据库中插入合成样本。
 
+首轮 Windows QA [41592693379](https://github.com/bennick1/codex-monitor/actions/runs/41592693379) 在 A 安装器/签名生成后，因包内 EXE 摘要与构建目录 EXE 不同被来源校验拒绝，未上传可交付包。核实 [Tauri CLI 2.11.4 官方 bundler](https://github.com/tauri-apps/tauri/blob/tauri-cli-v2.11.4/crates/tauri-bundler/src/bundle.rs)：NSIS 打包只将固定标记 `__TAURI_BUNDLE_TYPE_VAR_UNK` 改为 `__TAURI_BUNDLE_TYPE_VAR_NSS`，随后恢复构建目录原始 EXE。这是既有 Windows 发布来源记录遗漏打包转换的缺陷，也会影响正式 `record-release-environment.mjs`。本轮增加共享的严格推导函数供 QA 与正式来源记录使用：从实际 VERSIONINFO 已核对的原始构建字节推导唯一 NSIS 标记转换，分别记录原始和预期安装字节摘要；拒绝非 x64 GUI、缺失/多义标记及当前未支持的 Authenticode 输入。`inspectPayload` 仍对安装器内实际 EXE 作完整 SHA-256 相等检查，没有忽略任意字节或放宽签名/身份门槛。旧候选 MSI/NSIS 的标记差异只作根因佐证；修复后的 QA 包必须在新源码重新构建并通过 Windows 实际提取核对。
+
 Windows 安装、主动检查前不下载、真实下载和验签、确认安装、旧/新进程及实际路径/版本/二进制来源、设置/统计保留、浮窗/侧边栏/系统托盘/更新入口、完整退出后冷启动、最后清理均保持 **待测试人员实测**。不要求 Windows 出现 macOS 专属菜单栏模式。测试人员应从当前包内步骤接续，并按 [Windows 手册](handoffs/20261013-online-update-windows.md) 与 [UPDATER-QA](UPDATER-QA.md) 回传脱敏结果；旧手册的源码归档与旧分支信息由本节当前来源替代。
 
 Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明。维护者完成审核安排、离线恢复备份并审阅真实 Windows 结果后，才能收敛正式发布决定；PR 合并与最终发布仍需分别明确授权。Signed Release 最终会公开 Release/latest，没有 dry-run，本轮未触发它。
