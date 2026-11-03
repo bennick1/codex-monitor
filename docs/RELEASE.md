@@ -1,23 +1,23 @@
 # 在线更新发布流程
 
-本流程尚未在 GitHub 执行。当前分支已合入 main 的 1.3.1 版本；它与本轮核对的已发布版本相同，发布门禁会阻止重复发布。正式发布前须重新核对远程状态，由维护者选择更高的稳定版本，同时更新 package.json、Cargo.toml、tauri.conf.json。不得把本轮本地准备描述成已上线。
+当前准备版本为 **1.4.0**，尚未发布。2026-11-03 核实最新 published Release 为 v1.3.1，1.4.0 尚未占用；当前检查、原生升级证据、配置缺项和候选来源集中记录在 [1.4.0 发布准备](RELEASE-1.4.0-PREPARATION.md)。历史验收文档的版本和配置描述仅代表当时状态。正式 dispatch 前仍须重新核对远端版本与 tag；不得将候选准备描述成已上线。
 
 ## 一次性维护者配置
 
-在规范仓库 bennick1/codex-monitor 创建 `release` environment，只允许 main，配置 required reviewers，并禁止自我批准（组织/套餐支持时）。保护 main，禁止绕过 PR 审核。当前操作者没有 admin 权限，本轮不配置这些设置；未配置审核不能宣称发布流程已受人工门禁保护。
+在规范仓库 bennick1/codex-monitor 创建 `release` environment，只允许 main，配置 required reviewers，并禁止自我批准（组织/套餐支持时）。保护 main，禁止绕过 PR 审核。权限与当前配置以本轮只读核查结果为准；本轮不配置这些设置。未配置审核不能宣称发布流程已受人工门禁保护。
 
 维护者在可信离线环境执行官方 `npx tauri signer generate` 生成正式 updater 密钥。将公钥写入 release environment variable `CODEX_MONITOR_UPDATER_PUBLIC_KEY`，私钥和密码分别写入 environment secrets `TAURI_SIGNING_PRIVATE_KEY`、`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。密钥不得进入仓库、日志、安装包或工单；保存可恢复的离线备份。普通开发无公钥时显示“未配置”并提供 Release 下载页。正式构建缺公钥、存在 QA 标志或测试 endpoint 时失败。不要把独立 QA 密钥设为正式密钥。
 
-Tauri updater 签名仅验证更新包来源与完整性，与 Apple Developer ID / notarization、Windows Authenticode 是不同机制。当前 OS 证书未配置；Gatekeeper/SmartScreen 与安装提示仍需真实设备验收，Release Notes 必须披露。
+Tauri updater 签名仅验证更新包来源与完整性，与 Apple Developer ID / notarization、Windows Authenticode 是不同机制。当前工作流没有接入 OS 证书签名；Gatekeeper/SmartScreen 与安装提示仍需真实设备验收，Release Notes 必须披露。
 
 ## 手动发布
 
 1. 完成 [隔离升级验收](UPDATER-QA.md)，维护者确认两平台结果和版本；Windows 缺设备时保持待测。合并授权与正式发布授权分别处理。
-2. 只在规范仓库 main 手动 dispatch `Signed Release`。普通 push/PR 仅执行 CI，不发布。
+2. 在准备 PR 审阅通过并合入 main、维护者另行批准正式发布后，只在规范仓库 main 手动 dispatch `Signed Release`（`.github/workflows/release.yml`）。普通 push/PR 仅执行 CI，不发布。该 workflow 没有只构建或 dry-run 选项，成功后会最终公开 Release，不得用于探测签名配置。
 3. gate 固定触发时 source SHA，检查事件、仓库、main、三处版本一致、稳定 SemVer、高于最新 published Release、tag 不存在；GitHub 查询失败直接失败。所有 job checkout 同一 SHA。
 4. release environment 审核后，GitHub macOS runner 构建 Universal（arm64+x86_64），Windows runner 构建 x64 NSIS。正式公钥编译进后端；安全 Node JSON 脚本生成临时 overlay 供 CLI 打包读取相同公钥和固定 endpoint，基础 tauri.conf 不持久化测试 key/endpoint。CLI 使用私钥签 updater 产物。
 5. 两平台收集前读取实际 Mac Info.plist / Windows binary VERSIONINFO 与冻结正式 config，确认正式标识、名称和版本；拒绝 QA 名称/标记。验签后从实际 Mac updater tar archive 的唯一 Info.plist 和主程序读取身份与 SHA256；Windows 使用 runner 7-Zip 只向 stdout 解出 NSIS 中唯一主程序并比较其 SHA256。必须与已验证的构建二进制完全相同，不能以新版旁边的报告为旧更新包背书。解包检查不运行安装器、不将 archive 路径写入工作区。使用与官方 updater 同源的成熟 minisign-verify 库，对原始 updater 字节及 .sig 使用客户端公钥验证，错 key、错签名失败。两平台都成功才组装唯一 latest.json，复核来源 SHA、安装包、更新包、对应 .sig、公钥摘要与 SHA256。清单提供 darwin-aarch64、darwin-x86_64、windows-x86_64；Mac 两架构共享 Universal archive。
-6. 再检查远程版本/tag，创建 draft 并一次上传全部资产，核对 draft 完整资产数量与大小，并重新下载逐项比较 SHA256 后才 publish/latest。任一步失败不公开半份 manifest。失败 draft 留待维护者检查；不要手动公开不完整 draft，也不要自动删已有 tag 后重跑。
+6. 使用冻结源码中的 `docs/releases/<version>.md` 同时填充 Release 正文和 `latest.json` 的更新说明；当前文件为 [1.4.0.md](releases/1.4.0.md)。发布前确认说明中的验收与签名边界仍准确。再检查远程版本/tag，创建 draft 并一次上传全部资产，核对 draft 完整资产数量与大小，并重新下载逐项比较 SHA256 后才 publish/latest。任一步失败不公开半份 manifest。失败 draft 留待维护者检查；不要手动公开不完整 draft，也不要自动删已有 tag 后重跑。
 
 源 SHA、实际 Node/npm/Rust/Tauri 版本、run URL、构建时间记录在各平台 build-environment.json；安装包和更新签名保留在同一 Release，SHA256SUMS 包括 manifest 和来源记录。SHA256 供下载校验，不替代 updater 公钥验签。
 

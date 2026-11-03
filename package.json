@@ -1,7 +1,7 @@
 {
   "name": "codex-monitor",
   "private": true,
-  "version": "1.3.1",
+  "version": "1.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --configLoader native",
@@ -9,7 +9,8 @@
     "check:codex": "powershell -ExecutionPolicy Bypass -File scripts/check-codex-update.ps1",
     "check:updater-policy": "node scripts/check-updater-policy.mjs",
     "test": "vitest run --configLoader native",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "check": "tsc --noEmit && npm run check:updater-policy"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

@@ -111,7 +111,10 @@ export async function collect(platform, bundle, output, version, sourceSha, veri
   await writeFile(join(output, `${platform}-inventory.json`), JSON.stringify(inventory, null, 2));
   return inventory;
 }
-export async function assemble(input, output, version, sourceSha) {
+export async function assemble(input, output, version, sourceSha, notesPath) {
+  if (!notesPath) throw new Error("Release notes file is required");
+  const notes = (await readFile(notesPath, "utf8")).trim();
+  if (!notes) throw new Error("Release notes file is empty");
   const inventories = await Promise.all(Object.keys(platforms).map(p => readFile(join(input, `${p}-inventory.json`), "utf8").then(JSON.parse)));
   validateInventories(inventories, version, sourceSha);
   if (process.env.CODEX_MONITOR_UPDATER_PUBLIC_KEY) {
@@ -126,7 +129,7 @@ export async function assemble(input, output, version, sourceSha) {
   }
   for (const file of files) if (await digest(join(input, file.name)) !== file.sha256) throw new Error(`Changed asset: ${file.name}`);
   for (const i of inventories) if ((await readFile(join(input, i.signatureFile), "utf8")).trim() !== i.signature) throw new Error("Wrong signature mapping");
-  const manifest = { version, notes: `Codex Monitor ${version}`, pub_date: new Date().toISOString(), platforms: {} };
+  const manifest = { version, notes, pub_date: new Date().toISOString(), platforms: {} };
   for (const i of inventories) for (const key of platforms[i.platform].keys) manifest.platforms[key] = { signature: i.signature, url: `https://github.com/${repository}/releases/download/v${version}/${i.update}` };
   // No manifest is written until both inventories and every asset have passed validation.
   await mkdir(output, { recursive: true });
@@ -145,5 +148,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!process.env.CODEX_MONITOR_UPDATER_PUBLIC_KEY?.trim()) throw new Error("Manifest assembly requires expected production public key");
     await assemble(...args);
   }
-  else throw new Error("Usage: updater-artifacts.mjs collect <macos|windows> <bundle> <output> <version> <sha> | assemble <input> <output> <version> <sha>");
+  else throw new Error("Usage: updater-artifacts.mjs collect <macos|windows> <bundle> <output> <version> <sha> | assemble <input> <output> <version> <sha> <notes-file>");
 }

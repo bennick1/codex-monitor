@@ -41,8 +41,16 @@ test("collect versionless Mac archive; assemble full manifest and reject changed
       await writeFile(join(incoming, `${platform}-build-environment.json`), JSON.stringify({ sourceSha: sha, platform, identity: { identifier: "app.quotafloat.desktop", version: "1.4.0", productName: "Codex Monitor" }, binarySha256: "b".repeat(64), qa: false, releaseBuild: true, updaterSigned: true, rust: "fixture", node: "fixture", tauri: "fixture", runUrl: "fixture" }));
       await collect(platform, bundle, incoming, "1.4.0", sha, async () => {}, async (_platform, _artifact, report) => ({ ...report.identity, binarySha256: report.binarySha256 }));
     }
+    const notesPath = join(dir, "release-notes.md");
+    const notes = "# Codex Monitor 1.4.0\n\n菜单栏与在线更新。\n下载和安装由用户确认。";
+    await writeFile(notesPath, `${notes}\n`);
     const output = join(dir, "complete");
-    const manifest = await assemble(incoming, output, "1.4.0", sha);
+    const manifest = await assemble(incoming, output, "1.4.0", sha, notesPath);
+    assert.equal(manifest.notes, notes);
+    const manifestBytes = await readFile(join(output, "latest.json"));
+    assert.equal(JSON.parse(manifestBytes).notes, notes);
+    const manifestHash = createHash("sha256").update(manifestBytes).digest("hex");
+    assert.ok((await readFile(join(output, "SHA256SUMS"), "utf8")).includes(`${manifestHash}  latest.json\n`));
     assert.deepEqual(Object.keys(manifest.platforms).sort(), ["darwin-aarch64", "darwin-x86_64", "windows-x86_64"]);
     assert.match(manifest.platforms["darwin-aarch64"].url, /releases\/download\/v1\.4\.0\/Codex-Monitor-1\.4\.0-macos\.app\.tar\.gz$/);
     const oldInventory = JSON.parse(await readFile(join(incoming, "macos-inventory.json"), "utf8"));
@@ -50,8 +58,20 @@ test("collect versionless Mac archive; assemble full manifest and reject changed
     oldInventory.signature = "windows-fixture-signature";
     await writeFile(join(incoming, "macos-inventory.json"), JSON.stringify(oldInventory));
     const rejected = join(dir, "rejected");
-    await assert.rejects(assemble(incoming, rejected, "1.4.0", sha), /Wrong signature mapping/);
+    await assert.rejects(assemble(incoming, rejected, "1.4.0", sha, notesPath), /Wrong signature mapping/);
     await assert.rejects(readdir(rejected), { code: "ENOENT" });
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+test("missing or empty release notes cannot produce a manifest", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "codex-release-notes-fixture-"));
+  try {
+    const output = join(dir, "rejected");
+    const notesPath = join(dir, "release-notes.md");
+    await assert.rejects(assemble(dir, output, "1.4.0", sha), /Release notes file is required/);
+    await assert.rejects(assemble(dir, output, "1.4.0", sha, notesPath), { code: "ENOENT" });
+    await writeFile(notesPath, " \n\t");
+    await assert.rejects(assemble(dir, output, "1.4.0", sha, notesPath), /Release notes file is empty/);
+    await assert.rejects(readdir(output), { code: "ENOENT" });
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 test("reject mismatched production verification keys", () => {

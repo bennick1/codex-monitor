@@ -144,16 +144,17 @@ jobs:
       - name: Assemble one complete manifest
         env:
           CODEX_MONITOR_UPDATER_PUBLIC_KEY: ${{ vars.CODEX_MONITOR_UPDATER_PUBLIC_KEY }}
-        run: node scripts/updater-artifacts.mjs assemble outputs/incoming outputs/release "${{ needs.gate.outputs.version }}" "${{ needs.gate.outputs.sha }}"
+        run: node scripts/updater-artifacts.mjs assemble outputs/incoming outputs/release "${{ needs.gate.outputs.version }}" "${{ needs.gate.outputs.sha }}" "docs/releases/${{ needs.gate.outputs.version }}.md"
       - name: Create draft, upload complete set, then publish
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.gate.outputs.tag }}
           SOURCE_SHA: ${{ needs.gate.outputs.sha }}
+          RELEASE_NOTES_FILE: docs/releases/${{ needs.gate.outputs.version }}.md
         shell: bash
         run: |
           set -euo pipefail
-          gh release create "$RELEASE_TAG" --repo bennick1/codex-monitor --target "$SOURCE_SHA" --draft --title "Codex Monitor $RELEASE_TAG" --notes '用户主动检查、确认下载并安装。更新包包含 Tauri updater 签名。此签名不代表 Apple Developer ID、公证或 Windows Authenticode；平台证书尚未配置。'
+          gh release create "$RELEASE_TAG" --repo bennick1/codex-monitor --target "$SOURCE_SHA" --draft --title "Codex Monitor $RELEASE_TAG" --notes-file "$RELEASE_NOTES_FILE"
           gh release upload "$RELEASE_TAG" outputs/release/* --repo bennick1/codex-monitor
           node scripts/verify-release-assets.mjs outputs/release "$RELEASE_TAG"
           gh release edit "$RELEASE_TAG" --repo bennick1/codex-monitor --draft=false --latest
