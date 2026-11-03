@@ -1,0 +1,76 @@
+name: Windows Updater QA Package
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.repository == 'bennick1/codex-monitor' && github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> ../outputs/windows-updater-qa/target-build
+          key: windows-updater-qa
+      - run: npm ci
+      - run: npm run check:updater-policy
+      - run: npm audit --audit-level=high
+      - run: node --test scripts/windows-updater-qa-package.node-test.mjs
+      - name: Check Windows PowerShell scripts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem scripts/windows-updater-qa/*.ps1 | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { throw ($errors | Out-String) }
+          }
+      - name: Generate runner-local QA key and build A
+        run: |
+          node scripts/updater-qa.mjs prepare outputs/windows-updater-qa
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/updater-qa.mjs build outputs/windows-updater-qa 0.0.1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/windows-updater-qa-package.mjs snapshot outputs/windows-updater-qa 0.0.1
+      - name: Build B with the same QA key
+        run: |
+          node scripts/updater-qa.mjs build outputs/windows-updater-qa 0.0.2
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/windows-updater-qa-package.mjs snapshot outputs/windows-updater-qa 0.0.2
+      - name: Build existing signature verifier
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/outputs/windows-updater-qa/target-build
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --release --example verify_updater_signature
+      - name: Verify and assemble shareable QA package
+        env:
+          CODEX_MONITOR_SIGNATURE_VERIFY_BIN: ${{ github.workspace }}/outputs/windows-updater-qa/target-build/release/examples/verify_updater_signature.exe
+        run: node scripts/windows-updater-qa-package.mjs package outputs/windows-updater-qa outputs/windows-updater-qa-share
+      - name: Test packaged Windows helpers without installing application
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows-updater-qa/ci-smoke.ps1 -PackageDirectory outputs/windows-updater-qa-share
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-monitor-windows-updater-qa-${{ github.sha }}
+          path: outputs/windows-updater-qa-share/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Remove ephemeral runner QA private key
+        if: always()
+        shell: pwsh
+        run: |
+          $key = Join-Path $env:GITHUB_WORKSPACE 'outputs/windows-updater-qa/test.key'
+          if (Test-Path -LiteralPath $key) { Remove-Item -LiteralPath $key -Force }

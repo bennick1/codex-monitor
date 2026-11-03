@@ -2,6 +2,8 @@
 
 任务：`CM-RELEASE-PREP-20261103`。日期：2026-11-03，Asia/Shanghai。
 
+> 下面至“本机可复核材料”为上一轮准备记录；当前配置和 Windows 接续状态以文末 `CM-RELEASE-ENABLEMENT-20261103` 为准。上一轮只读配置边界已由维护者本轮授权替代，原有验收证据和发布要求仍有效。
+
 **结论：候选版本、Mac arm64 菜单栏定向升级验证和双平台 CI 制品已准备好，可集中审阅；正式发布仍受生产配置、审核保护及 Windows 原生升级验收阻塞。** 本轮未合并准备 PR、未打 tag、未创建 Release、未触发 Signed Release、未修改保护或生产密钥。
 
 ## 基线、版本与改动
@@ -114,3 +116,55 @@ QA **A=0.0.1、B=0.0.2**，与正式候选 **1.4.0** 分开。A/B 均在本轮�
 - `candidates/inspect-windows.py`：只用已有系统工具/标准库的离线 Windows 包检查。Windows 安装器未执行，无新增检查依赖。
 
 旧 worktree、历史未跟踪材料、正式安装、真实账户和统计数据保留。本轮网络直连 fetch 失败后使用机器已有系统代理完成，未修改持久 Git 配置；提交和推送均为准备分支白名单及普通 push。
+
+## CM-RELEASE-ENABLEMENT-20261103：生产配置与 Windows 接续
+
+日期：2026-11-03，Asia/Shanghai。复用原准备 worktree 和 [PR #2](https://github.com/bennick1/codex-monitor/pull/2)。开工独立 fetch 后，准备分支/PR 为 `52cf581960e09a8fc01aa64a44c04ba57f447703`，main 仍为 `691f7dd1a9abe6bdb12bd0b2e81bb703775b40c1`，remote-only/local-only 为 0/0；没有重做版本准备或菜单栏开发。
+
+维护者明确回复“无既有生产密钥”“审核安排待定”，并追加授权在 Windows CI 生成独立 A/B QA 安装包，供其安排人员在 Windows 实测。未授权连接其他电脑、增加协作者或授予权限。此前 Mac arm64 A→B、自动重启、冷启动、旧配置兼容及 13,023 Token 保留证据继续有效。
+
+### 生产身份、保管与本地验证
+
+- 开工重新核实全部 6 个 Release、17 个 tag，最新 published 仍为 `v1.3.1`（ID `403027234`），没有 `v1.4.0`。环境、仓库变量和 secrets 原为空；已发布资产没有 `latest.json` 或 updater `.sig`，v1.3.1 配置为 `createUpdaterArtifacts=false` 且没有 updater 公钥。旧 `release.yml` 的历史运行是当时 unsigned `Release Preparation`，不能凭其当前显示的工作流名称当作生产 updater 签名历史。
+- 使用本项目已安装的官方 Tauri CLI **2.11.4** 首次生成独立加密生产私钥；没有使用 QA key、换钥或升级工具链。私钥在仓库外专用长期目录，目录权限 **700**、私钥 **600**。随机密码经关闭回显的交互输入送给官方 signer，单独存入本机 macOS Keychain；没有明文命令行参数、终端输出、Git、工单或候选包副本。
+- 已从长期保存的加密私钥和 Keychain 重新取用密码完成签名，留下本机恢复说明。**独立离线备份尚未实际完成**；维护者须将加密私钥及密码保存到受控的独立恢复介质，并验证恢复。GitHub secrets 不能读取回来作备份。
+- 公钥摘要为 SHA-256（对去除首尾空白的 Tauri base64 公钥 UTF-8 文本计算）：`25c31a8a881b7539005c55614897f06275396d6f1a25fb20efcd84af4d7d0ec4`。
+- 固定本地文件 SHA-256：`dca930823e5c9d785b006eccb2368c9c6b739d02c17cd7e7765a07c17f7aedcb`。官方 signer 实签、项目现有 `verify_updater_signature`/`minisign-verify` 验签通过；篡改文件被拒绝，错误解密密码被拒绝。仅证明保存的密钥对和密码可配合使用；**没有签正式安装包、没有执行正式发布包签名或 Signed Release，没有在线生产升级验收**。
+
+### GitHub 配置实际状态
+
+本轮使用现有维护者身份 `bennick1`（仓库 admin）实施并回读。仅秘密值经 `gh secret set --env release --repo bennick1/codex-monitor` 的标准输入传入，在本地加密后提交 GitHub；回读仅查看 secret 元数据。
+
+| 配置 | 实际结果 / 未完成部分 |
+| --- | --- |
+| `release` environment | 已创建，ID `26101575080` |
+| 部署范围 | `custom_branch_policies=true`、`protected_branches=false`；仅一条 `name=main,type=branch`（ID `65316369`），没有标签或其他分支规则 |
+| 公钥 variable | `CODEX_MONITOR_UPDATER_PUBLIC_KEY` 已存在，回读值摘要与上方生产公钥一致；2026-11-03 14:39:36 +08 写入 |
+| 两个 environment secrets | `TAURI_SIGNING_PRIVATE_KEY`、`TAURI_SIGNING_PRIVATE_KEY_PASSWORD` 名称和存在性回读通过，分别于 14:39:32、14:39:35 +08 创建；未读取 secret 明文；没有 repository 级兜底 |
+| main 基础保护 | 已设置 PR 路径、`strict=true` 必需 CI 检查、`allow_force_pushes=false`、`allow_deletions=false` |
+| main 人工审核 / 绕过 | **未完成**。当前 `required_approving_review_count=0` 仅表示先要求 PR，不要求人工批准；`enforce_admins=false` 保留管理员默认例外。批准数量、审核身份和禁止管理员绕过仍须维护者明确选择，不能将当前基础规则视为达到发布文档的人工审核要求 |
+| environment 审核 / 自审 / 绕过 | **未完成**。没有 required reviewers，未启用 prevent self-review，`can_admins_bypass=true` 为创建后的默认值；待维护者指定且核实有权限的身份及相应规则。没有替维护者选择人员、邀请协作者或构造无法完成的自审流程 |
+
+三个必需检查来自 `52cf581` 成功 check runs 的完整 API `name`，全部绑定 GitHub Actions `app_id=15368`。下面结尾的 `...` 是 GitHub 实际名称的一部分，不是本记录另行缩写：
+
+```text
+frontend
+desktop (windows-latest, codex-monitor-windows-unsigned, npm run tauri -- build --config '{"bundl...
+desktop (macos-latest, codex-monitor-macos-universal-unsigned, npm run tauri -- build --target un...
+```
+
+配置后 PR 仍 open/unmerged；原 HEAD 的检查成功，GitHub 显示 CLEAN，但这不是维护者发布批准。人工审核配置未完成、Windows 待验收、离线恢复备份未完成仍阻止正式发布。没有通过管理员绕过、关闭检查或强推推进 PR。`docs/RELEASE.md` 的 required reviewers / 禁止自审及禁止绕过审核要求没有降低；其“本轮只读”描述属于上一轮准备任务，不作为本轮执行授权。
+
+### Windows 测试交付与未验收边界
+
+当前执行设备仍为 macOS 27.0.1 arm64；没有连接 Windows 测试设备。维护者选择取得独立 A/B EXE 后安排人员实测。本轮 Windows CI 仅用于生成和校验隔离测试材料，**不能代签 Windows 原生 A→B 验收**。
+
+测试材料使用当前准备分支冻结 SHA、独立 QA 标识/名称、Windows runner 本次生成的 QA key、空 CODEX_HOME、合成额度和非空合成统计，以及 `127.0.0.1:18765`。不使用旧源码归档，不传送生产私钥；普通 1.4.0 unsigned 候选继续保留原 `2a3e34c` 来源，不改称 QA 包或正式签名包。新的手动 QA 工作流通过既有 CI 的显式输入调用，普通 push/PR 的原有检查与名称保留；QA 专用 dispatch 不重复运行无关候选构建。
+
+本轮 QA 工具最小修正：`updater-qa.mjs prepare` 改为直接调用已安装的官方 CLI，避免 Windows `shell:true` 经过 `cmd.exe` 丢失空密码参数。不修改产品、正式版本、依赖或发布工作流；新 A/B 包使用本轮更新后的 QA 工具生成。新增包只白名单复制安装器、公开签名/公钥、来源及操作脚本，不上传 QA 私钥、构建缓存、账户资料或数据库。测试端无需 Node/Rust/Python，使用系统 PowerShell 和 `winsqlite3.dll`，仅在已退出的独立 QA 数据库中插入合成样本。
+
+Windows 安装、主动检查前不下载、真实下载和验签、确认安装、旧/新进程及实际路径/版本/二进制来源、设置/统计保留、浮窗/侧边栏/系统托盘/更新入口、完整退出后冷启动、最后清理均保持 **待测试人员实测**。不要求 Windows 出现 macOS 专属菜单栏模式。测试人员应从当前包内步骤接续，并按 [Windows 手册](handoffs/20261013-online-update-windows.md) 与 [UPDATER-QA](UPDATER-QA.md) 回传脱敏结果；旧手册的源码归档与旧分支信息由本节当前来源替代。
+
+Windows 真正通过之前，不修改 `docs/releases/1.4.0.md` 的待测说明。维护者完成审核安排、离线恢复备份并审阅真实 Windows 结果后，才能收敛正式发布决定；PR 合并与最终发布仍需分别明确授权。Signed Release 最终会公开 Release/latest，没有 dry-run，本轮未触发它。
+
+本机公开证据集中在原工作区 ignored `outputs/release-enable-20261103/`：`initial-audit.json`、`environment-created.json`、`main-protection-readback.json`、`production-key-proof.json` 及固定文件/签名；不包含私钥、密码或真实账户数据。精确成果 HEAD、Windows QA 制品来源、CI 终态和独立同步结果在本节完成交付记录及 PR 中核对。

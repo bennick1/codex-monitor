@@ -17,7 +17,9 @@ if (mode === "prepare") {
   // Test-only key; never print its private content or use it for a production build.
   try { await access(join(root, "test.key")); throw new Error("Existing test key: reuse it or choose a fresh output directory"); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
-  const generated = spawnSync("npx", ["tauri", "signer", "generate", "--ci", "-p", "", "-w", join(root, "test.key")], { encoding: "utf8", shell: process.platform === "win32" });
+  // Direct argv preserves the explicit empty QA password on Windows; cmd.exe
+  // would discard it when joining shell arguments. Use only the installed CLI.
+  const generated = spawnSync(process.execPath, [resolve("node_modules/@tauri-apps/cli/tauri.js"), "signer", "generate", "--ci", "-p", "", "-w", join(root, "test.key")], { encoding: "utf8" });
   // The CLI can print key content: suppress all output, including failure output.
   if (generated.status !== 0) throw new Error("Test signer generation failed; inspect CLI usage without printing key material");
   await chmod(join(root, "test.key"), 0o600);
