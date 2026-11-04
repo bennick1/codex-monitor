@@ -2,6 +2,11 @@ name: CI
 
 on:
   workflow_dispatch:
+    inputs:
+      windows_updater_qa:
+        description: Build isolated Windows A/B QA package only (never a Release)
+        type: boolean
+        default: false
   push:
   pull_request:
 
@@ -22,6 +27,7 @@ jobs:
       - run: npm audit --audit-level=high
 
   desktop:
+    if: github.event_name != 'workflow_dispatch' || !inputs.windows_updater_qa
     strategy:
       fail-fast: false
       matrix:
@@ -113,3 +119,9 @@ jobs:
           path: ${{ matrix.artifact-path }}
           if-no-files-found: error
           retention-days: 14
+
+  windows-updater-qa:
+    if: github.repository == 'bennick1/codex-monitor' && github.event_name == 'workflow_dispatch' && inputs.windows_updater_qa
+    permissions:
+      contents: read
+    uses: ./.github/workflows/windows-updater-qa.yml

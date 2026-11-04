@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import { readFile, mkdir, writeFile, readdir, chmod, access, cp, open } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
+import { copyVersionedWindowsBundle } from "./windows-qa-bundle.mjs";
 const [mode, directory = "outputs/updater-qa", argument = "normal"] = process.argv.slice(2);
 const root = resolve(directory);
 const port = 18765;
@@ -17,11 +18,16 @@ if (mode === "prepare") {
   // Test-only key; never print its private content or use it for a production build.
   try { await access(join(root, "test.key")); throw new Error("Existing test key: reuse it or choose a fresh output directory"); }
   catch (error) { if (error.code !== "ENOENT") throw error; }
-  const generated = spawnSync("npx", ["tauri", "signer", "generate", "--ci", "-p", "", "-w", join(root, "test.key")], { encoding: "utf8", shell: process.platform === "win32" });
+  // Direct argv preserves the explicit empty QA password on Windows; cmd.exe
+  // would discard it when joining shell arguments. Use only the installed CLI.
+  const generated = spawnSync(process.execPath, [resolve("node_modules/@tauri-apps/cli/tauri.js"), "signer", "generate", "--ci", "-p", "", "-w", join(root, "test.key")], { encoding: "utf8" });
   // The CLI can print key content: suppress all output, including failure output.
   if (generated.status !== 0) throw new Error("Test signer generation failed; inspect CLI usage without printing key material");
   await chmod(join(root, "test.key"), 0o600);
-  for (const version of ["0.0.1", "0.0.2"]) await writeFile(join(root, `${version}.json`), JSON.stringify({ version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", bundle: { createUpdaterArtifacts: true, macOS: { signingIdentity: "-" } } }, null, 2));
+  // NSIS finds/kills prior processes by executable name. Keep Windows QA's
+  // name distinct from production as well as its identifier and install path.
+  const windowsIdentity = process.platform === "win32" ? { mainBinaryName: "codex-monitor-updater-qa" } : {};
+  for (const version of ["0.0.1", "0.0.2"]) await writeFile(join(root, `${version}.json`), JSON.stringify({ version, identifier: "app.codexmonitor.updater-test.local", productName: "Codex Monitor Updater QA", ...windowsIdentity, bundle: { createUpdaterArtifacts: true, macOS: { signingIdentity: "-" } } }, null, 2));
   console.log(`QA配置与独立测试密钥已生成：${root}`);
 } else if (mode === "build") {
   if (!["0.0.1", "0.0.2"].includes(argument)) throw new Error("QA version must be A=0.0.1 or B=0.0.2");
@@ -30,12 +36,17 @@ if (mode === "prepare") {
   const overlayPath = join(root, `${argument}.json`);
   const overlay = JSON.parse(await readFile(overlayPath, "utf8"));
   if (overlay.identifier !== "app.codexmonitor.updater-test.local" || overlay.version !== argument || overlay.productName !== "Codex Monitor Updater QA") throw new Error("Unexpected QA overlay identity/version");
+  if (process.platform === "win32" && overlay.mainBinaryName !== "codex-monitor-updater-qa") throw new Error("Windows QA requires an independent executable name");
   overlay.plugins = { updater: { pubkey, endpoints: [endpoint], dangerousInsecureTransportProtocol: true } };
   await writeFile(overlayPath, JSON.stringify(overlay, null, 2));
   const target = join(root, "target-build");
   const env = { ...process.env, CODEX_MONITOR_RELEASE_BUILD: "", CODEX_MONITOR_UPDATER_TEST_BUILD: "1", CODEX_MONITOR_UPDATER_TEST_ENDPOINT: endpoint, CODEX_MONITOR_UPDATER_PUBLIC_KEY: pubkey, TAURI_SIGNING_PRIVATE_KEY: key, TAURI_SIGNING_PRIVATE_KEY_PASSWORD: "", CARGO_TARGET_DIR: target, CODEX_HOME: join(root, "empty-codex-home") };
   run("npx", ["tauri", "build", "--bundles", process.platform === "darwin" ? "app,dmg" : "nsis", "--config", join(root, `${argument}.json`)], env);
-  await cp(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), { recursive: true, force: false, errorOnExist: true });
+  if (process.platform === "win32") {
+    await copyVersionedWindowsBundle(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), argument);
+  } else {
+    await cp(join(target, "release", "bundle"), join(root, `target-${argument}`, "release", "bundle"), { recursive: true, force: false, errorOnExist: true });
+  }
 } else if (mode === "serve") {
   if (!["normal", "missing", "bad-signature", "older", "same", "missing-platform", "bad-download", "slow", "chunked", "interrupted", "bad-install"].includes(argument)) throw new Error("Unknown server scenario");
   const bundle = join(root, "target-0.0.2", "release", "bundle");

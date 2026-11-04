@@ -1,0 +1,126 @@
+name: Windows Updater QA Package
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: github.repository == 'bennick1/codex-monitor' && github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> ../outputs/windows-updater-qa/target-build
+          key: windows-updater-qa
+          cache-on-failure: true
+      - run: npm ci
+      - run: npm run check:updater-policy
+      - run: npm audit --audit-level=high
+      - run: node --test scripts/windows-updater-qa-package.node-test.mjs
+      # The full suite also creates macOS tar/plist fixtures; existing Linux
+      # frontend and macOS CI continue to run all cases. Exercise the new
+      # Windows provenance cases here before building actual NSIS packages.
+      - run: node --test --test-name-pattern="^Windows NSIS provenance" scripts/release-updater.node-test.mjs
+      - name: Check Windows PowerShell scripts
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Get-ChildItem scripts/windows-updater-qa/*.ps1 | ForEach-Object {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count) { throw ($errors | Out-String) }
+          }
+      - name: Test redirected Windows PowerShell process exit codes
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows-updater-qa/ci-smoke-process.ps1
+      - name: Generate runner-local QA key and build A
+        run: |
+          node scripts/updater-qa.mjs prepare outputs/windows-updater-qa
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/updater-qa.mjs build outputs/windows-updater-qa 0.0.1
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/windows-updater-qa-package.mjs snapshot outputs/windows-updater-qa 0.0.1
+      - name: Build B with the same QA key
+        run: |
+          node scripts/updater-qa.mjs build outputs/windows-updater-qa 0.0.2
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node scripts/windows-updater-qa-package.mjs snapshot outputs/windows-updater-qa 0.0.2
+      - name: Build existing signature verifier
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/outputs/windows-updater-qa/target-build
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked --release --example verify_updater_signature
+      - name: Verify and assemble shareable QA package
+        env:
+          CODEX_MONITOR_SIGNATURE_VERIFY_BIN: ${{ github.workspace }}/outputs/windows-updater-qa/target-build/release/examples/verify_updater_signature.exe
+        run: node scripts/windows-updater-qa-package.mjs package outputs/windows-updater-qa outputs/windows-updater-qa-share
+      - name: Test packaged Windows helpers without installing application
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/windows-updater-qa/ci-smoke.ps1 -PackageDirectory outputs/windows-updater-qa-share
+      - uses: actions/upload-artifact@v4
+        with:
+          name: codex-monitor-windows-updater-qa-${{ github.sha }}
+          path: outputs/windows-updater-qa-share/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record public failure diagnostics
+        if: failure()
+        shell: pwsh
+        run: |
+          $root = Join-Path $env:GITHUB_WORKSPACE 'outputs/windows-updater-qa'
+          New-Item -ItemType Directory -Path $root -Force | Out-Null
+          @{ sourceSha = $env:GITHUB_SHA; runId = $env:GITHUB_RUN_ID; nativeAcceptance = 'PENDING'; qa = $true } | ConvertTo-Json | Set-Content (Join-Path $root 'failure-source.json') -Encoding utf8
+          git status --short --untracked-files=no | Set-Content (Join-Path $root 'tracked-status.txt') -Encoding utf8
+          git diff --stat HEAD -- | Set-Content (Join-Path $root 'tracked-diffstat.txt') -Encoding utf8
+          $evidence = Join-Path $env:LOCALAPPDATA 'CodexMonitorUpdaterQA-CM-RELEASE-ENABLEMENT-20261103/evidence'
+          foreach ($name in @('server-out.txt', 'server-error.txt', 'server-exit-status.json')) {
+            $file = Join-Path $evidence $name
+            if (Test-Path -LiteralPath $file -PathType Leaf) { Copy-Item -LiteralPath $file -Destination (Join-Path $root $name) }
+          }
+      - name: Preserve only public QA failure evidence
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-monitor-windows-qa-diagnostics-${{ github.sha }}
+          path: |
+            outputs/windows-updater-qa/failure-source.json
+            outputs/windows-updater-qa/source-diagnostics.json
+            outputs/windows-updater-qa/tracked-status.txt
+            outputs/windows-updater-qa/tracked-diffstat.txt
+            outputs/windows-updater-qa/process-smoke/process-exit-status.json
+            outputs/windows-updater-qa/process-smoke/exit-0-out.txt
+            outputs/windows-updater-qa/process-smoke/exit-0-error.txt
+            outputs/windows-updater-qa/process-smoke/exit-7-out.txt
+            outputs/windows-updater-qa/process-smoke/exit-7-error.txt
+            outputs/windows-updater-qa/server-out.txt
+            outputs/windows-updater-qa/server-error.txt
+            outputs/windows-updater-qa/server-exit-status.json
+            outputs/windows-updater-qa/test.key.pub
+            outputs/windows-updater-qa/0.0.1-identity.json
+            outputs/windows-updater-qa/0.0.2-identity.json
+            outputs/windows-updater-qa/target-build/release/codex-monitor-updater-qa.exe
+            outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe
+            outputs/windows-updater-qa/target-0.0.1/release/bundle/nsis/*-setup.exe.sig
+            outputs/windows-updater-qa/target-0.0.2/release/bundle/nsis/*-setup.exe
+            outputs/windows-updater-qa/target-0.0.2/release/bundle/nsis/*-setup.exe.sig
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Remove ephemeral runner QA private key
+        if: always()
+        shell: pwsh
+        run: |
+          $key = Join-Path $env:GITHUB_WORKSPACE 'outputs/windows-updater-qa/test.key'
+          if (Test-Path -LiteralPath $key) { Remove-Item -LiteralPath $key -Force }

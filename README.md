@@ -2,7 +2,7 @@
 
 A lightweight, local-first desktop resource monitor for Codex. See your remaining quota, quota reset times, and token usage on this machine in a floating widget.
 
-当前已发布版本为 **v1.3.1**，下载见 [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1)，原版本状态见 [Fast 恢复验收报告](docs/fast-request-metadata-validation.md)。当前功能分支已合入该版本，并新增可关闭的后台更新检查；下载、验签与安装需要用户操作。普通开发构建未配置公钥时提供手动下载页。新增功能尚未正式发布，进度见 [发布流程](docs/RELEASE.md) 与 [主分支合并验收](docs/MAIN-MERGE-VALIDATION.md)。
+当前已发布版本为 **v1.3.1**，下载见 [Codex Monitor v1.3.1](https://github.com/bennick1/codex-monitor/releases/tag/v1.3.1)，原版本状态见 [Fast 恢复验收报告](docs/fast-request-metadata-validation.md)。当前源码正在准备 **1.4.0 候选版本**，包括侧边栏、在线更新和 macOS 仅菜单栏模式，尚未正式发布。公开 v1.3.1 用户需要手动安装首个带 updater 的正式版本；此后后台仅检查，下载和安装分别由用户确认。普通 unsigned 构建未配置公钥时提供手动下载页。见 [1.4.0 发布说明](docs/releases/1.4.0.md)、[集中准备记录](docs/RELEASE-1.4.0-PREPARATION.md)与[发布流程](docs/RELEASE.md)。
 
 
 ## Features

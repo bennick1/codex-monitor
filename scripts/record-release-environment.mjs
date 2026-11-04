@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { deriveNsisBinaryIdentity } from "./windows-nsis-provenance.mjs";
 const output = process.argv[2];
 const platform = process.env.PLATFORM;
 const bundle = process.env.BUNDLE_DIR;
@@ -26,6 +27,11 @@ if (platform === "macos") {
   identity = { identifier: config.identifier, version: metadata.version?.replace(/\.0$/, match => metadata.version.split(".").length === 4 ? "" : match), productName: metadata.productName, method: "actual Windows binary VERSIONINFO plus frozen production config" };
 }
 if (identity.identifier !== "app.quotafloat.desktop" || identity.version !== config.version || identity.productName !== "Codex Monitor") throw new Error("Actual bundle identity/version mismatch or QA artifact");
-const binarySha256 = createHash("sha256").update(await readFile(binary)).digest("hex");
+const binaryBytes = await readFile(binary);
+// Tauri restores the raw Windows EXE after bundling. Derive the exact NSIS
+// marker patch from that verified build, then require a full payload hash match.
+const binaryIdentity = platform === "windows"
+  ? deriveNsisBinaryIdentity(binaryBytes)
+  : { binarySha256: createHash("sha256").update(binaryBytes).digest("hex") };
 await mkdir(output, { recursive: true });
-await writeFile(join(output, `${platform}-build-environment.json`), JSON.stringify({ sourceSha, platform, arch: process.arch, identity, binarySha256, qa: false, releaseBuild: true, node: process.version, npm: run("npm", ["--version"]), rust: run("rustc", ["--version"]), tauri: run("npx", ["tauri", "--version"]), runUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`, builtAt: new Date().toISOString(), updaterSigned: true, platformSigning: "Developer ID/notarization/Authenticode not configured" }, null, 2));
+await writeFile(join(output, `${platform}-build-environment.json`), JSON.stringify({ sourceSha, platform, arch: process.arch, identity, ...binaryIdentity, qa: false, releaseBuild: true, node: process.version, npm: run("npm", ["--version"]), rust: run("rustc", ["--version"]), tauri: run("npx", ["tauri", "--version"]), runUrl: `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`, builtAt: new Date().toISOString(), updaterSigned: true, platformSigning: "Developer ID/notarization/Authenticode not configured" }, null, 2));

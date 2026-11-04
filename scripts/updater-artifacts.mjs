@@ -20,6 +20,19 @@ const safeArchivePath = name => {
   if (!name || name.startsWith("/") || name.startsWith("-") || /^[A-Za-z]:/.test(name) || name.includes("\\") || name.split("/").includes("..") || /[\x00-\x1f*?\[\]]/.test(name)) throw new Error("Unsafe archive member path");
   return name;
 };
+export function selectWindowsPayloadMember(listing, identity) {
+  const production = identity?.identifier === "app.quotafloat.desktop" && identity.productName === "Codex Monitor";
+  const qa = identity?.identifier === "app.codexmonitor.updater-test.local" && identity.productName === "Codex Monitor Updater QA" && ["0.0.1", "0.0.2"].includes(identity.version);
+  if (!production && !qa) throw new Error("Unsupported Windows payload identity");
+  const expected = qa ? "codex-monitor-updater-qa.exe" : "codex-monitor.exe";
+  if ((qa || identity.binaryName !== undefined) && identity.binaryName !== expected) throw new Error("Windows executable name does not match its isolated identity");
+  // Refuse a mixed production/QA installer, duplicate members, or an old QA
+  // build that still shares the production process name used by NSIS.
+  const executables = [...listing.matchAll(/^Path = (.+)$/gm)].map(match => match[1].trim()).filter(name => /(?:^|[\\/])codex-monitor(?:-updater-qa)?\.exe$/i.test(name));
+  if (executables.length !== 1 || executables[0].replaceAll("\\", "/").split("/").at(-1).toLowerCase() !== expected) throw new Error(`Expected exactly one isolated ${expected} inside NSIS installer`);
+  safeArchivePath(executables[0].replaceAll("\\", "/"));
+  return executables[0];
+}
 export function inspectPayload(platform, artifact, provenance) {
   const command = (name, args, options = {}) => execFileSync(name, args, { maxBuffer: 256 * 1024 * 1024, ...options });
   let binary;
@@ -45,10 +58,8 @@ export function inspectPayload(platform, artifact, provenance) {
   } else if (platform === "windows") {
     const sevenZip = process.platform === "win32" ? join(process.env.ProgramFiles ?? "C:\\Program Files", "7-Zip", "7z.exe") : "7z";
     const listing = command(sevenZip, ["l", "-slt", artifact], { encoding: "utf8" });
-    const executables = [...listing.matchAll(/^Path = (.+)$/gm)].map(match => match[1].trim()).filter(name => /(?:^|[\\/])codex-monitor\.exe$/i.test(name));
-    if (executables.length !== 1) throw new Error("Expected exactly one codex-monitor.exe inside NSIS installer");
-    safeArchivePath(executables[0].replaceAll("\\", "/"));
-    binary = command(sevenZip, ["x", "-so", artifact, executables[0]]);
+    const executable = selectWindowsPayloadMember(listing, provenance.identity);
+    binary = command(sevenZip, ["x", "-so", artifact, executable]);
     // The VERSIONINFO-verified build binary must be byte-identical to the NSIS member.
     identity = provenance.identity;
   } else throw new Error("Unknown payload platform");
@@ -111,7 +122,10 @@ export async function collect(platform, bundle, output, version, sourceSha, veri
   await writeFile(join(output, `${platform}-inventory.json`), JSON.stringify(inventory, null, 2));
   return inventory;
 }
-export async function assemble(input, output, version, sourceSha) {
+export async function assemble(input, output, version, sourceSha, notesPath) {
+  if (!notesPath) throw new Error("Release notes file is required");
+  const notes = (await readFile(notesPath, "utf8")).trim();
+  if (!notes) throw new Error("Release notes file is empty");
   const inventories = await Promise.all(Object.keys(platforms).map(p => readFile(join(input, `${p}-inventory.json`), "utf8").then(JSON.parse)));
   validateInventories(inventories, version, sourceSha);
   if (process.env.CODEX_MONITOR_UPDATER_PUBLIC_KEY) {
@@ -126,7 +140,7 @@ export async function assemble(input, output, version, sourceSha) {
   }
   for (const file of files) if (await digest(join(input, file.name)) !== file.sha256) throw new Error(`Changed asset: ${file.name}`);
   for (const i of inventories) if ((await readFile(join(input, i.signatureFile), "utf8")).trim() !== i.signature) throw new Error("Wrong signature mapping");
-  const manifest = { version, notes: `Codex Monitor ${version}`, pub_date: new Date().toISOString(), platforms: {} };
+  const manifest = { version, notes, pub_date: new Date().toISOString(), platforms: {} };
   for (const i of inventories) for (const key of platforms[i.platform].keys) manifest.platforms[key] = { signature: i.signature, url: `https://github.com/${repository}/releases/download/v${version}/${i.update}` };
   // No manifest is written until both inventories and every asset have passed validation.
   await mkdir(output, { recursive: true });
@@ -145,5 +159,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     if (!process.env.CODEX_MONITOR_UPDATER_PUBLIC_KEY?.trim()) throw new Error("Manifest assembly requires expected production public key");
     await assemble(...args);
   }
-  else throw new Error("Usage: updater-artifacts.mjs collect <macos|windows> <bundle> <output> <version> <sha> | assemble <input> <output> <version> <sha>");
+  else throw new Error("Usage: updater-artifacts.mjs collect <macos|windows> <bundle> <output> <version> <sha> | assemble <input> <output> <version> <sha> <notes-file>");
 }
